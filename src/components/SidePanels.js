@@ -56,22 +56,22 @@ export function LeftPanel({ section = "beranda" }) {
             <div className={styles.founderImageContainer}>
               <img
                 src="/founder.jpg"
-                alt="Arvin Maulana - Founder &amp; CEO NeoKarbon Indonesia"
+                alt="Arvin M. H - Founder &amp; CEO Coconut Shell Charcoal Indonesia"
                 className={styles.founderImage}
                 draggable={false}
               />
 
               <div className={styles.founderTextOverlay}>
                 <span className={styles.founderOverlayTag}>FOUNDER &amp; CEO</span>
-                <h4 className={styles.founderOverlayName}>Arvin Maulana</h4>
+                <h4 className={styles.founderOverlayName}>Arvin M. H</h4>
                 <p className={styles.founderOverlayQuote}>
-                  "Menghadirkan briket &amp; arang kelapa premium dari Indonesia untuk pasar energi global secara berkelanjutan."
+                  "Menyediakan &amp; Lorem Ipsum."
                 </p>
               </div>
 
               <div className={styles.verticalHoverButtons}>
                 <a
-                  href="https://instagram.com/arvinmaulana"
+                  href="https://instagram.com/tunaskembarabadi"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.squareBtn}
