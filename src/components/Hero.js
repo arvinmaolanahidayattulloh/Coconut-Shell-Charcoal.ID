@@ -8,9 +8,9 @@ import Particles from "./Particles";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
-  const yearsCount = useCountUp(10, 1800);
-  const clientsCount = useCountUp(500, 2000);
-  const countriesCount = useCountUp(15, 1500);
+  const yearsCount = useCountUp(0, 1800);
+  const clientsCount = useCountUp(1, 2000);
+  const countriesCount = useCountUp(1, 1500);
 
   return (
     <section className={`${styles.hero} wrap`} id="beranda">
