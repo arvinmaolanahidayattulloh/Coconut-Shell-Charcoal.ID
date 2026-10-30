@@ -16,7 +16,7 @@ const COMPANY_LINKS = [
 ];
 
 const CONTACT_INFO = [
-  { label: "info@neokarbon.co.id", href: "mailto:Info@CoconutShellCharcoal.ID" },
+  { label: "Info@CoconutShellCharcoal.ID", href: "mailto:Info@CoconutShellCharcoal.ID" },
   { label: "+62 851 681 52525", href: "tel:+6285168152525" },
   { label: "Jl. Sarikaya No.217 RT.6/RW.14 Depok Jaya Kecamatan Pancoran Mas Depok Jawa Barat 16432", href: "#" },
 ];
@@ -93,8 +93,8 @@ export default function Footer() {
       </div>
 
       <div className={styles.footerBottom}>
-        <span>© 2026 NeoKarbon Indonesia. Seluruh hak dilindungi.</span>
-        <span>Briket Batu Bara Premium Indonesia</span>
+        <span>© 2026 Coconut Shell Charcoal Indonesia. Seluruh Hak Di Lindungi.</span>
+        <span>remium Indonesia</span>
       </div>
     </footer>
   );
