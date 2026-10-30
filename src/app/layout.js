@@ -2,7 +2,7 @@ import "./globals.css";
 import Script from "next/script";
 
 export const metadata = {
-  title: "Menyediakan Arang Batok Kelapa Premium",
+  title: "Coconut Shell Charcoal ID",
   description: "NeoKarbon Indonesia adalah produsen dan distributor briket batu bara serta arang berkualitas tinggi untuk kebutuhan industri, restoran, dan ekspor internasional. Sertifikasi ISO 9001.",
   keywords: "briket batu bara, arang briket, charcoal briquette, produsen briket, ekspor briket, briket industri, NeoKarbon Indonesia",
   openGraph: {
