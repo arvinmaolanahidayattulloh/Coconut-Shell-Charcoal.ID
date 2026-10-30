@@ -327,11 +327,11 @@ export function LeftPanel({ section = "beranda" }) {
               </div>
               <div className={styles.addressBox}>
                 <h6>Pusat Produksi (Plant)</h6>
-                <p>Jl. Raya Briket No. 88, Kaliwungu, Kendal, Jawa Tengah, Indonesia.</p>
+                <p>Tajur, Kec. Citeureup, Kabupaten Bogor, Jawa Barat 16810</p>
               </div>
               <div className={styles.addressBox}>
                 <h6>Surel Penjualan</h6>
-                <p>sales@neokarbon.com</p>
+                <p>Info@CoconutShellCharcoal.ID</p>
               </div>
             </div>
           </div>
@@ -432,8 +432,8 @@ export function RightPanel({ section = "beranda" }) {
   };
 
   const getWhatsAppLink = (productName, qty) => {
-    const text = `Halo NeoKarbon, saya tertarik memesan ${qty} Ton produk ${productName}. Bagaimana prosedur Letter of Intent (LOI) dan kontrak pembelian selanjutnya?`;
-    return `https://wa.me/628123456789?text=${encodeURIComponent(text)}`;
+    const text = `Halo Arvin, saya tertarik memesan ${qty} Ton produk ${productName}. Bagaimana prosedur Letter of Intent (LOI) dan kontrak pembelian selanjutnya?`;
+    return `https://wa.me/6285168152525?text=${encodeURIComponent(text)}`;
   };
 
   const activeProduct = PRODUCTS_LIST[activeProductIndex];
