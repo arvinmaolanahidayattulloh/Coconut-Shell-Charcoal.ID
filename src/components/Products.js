@@ -18,7 +18,7 @@ const PRODUCTS = [
       { label: "Kadar Abu", value: "1,52%", progress: 1.52 },
       { label: "Zat Terbang", value: "11,37%", progress: 11.37 },
       { label: "Karbon Tetap", value: "81,39%", progress: 81.39 },
-      { label: "Nilai Kalori", value: "?%", progress: 60 }
+      { label: "Nilai Kalori", value: "?%", progress: 0 }
     ]
   },
   {
@@ -28,17 +28,19 @@ const PRODUCTS = [
     desc: "Lorem Ipsum",
     image: "/products/Carbon-Active.png",
     specs: [
-      { label: "Nilai Kalori", value: "7.300+ kcal/kg", progress: 95 },
-      { label: "Durasi Bakar", value: "3 - 4 Jam", progress: 80 },
-      { label: "Kadar Abu", value: "< 3%", progress: 25 }
+      { label: "Kadar Air", value: "Maks. 4,5%", progress: 20 },
+      { label: "Kadar Abu", value: "Maks. 2,5%", progress: 15 },
+      { label: "Volatile Matter", value: "Maks. 15%", progress: 30 },
+      { label: "Iodine Number", value: "Min. 750 mg/g", progress: 85 },
+      { label: "Serap Benzena", value: "Min. 25%", progress: 40 }
     ]
   },
   {
-    name: "Arang Briket",
+    name: "Briket",
     subName: "Charcoal Briquettes",
-    badge: "Shisha Premium",
-    desc: "Arang halus dari tempurung kelapa atau kayu yang dipadatkan dengan bahan perekat alami (tapioka). Bentuk kubus atau heksagonal yang presisi, panasnya sangat stabil dan minim abu.",
-    image: "/products/charcoal_briquettes.png",
+    badge: "Costume",
+    desc: "Lorem Ipsum",
+    image: "/products/Briquettes.png",
     specs: [
       { label: "Nilai Kalori", value: "7.200+ kcal/kg", progress: 92 },
       { label: "Durasi Bakar", value: "3 - 5 Jam", progress: 90 },
@@ -46,6 +48,7 @@ const PRODUCTS = [
     ]
   }
 ];
+
 
 export default function Products() {
   const [activeIndex, setActiveIndex] = useState(0);
