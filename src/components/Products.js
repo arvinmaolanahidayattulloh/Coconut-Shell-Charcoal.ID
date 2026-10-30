@@ -8,23 +8,23 @@ import styles from "./Products.module.css";
 
 const PRODUCTS = [
   {
-    name: "Batu Bara",
-    subName: "Coal",
-    badge: "Energi Fosil Alam",
-    desc: "Bahan bakar fosil alami berkalori tinggi yang melimpah, digunakan sebagai sumber energi utama pembangkit listrik dan pembakaran industri skala besar.",
-    image: "/products/coal.png",
+    name: "Natural",
+    subName: "Coconut Shell Charcoal",
+    badge: "Best Seller",
+    desc: "Lorem Ipsum.",
+    image: "/products/Natural.png",
     specs: [
-      { label: "Nilai Kalori", value: "6.500+ kcal/kg", progress: 85 },
-      { label: "Kadar Abu", value: "10 - 15%", progress: 70 },
-      { label: "Kadar Air", value: "8 - 12%", progress: 60 }
+      { label: "Nilai Kalori", value: "77,47+ kcal/kg", progress: 85 },
+      { label: "Kadar Abu", value: "1,52%", progress: 70 },
+      { label: "Kadar Air", value: "3,79 - 4,2%", progress: 60 }
     ]
   },
   {
-    name: "Arang Batok Kelapa",
+    name: "Carbon Active",
     subName: "Coconut Shell Charcoal",
-    badge: "Premium Shisha & BBQ",
+    badge: "Product",
     desc: "Dibuat dari tempurung kelapa tua pilihan. Memiliki panas tinggi, merata, tanpa asap, abu abu putih tipis, serta sangat diminati pasar internasional.",
-    image: "/products/coconut_shell_charcoal.png",
+    image: "/products/Carbon-Active.png",
     specs: [
       { label: "Nilai Kalori", value: "7.300+ kcal/kg", progress: 95 },
       { label: "Durasi Bakar", value: "3 - 4 Jam", progress: 80 },
