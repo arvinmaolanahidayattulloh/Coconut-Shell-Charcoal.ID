@@ -674,12 +674,12 @@ export function RightPanel({ section = "beranda" }) {
                 <div><span>Jam Kerja:</span> <strong>Senin-Sabtu (08:00 - 17:00 WIB)</strong></div>
               </div>
               <a
-                href="https://wa.me/628123456789"
+                href="https://wa.me/6285168152525"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.salesWaBtn}
               >
-                Hubungi Hendra Sekarang
+                Hubungi Arvin Sekarang
               </a>
             </div>
           </div>
