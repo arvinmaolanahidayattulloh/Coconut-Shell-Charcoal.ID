@@ -16,9 +16,9 @@ const COMPANY_LINKS = [
 ];
 
 const CONTACT_INFO = [
-  { label: "info@neokarbon.co.id", href: "mailto:info@neokarbon.co.id" },
-  { label: "+62 21 5050 8800", href: "tel:+622150508800" },
-  { label: "Jl. Industri No. 42, Banjarmasin", href: "#" },
+  { label: "info@neokarbon.co.id", href: "mailto:Info@CoconutShellCharcoal.ID" },
+  { label: "+62 851 681 52525", href: "tel:+6285168152525" },
+  { label: "Jl. Sarikaya No.217 RT.6/RW.14 Depok Jaya Kecamatan Pancoran Mas Depok Jawa Barat 16432", href: "#" },
 ];
 
 export default function Footer() {
