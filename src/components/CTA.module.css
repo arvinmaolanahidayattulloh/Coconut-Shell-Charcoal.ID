@@ -1,0 +1,164 @@
+.ctaSection {
+  padding-top: var(--section-gap);
+  padding-bottom: var(--section-gap);
+}
+
+.cta {
+  border-radius: var(--radius-xl);
+  padding: 80px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.ctaBg {
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background-image: url('/cta-bg.png');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  animation: slowZoom 25s ease-in-out infinite alternate;
+}
+
+.ctaOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(17, 17, 17, 0.7), rgba(17, 17, 17, 0.95));
+  z-index: 1;
+}
+
+.ctaGlow {
+  position: absolute;
+  bottom: -30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(ellipse at center, rgba(196, 94, 32, 0.4) 0%, transparent 60%);
+  z-index: 2;
+  filter: blur(50px);
+  animation: pulseGlow 6s ease-in-out infinite alternate;
+}
+
+@keyframes slowZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.1); }
+}
+
+@keyframes pulseGlow {
+  0% { opacity: 0.4; transform: translateX(-50%) scale(0.9); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+}
+
+.ctaTitle {
+  color: var(--color-white);
+  font-size: var(--text-4xl);
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+  font-weight: 600;
+  position: relative;
+  z-index: 3;
+}
+
+.ctaDesc {
+  color: var(--color-ash);
+  max-width: 520px;
+  margin: 0 auto 36px;
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  position: relative;
+  z-index: 3;
+}
+
+.ctaActions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 3;
+}
+
+.btnLight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 14px 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  color: var(--color-white);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+
+.btnLight:hover {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.btnLight:active {
+  transform: scale(0.97) translateY(0);
+}
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 14px 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-white);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.btnGhost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.btnGhost:active {
+  transform: scale(0.97) translateY(0);
+}
+
+@media (max-width: 860px) {
+  .cta {
+    padding: 56px 32px;
+  }
+
+  .ctaTitle {
+    font-size: var(--text-3xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .cta {
+    padding: 40px 24px;
+  }
+
+  .ctaTitle {
+    font-size: var(--text-2xl);
+  }
+}

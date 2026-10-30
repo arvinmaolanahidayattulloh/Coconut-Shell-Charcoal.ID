@@ -1,0 +1,253 @@
+.whyUs {
+  padding-top: var(--section-gap);
+  padding-bottom: var(--section-gap);
+  position: relative;
+}
+
+.sectionHead {
+  max-width: 650px;
+  margin-bottom: 56px;
+}
+
+.sectionTitle {
+  font-size: var(--text-4xl);
+  letter-spacing: -0.03em;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.sectionDesc {
+  font-size: var(--text-lg);
+  color: var(--color-graphite);
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+/* ─── Grid Layout ──────────────────────────────── */
+.gridContainer {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+/* ─── Left Column: Stats Grid ───────────────────── */
+.tilesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.tile {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  padding: 32px 24px;
+  box-shadow: 
+    0 8px 30px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tileDecor {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(196, 94, 32, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.5s ease;
+}
+
+.tile:hover {
+  transform: translateY(-6px);
+  border-color: rgba(196, 94, 32, 0.25);
+  box-shadow: 
+    0 20px 40px rgba(196, 94, 32, 0.06),
+    0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.tile:hover .tileDecor {
+  transform: scale(1.8);
+}
+
+.tileValue {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--color-carbon);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.tileLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ember);
+  margin-bottom: 8px;
+}
+
+.tileDesc {
+  font-size: 13px;
+  color: var(--color-stone);
+  line-height: 1.5;
+}
+
+/* ─── Right Column: Timeline ────────────────────── */
+.timelineSection {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+}
+
+.timelineHeader {
+  margin-bottom: 32px;
+}
+
+.timelineHeader h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-carbon);
+  margin-bottom: 6px;
+}
+
+.timelineHeader p {
+  font-size: 13px;
+  color: var(--color-stone);
+}
+
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.timelineLine {
+  position: absolute;
+  left: 20px;
+  top: 15px;
+  bottom: 15px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    rgba(196, 94, 32, 0.4) 0%,
+    rgba(196, 94, 32, 0.1) 100%
+  );
+}
+
+.timelineStep {
+  display: flex;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.stepIndicator {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--color-white);
+  border: 1.5px solid rgba(196, 94, 32, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.stepNum {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ember);
+}
+
+.stepPulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(196, 94, 32, 0.15);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.4s ease;
+  transform: scale(0.9);
+}
+
+.timelineStep:hover .stepIndicator {
+  border-color: var(--color-ember);
+  background: var(--color-ember);
+  box-shadow: 0 0 16px rgba(196, 94, 32, 0.3);
+}
+
+.timelineStep:hover .stepNum {
+  color: var(--color-white);
+}
+
+.timelineStep:hover .stepPulse {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.stepContent {
+  padding-top: 8px;
+}
+
+.stepTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-carbon);
+  margin-bottom: 6px;
+  transition: color 0.2s ease;
+}
+
+.timelineStep:hover .stepTitle {
+  color: var(--color-ember);
+}
+
+.stepDesc {
+  font-size: 13px;
+  color: var(--color-stone);
+  line-height: 1.6;
+}
+
+/* ─── Responsive ────────────────────────────────── */
+@media (max-width: 1024px) {
+  .gridContainer {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tilesGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .timelineSection {
+    padding: 24px;
+  }
+
+  .timelineLine {
+    left: 16px;
+  }
+
+  .stepIndicator {
+    width: 34px;
+    height: 34px;
+  }
+
+  .stepNum {
+    font-size: 12px;
+  }
+}

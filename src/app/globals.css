@@ -1,0 +1,313 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-ember: #c45e20;
+  --color-ember-light: #d4890a;
+  --color-ember-dark: #9a4a18;
+  --color-copper: #b87333;
+  --color-sienna: #8b4513;
+
+  --color-carbon: #1a1a1a;
+  --color-carbon-deep: #111111;
+  --color-graphite: #4d4d4d;
+  --color-stone: #6b6b6b;
+  --color-ash: #999999;
+
+  --color-smoke: #e8e5e0;
+  --color-cream: #f4f2ef;
+  --color-warm-white: #faf8f5;
+  --color-white: #ffffff;
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-4xl: 48px;
+  --text-5xl: 60px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+  --radius-full: 200px;
+
+  --page-max: 1200px;
+  --section-gap: 100px;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 16px 50px rgba(0, 0, 0, 0.12);
+
+  --glass-bg-light: rgba(255, 255, 255, 0.5);
+  --glass-bg-dark: rgba(17, 17, 17, 0.65);
+  --glass-border-light: rgba(255, 255, 255, 0.6);
+  --glass-border-dark: rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  --panel-gap: 48px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--color-carbon);
+  background: var(--color-warm-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul {
+  list-style: none;
+}
+
+
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--color-carbon);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.wrap {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ember);
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(40px) scale(0.98);
+  filter: blur(12px);
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity, filter;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.reveal-delay-1 {
+  transition-delay: 0.1s;
+}
+
+.reveal-delay-2 {
+  transition-delay: 0.2s;
+}
+
+.reveal-delay-3 {
+  transition-delay: 0.3s;
+}
+
+.reveal-delay-4 {
+  transition-delay: 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --section-gap: 64px;
+  }
+
+  .wrap {
+    padding: 0 20px;
+  }
+}
+
+/* ─── Page Flex Layout for Dynamic Sidebars ─── */
+.pageFlexLayout {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0;
+  position: relative;
+  overflow: visible;
+}
+
+.mainLayoutContainer {
+  width: 1200px;
+  max-width: 100%;
+  flex-shrink: 0;
+  overflow: visible;
+  transition: none !important;
+}
+
+@media (min-width: 1540px) and (max-width: 1839px) {
+  .mainLayoutContainer {
+    transform: translateX(-150px) !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 1840px) {
+  .mainLayoutContainer {
+    transform: translateX(0) !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 2200px) {
+  :root {
+    --page-max: 1400px;
+    --panel-gap: 56px;
+  }
+  .mainLayoutContainer {
+    width: 1400px;
+    transform: translateX(0) !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --page-max: 1700px;
+    --panel-gap: 70px;
+    --text-xs: 13px;
+    --text-sm: 15px;
+    --text-base: 17px;
+    --text-lg: 19px;
+    --text-xl: 24px;
+    --text-2xl: 30px;
+    --text-3xl: 40px;
+    --text-4xl: 52px;
+    --text-5xl: 66px;
+  }
+  .mainLayoutContainer {
+    width: 1700px;
+    transform: translateX(0) !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 3440px) {
+  :root {
+    --page-max: 2300px;
+    --panel-gap: 85px;
+    --text-xs: 14px;
+    --text-sm: 16px;
+    --text-base: 18px;
+    --text-lg: 21px;
+    --text-xl: 26px;
+    --text-2xl: 34px;
+    --text-3xl: 46px;
+    --text-4xl: 60px;
+    --text-5xl: 76px;
+  }
+  .mainLayoutContainer {
+    width: 2300px;
+    transform: translateX(0) !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 4500px) {
+  :root {
+    --page-max: 3000px;
+    --panel-gap: 100px;
+    --text-xs: 15px;
+    --text-sm: 17px;
+    --text-base: 19px;
+    --text-lg: 23px;
+    --text-xl: 28px;
+    --text-2xl: 38px;
+    --text-3xl: 50px;
+    --text-4xl: 66px;
+    --text-5xl: 84px;
+  }
+  .mainLayoutContainer {
+    width: 3000px;
+    transform: translateX(0) !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 5000px) {
+  :root {
+    --page-max: 3500px;
+    --panel-gap: 120px;
+    --text-xs: 16px;
+    --text-sm: 18px;
+    --text-base: 20px;
+    --text-lg: 24px;
+    --text-xl: 30px;
+    --text-2xl: 40px;
+    --text-3xl: 54px;
+    --text-4xl: 72px;
+    --text-5xl: 90px;
+  }
+  .mainLayoutContainer {
+    width: 3500px;
+    transform: translateX(0) !important;
+    transition: none !important;
+  }
+}
+
+.sectionWrapper {
+  position: relative;
+  width: 100%;
+}
