@@ -5,9 +5,9 @@ import styles from "./Partners.module.css";
 
 const PARTNERS = [
   {
-    name: "PT. INAGRIN Tbk.",
+    name: "Valeed. ID",
     logo: (
-      <svg width="120" height="32" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="120" height="32" viewBox="0 0 120 32" fill="none" xmlns="https://valeed.id/wp-content/uploads/2024/04/logo-valeed.png">
         <path d="M6 4h10v8H6V4z" fill="#0066B2" />
         <path d="M16 12h10v8H16v-8z" fill="#39B54A" />
         <path d="M6 20h20v8H6v-8z" fill="#ED1C24" />
@@ -16,9 +16,9 @@ const PARTNERS = [
     ),
   },
   {
-    name: "PT. INAGRIN Tbk.",
+    name: "PT. Bank Central Asia Tbk.",
     logo: (
-      <svg width="130" height="32" viewBox="0 0 130 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="130" height="32" viewBox="0 0 130 32" fill="none" xmlns="https://www.bca.co.id/-/media/Feature/Card/List-Card/Tentang-BCA/Brand-Assets/Logo-BCA/Logo-BCA_Biru.png">
         <path d="M8 20c0 4.418-3.582 8-8 8s8-3.582 8-8zm0 0c0-4.418 3.582-8 8-8s-8 3.582-8 8z" fill="#39B54A" />
         <circle cx="8" cy="16" r="5" fill="#005A36" />
         <text x="24" y="21" fontFamily="var(--font-display)" fontSize="14" fontWeight="700" fill="var(--color-carbon)" letterSpacing="0.04em">ADARO ENERGY</text>
