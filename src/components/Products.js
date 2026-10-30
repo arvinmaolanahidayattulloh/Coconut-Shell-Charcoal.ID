@@ -25,48 +25,12 @@ const PRODUCTS = [
     name: "Carbon Active",
     subName: "Coconut Shell Charcoal",
     badge: "Product",
-    desc: "Dibuat dari tempurung kelapa tua pilihan. Memiliki panas tinggi, merata, tanpa asap, abu abu putih tipis, serta sangat diminati pasar internasional.",
+    desc: "Lorem Ipsum",
     image: "/products/Carbon-Active.png",
     specs: [
       { label: "Nilai Kalori", value: "7.300+ kcal/kg", progress: 95 },
       { label: "Durasi Bakar", value: "3 - 4 Jam", progress: 80 },
       { label: "Kadar Abu", value: "< 3%", progress: 25 }
-    ]
-  },
-  {
-    name: "Arang Kayu",
-    subName: "Wood Charcoal / Lump Charcoal",
-    badge: "BBQ Tradisional",
-    desc: "Arang bongkahan kayu keras alami. Mudah menyala, memberikan aroma khas smokey alami pada masakan panggangan, cocok untuk kuliner sate, steak, dan BBQ.",
-    image: "/products/wood_charcoal.png",
-    specs: [
-      { label: "Durasi Bakar", value: "2 - 3 Jam", progress: 60 },
-      { label: "Kadar Abu", value: "3 - 4%", progress: 35 },
-      { label: "Kadar Air", value: "< 6%", progress: 40 }
-    ]
-  },
-  {
-    name: "Arang Bambu",
-    subName: "Bamboo Charcoal",
-    badge: "Purifikasi & Deodoran",
-    desc: "Memiliki porositas tinggi dan struktur internal yang padat. Sangat baik untuk filter air, penyerap kelembaban ruangan, menetralisir bau, dan produk kecantikan.",
-    image: "/products/bamboo_charcoal.png",
-    specs: [
-      { label: "Daya Serap", value: "Sangat Tinggi", progress: 95 },
-      { label: "Kemurnian", value: "98%", progress: 98 },
-      { label: "Kadar Air", value: "< 8%", progress: 50 }
-    ]
-  },
-  {
-    name: "Arang Kemiri",
-    subName: "Candlenut Shell Charcoal",
-    badge: "Bahan Bakar Alternatif",
-    desc: "Terbuat dari cangkang kemiri yang keras dan kering. Menghasilkan panas stabil dan biasanya digunakan untuk pembakaran besi, pandai besi, maupun briket campuran.",
-    image: "/products/candlenut_charcoal.png",
-    specs: [
-      { label: "Nilai Kalori", value: "6.000+ kcal/kg", progress: 75 },
-      { label: "Kadar Abu", value: "< 5%", progress: 45 },
-      { label: "Kadar Air", value: "< 8%", progress: 50 }
     ]
   },
   {
@@ -79,90 +43,6 @@ const PRODUCTS = [
       { label: "Nilai Kalori", value: "7.200+ kcal/kg", progress: 92 },
       { label: "Durasi Bakar", value: "3 - 5 Jam", progress: 90 },
       { label: "Kadar Abu", value: "< 2.5%", progress: 20 }
-    ]
-  },
-  {
-    name: "Arang Serbuk Gergaji",
-    subName: "Sawdust Charcoal / Sawdust Briquette",
-    badge: "Ekspor BBQ Premium",
-    desc: "Terbuat dari serbuk gergaji kayu keras yang dikompres padat tanpa bahan kimia perekat, lalu dikarbonisasi. Sangat padat, awet, menghasilkan panas stabil tanpa percikan api.",
-    image: "/products/sawdust_charcoal.png",
-    specs: [
-      { label: "Nilai Kalori", value: "7.000+ kcal/kg", progress: 90 },
-      { label: "Durasi Bakar", value: "4 - 5 Jam", progress: 95 },
-      { label: "Kadar Abu", value: "< 3.5%", progress: 30 }
-    ]
-  },
-  {
-    name: "Arang Sekam Padi",
-    subName: "Rice Husk Charcoal",
-    badge: "Pertanian & Media Tanam",
-    desc: "Hasil pembakaran sekam padi tidak sempurna. Porositas tinggi, kaya unsur silika, ideal untuk media tanam hortikultura, pupuk tanah, maupun insulator panas industri cor logam.",
-    image: "/products/rice_husk_charcoal.png",
-    specs: [
-      { label: "Kandungan Silika", value: "90%", progress: 90 },
-      { label: "Porositas", value: "Tinggi", progress: 85 },
-      { label: "pH Tanah", value: "7.0 - 8.5", progress: 75 }
-    ]
-  },
-  {
-    name: "Arang Aktif / Karbon Aktif",
-    subName: "Activated Charcoal",
-    badge: "Filtrasi & Medis",
-    desc: "Karbon yang diaktifkan melalui pemanasan suhu tinggi dan uap untuk memperluas luas permukaan pori-porinya. Digunakan untuk penjernih air, masker udara, dan detoksifikasi tubuh.",
-    image: "/products/activated_charcoal.png",
-    specs: [
-      { label: "Iodine Number", value: "800 - 1100 mg/g", progress: 95 },
-      { label: "Luas Permukaan", value: "Sangat Tinggi", progress: 90 },
-      { label: "Kadar Abu", value: "< 4%", progress: 35 }
-    ]
-  },
-  {
-    name: "Arang Binchotan",
-    subName: "Binchotan / White Charcoal",
-    badge: "Khas Jepang Tradisional",
-    desc: "Arang premium khas Jepang yang terbuat dari kayu oak Ubame. Dibakar pada suhu yang sangat tinggi (>1000°C), menghasilkan arang yang keras seperti logam, tanpa asap, tanpa bau, dan sangat tahan lama.",
-    image: "/products/binchotan.png",
-    specs: [
-      { label: "Kadar Karbon", value: "> 95%", progress: 98 },
-      { label: "Durasi Bakar", value: "5 - 7 Jam", progress: 100 },
-      { label: "Tanpa Asap & Bau", value: "Ya (100%)", progress: 100 }
-    ]
-  },
-  {
-    name: "Arang Bonggol Jagung",
-    subName: "Corncob Charcoal",
-    badge: "Biomassa Alternatif",
-    desc: "Pemanfaatan limbah pertanian bonggol jagung menjadi bahan bakar biomassa ekonomis. Sering dibuat briket ramah lingkungan untuk konsumsi lokal dan panggangan.",
-    image: "/products/corncob_charcoal.png",
-    specs: [
-      { label: "Nilai Kalori", value: "5.000+ kcal/kg", progress: 60 },
-      { label: "Kadar Abu", value: "< 7%", progress: 55 },
-      { label: "Kadar Air", value: "< 8%", progress: 50 }
-    ]
-  },
-  {
-    name: "Arang Cangkang Sawit",
-    subName: "Palm Kernel Shell Charcoal",
-    badge: "Bahan Bakar Industri",
-    desc: "Arang yang terbuat dari limbah cangkang kelapa sawit, memiliki nilai kalori tinggi dan sering diekspor untuk bahan bakar industri berat, boiler, dan pengecoran logam.",
-    image: "/products/palm_shell_charcoal.png",
-    specs: [
-      { label: "Nilai Kalori", value: "5.800+ kcal/kg", progress: 72 },
-      { label: "Kadar Karbon", value: "> 75%", progress: 75 },
-      { label: "Kadar Air", value: "< 8%", progress: 50 }
-    ]
-  },
-  {
-    name: "Arang Tulang",
-    subName: "Bone Char / Bone Charcoal",
-    badge: "Pemurni & Filter Air",
-    desc: "Terbuat dari tulang hewan yang dikarbonisasi. Memiliki struktur pori kalsium fosfat alami yang sangat efektif menyerap fluorida, logam berat dalam air, serta dekolorisasi gula tebu.",
-    image: "/products/bone_charcoal.png",
-    specs: [
-      { label: "Kalsium Fosfat", value: "~80%", progress: 80 },
-      { label: "Daya Serap Logam", value: "Sangat Baik", progress: 90 },
-      { label: "Kadar Air", value: "< 5%", progress: 40 }
     ]
   }
 ];
