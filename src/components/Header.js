@@ -45,7 +45,7 @@ export default function Header() {
               />
             </svg>
           </span>
-          NeoKarbon
+          Coconut Shell Charcoal Indonesia
         </a>
 
         <nav className={styles.navPill}>
