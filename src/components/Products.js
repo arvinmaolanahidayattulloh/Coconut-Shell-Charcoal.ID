@@ -40,7 +40,7 @@ const PRODUCTS = [
     subName: "Charcoal Briquettes",
     badge: "Costume",
     desc: "Lorem Ipsum",
-    image: "/products/Briquettes.png",
+    image: "/products/Briquettes.jpg",
     specs: [
       { label: "Nilai Kalori", value: "7.200+ kcal/kg", progress: 92 },
       { label: "Durasi Bakar", value: "3 - 5 Jam", progress: 90 },
