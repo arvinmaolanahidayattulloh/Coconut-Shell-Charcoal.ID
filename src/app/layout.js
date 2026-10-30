@@ -1,7 +1,7 @@
 
 
 export const metadata = {
-  title: "NeoKarbon Indonesia - Produsen Briket Batu Bara & Arang Premium",
+  title: "Menyediakan Coconut Shell Charcoal.",
   description: "NeoKarbon Indonesia adalah produsen dan distributor briket batu bara serta arang berkualitas tinggi untuk kebutuhan industri, restoran, dan ekspor internasional. Sertifikasi ISO 9001.",
   keywords: "briket batu bara, arang briket, charcoal briquette, produsen briket, ekspor briket, briket industri, NeoKarbon Indonesia",
   openGraph: {
