@@ -16,19 +16,19 @@ export default function Hero() {
     <section className={`${styles.hero} wrap`} id="beranda">
       <div className={styles.heroGrid}>
         <RevealWrapper>
-          <span className="eyebrow">Produsen Briket Terpercaya</span>
+          <span className="eyebrow">Penyedia Kualitas Terbaik</span>
           <h1 className={styles.heroTitle}>
-            <SplitTextReveal text="Briket Batu Bara " delay={100} />
+            <SplitTextReveal text="Arang Batok Kelapa " delay={100} />
             <br />
             <span className={styles.titleAccent}>
               <SplitTextReveal text="Premium " delay={400} />
             </span>
-            <SplitTextReveal text="untuk" delay={400} />
+            <SplitTextReveal text="dari" delay={400} />
             <br />
             <SplitTextReveal text="Industri Indonesia" delay={700} />
           </h1>
           <p className={styles.heroDesc}>
-            NeoKarbon Indonesia memproduksi briket batu bara dan arang
+            menyediakan arang
             berkualitas tinggi dengan standar internasional. Solusi energi
             terpercaya untuk kebutuhan industri, restoran, dan ekspor.
           </p>
