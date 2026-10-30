@@ -47,7 +47,7 @@ export default function About() {
         <RevealWrapper delay={1}>
           <div className={styles.aboutVisual}>
             <img
-              src="/about-factory.png"
+              src="/Factory.jpg"
               alt="Fasilitas produksi PT Tunas Kembar Abadi"
               className={styles.aboutImage}
             />
