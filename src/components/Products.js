@@ -22,7 +22,7 @@ const PRODUCTS = [
     ]
   },
   {
-    name: "Carbon Active",
+    name: "Karbon Aktif",
     subName: "Coconut Shell Charcoal",
     badge: "Product",
     desc: "Lorem Ipsum",
