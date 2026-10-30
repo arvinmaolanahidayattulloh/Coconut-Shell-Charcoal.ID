@@ -5,7 +5,7 @@ import styles from "./WhyUs.module.css";
 
 const TILES = [
   {
-    value: "50.000 T",
+    value: "300 T",
     label: "Kapasitas / Tahun",
     desc: "Menjamin ketersediaan pasokan briket skala besar.",
   },
@@ -15,7 +15,7 @@ const TILES = [
     desc: "Retensi tinggi dari mitra industri nasional.",
   },
   {
-    value: "12.400 T",
+    value: "0 T",
     label: "Volume Ekspor",
     desc: "Pengiriman global ke Asia Timur & Timur Tengah.",
   },
