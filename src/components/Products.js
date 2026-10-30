@@ -12,7 +12,7 @@ const PRODUCTS = [
     subName: "Coconut Shell Charcoal",
     badge: "Best Seller",
     desc: "Lorem Ipsum.",
-    image: "/products/Natural.png",
+    image: "/products/Natural.jpg",
     specs: [
       { label: "Kadar Air", value: "4,37%", progress: 4.37 },
       { label: "Kadar Abu", value: "1,52%", progress: 1.52 },
