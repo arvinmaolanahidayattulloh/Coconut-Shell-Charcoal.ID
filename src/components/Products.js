@@ -156,10 +156,10 @@ export default function Products() {
       <RevealWrapper className={styles.sectionHead}>
         <span className="eyebrow">Produk Kami</span>
         <h2 className={styles.sectionTitle}>
-          Katalog Arang &amp; Batubara Lengkap
+          Katalog Produk
         </h2>
         <p className={styles.sectionDesc}>
-          Jelajahi 13 jenis bahan bakar padat alami dan olahan berkualitas tinggi kami. Geser atau klik kartu untuk informasi selengkapnya.
+          Lorem Ipsum. Geser atau klik kartu untuk informasi selengkapnya.
         </p>
       </RevealWrapper>
 
