@@ -70,7 +70,7 @@ export default function Hero() {
             <Particles count={40} className={styles.heroParticles} />
             <img
               src="/Coconut-Shell-Charcoal.jpg"
-              alt="Briket batu bara premium NeoKarbon Indonesia"
+              alt="Coconut-Shell-Charcoal-Indonesia"
               className={styles.heroImage}
             />
             <div className={styles.heroOverlayCard}>
