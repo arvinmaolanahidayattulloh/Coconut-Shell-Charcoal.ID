@@ -5,7 +5,7 @@ import styles from "./Partners.module.css";
 
 const PARTNERS = [
   {
-    name: "Pertamina",
+    name: "PT. INAGRIN Tbk.",
     logo: (
       <svg width="120" height="32" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M6 4h10v8H6V4z" fill="#0066B2" />
@@ -16,7 +16,7 @@ const PARTNERS = [
     ),
   },
   {
-    name: "Adaro Energy",
+    name: "PT. INAGRIN Tbk.",
     logo: (
       <svg width="130" height="32" viewBox="0 0 130 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M8 20c0 4.418-3.582 8-8 8s8-3.582 8-8zm0 0c0-4.418 3.582-8 8-8s-8 3.582-8 8z" fill="#39B54A" />
@@ -26,7 +26,7 @@ const PARTNERS = [
     ),
   },
   {
-    name: "Bukit Asam",
+    name: "PT. INAGRIN Tbk.",
     logo: (
       <svg width="120" height="32" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M4 24L12 8l8 16H4z" fill="var(--color-ember)" />
@@ -36,7 +36,7 @@ const PARTNERS = [
     ),
   },
   {
-    name: "Kideco",
+    name: "PT. INAGRIN Tbk.",
     logo: (
       <svg width="110" height="32" viewBox="0 0 110 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 4l8 8-8 8-8-8 8-8z" fill="#008080" />
@@ -46,7 +46,7 @@ const PARTNERS = [
     ),
   },
   {
-    name: "Bumi Resources",
+    name: "PT. INAGRIN Tbk.",
     logo: (
       <svg width="150" height="32" viewBox="0 0 150 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="12" cy="16" r="10" stroke="#b87333" strokeWidth="2" />
@@ -56,7 +56,7 @@ const PARTNERS = [
     ),
   },
   {
-    name: "Indo Tambangraya",
+    name: "PT. INAGRIN Tbk.",
     logo: (
       <svg width="160" height="32" viewBox="0 0 160 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 6l8 4.5v9l-8 4.5-8-4.5v-9L12 6z" fill="#c45e20" />
