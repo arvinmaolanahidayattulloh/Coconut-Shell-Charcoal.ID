@@ -14,9 +14,9 @@ const PRODUCTS = [
     desc: "Lorem Ipsum.",
     image: "/products/Natural.jpg",
     specs: [
-      { label: "Kadar Air", value: "4,37%", progress: 4.37 },
-      { label: "Kadar Abu", value: "1,52%", progress: 1.52 },
-      { label: "Zat Terbang", value: "11,37%", progress: 11.37 },
+      { label: "Kadar Air", value: "4,37%", progress: 20.37 },
+      { label: "Kadar Abu", value: "1,52%", progress: 10.52 },
+      { label: "Zat Terbang", value: "11,37%", progress: 71.37 },
       { label: "Karbon Tetap", value: "81,39%", progress: 81.39 },
       { label: "Nilai Kalori", value: "?%", progress: 0 }
     ]
@@ -28,11 +28,11 @@ const PRODUCTS = [
     desc: "Lorem Ipsum",
     image: "/products/Carbon-Active.png",
     specs: [
-      { label: "Kadar Air", value: "Maks. 4,5%", progress: 20 },
-      { label: "Kadar Abu", value: "Maks. 2,5%", progress: 15 },
-      { label: "Volatile Matter", value: "Maks. 15%", progress: 30 },
-      { label: "Iodine Number", value: "Min. 750 mg/g", progress: 85 },
-      { label: "Serap Benzena", value: "Min. 25%", progress: 40 }
+      { label: "Kadar Air", value: "4,5%", progress: 20 },
+      { label: "Kadar Abu", value: "2,5%", progress: 15 },
+      { label: "Volatile Matter", value: "15%", progress: 30 },
+      { label: "Iodine Number", value: "750 mg/g", progress: 85 },
+      { label: "Serap Benzena", value: "25%", progress: 40 }
     ]
   },
   {
