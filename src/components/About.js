@@ -16,22 +16,19 @@ export default function About() {
         <RevealWrapper>
           <span className="eyebrow">Tentang Kami</span>
           <h2 className={styles.aboutTitle}>
-            <SplitTextReveal text="Lebih dari Satu Dekade " delay={200} />
+            <SplitTextReveal text="Komitmen Menghasilkan " delay={200} />
             <br />
-            <SplitTextReveal text="Menghasilkan Energi Berkualitas" delay={400} />
+            <SplitTextReveal text="Arang Batok Kelapa Premium" delay={400} />
           </h2>
           <p className={styles.aboutText}>
-            NeoKarbon Indonesia didirikan pada tahun 2014 dengan misi
-            menyediakan briket batu bara dan arang berkualitas tinggi untuk
-            pasar domestik dan internasional. Dengan fasilitas produksi modern
-            di Kalimantan Selatan, kami mampu memenuhi kebutuhan energi
-            berbagai sektor industri.
+            Di Dirikan pada 19 Agustus 2026. Kami 
+            berdedikasi sebagai penyedia Coconut Shell Charcoal
+            berkualitas Premium.
           </p>
           <p className={styles.aboutText}>
-            Komitmen kami terhadap mutu dibuktikan dengan sertifikasi ISO 9001
-            dan standar ekspor internasional. Setiap produk melalui proses
-            quality control ketat untuk memastikan konsistensi kalori, kadar
-            air, dan kadar abu sesuai spesifikasi.
+            Melalui pengawasan mutu yang ketat, kami selalu memastikan konsistensi 
+            kalori dan kualitas produk guna memenuhi kebutuhan pasar B2B, baik 
+            untuk skala domestik maupun ekspor.
           </p>
           <a href="#produk" className={styles.aboutBtn}>
             Lihat Produk Kami
@@ -51,7 +48,7 @@ export default function About() {
           <div className={styles.aboutVisual}>
             <img
               src="/about-factory.png"
-              alt="Fasilitas produksi NeoKarbon Indonesia"
+              alt="Fasilitas produksi PT Tunas Kembar Abadi"
               className={styles.aboutImage}
             />
             <div className={styles.statsOverlay}>
