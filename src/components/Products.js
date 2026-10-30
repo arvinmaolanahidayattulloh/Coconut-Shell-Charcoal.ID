@@ -14,9 +14,11 @@ const PRODUCTS = [
     desc: "Lorem Ipsum.",
     image: "/products/Natural.png",
     specs: [
-      { label: "Nilai Kalori", value: "77,47+ kcal/kg", progress: 85 },
-      { label: "Kadar Abu", value: "1,52%", progress: 70 },
-      { label: "Kadar Air", value: "3,79 - 4,2%", progress: 60 }
+      { label: "Kadar Air", value: "4,37%", progress: 4.37 },
+      { label: "Kadar Abu", value: "1,52%", progress: 1.52 },
+      { label: "Zat Terbang", value: "11,37%", progress: 11.37 },
+      { label: "Karbon Tetap", value: "81,39%", progress: 81.39 },
+      { label: "Nilai Kalori", value: "?%", progress: 60 }
     ]
   },
   {
