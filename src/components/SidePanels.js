@@ -82,7 +82,7 @@ export function LeftPanel({ section = "beranda" }) {
                   </svg>
                 </a>
                 <a
-                  href="https://linkedin.com/in/arvinmaulana"
+                  href="https://linkedin.com/in/arvinmaolana"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.squareBtn}
@@ -98,7 +98,7 @@ export function LeftPanel({ section = "beranda" }) {
             <div className={styles.academyInfoBox}>
               <div className={styles.academyHeader}>
                 <ShieldCheck size={14} className={styles.academyIcon} />
-                <span className={styles.academyLabel}>Verified Alumni</span>
+                <span className={styles.academyLabel}>Verified</span>
               </div>
               <a
                 href="https://digitalindoacademy.com/"
@@ -106,10 +106,10 @@ export function LeftPanel({ section = "beranda" }) {
                 rel="noopener noreferrer"
                 className={styles.academyLink}
               >
-                Digital Indo Academy
+                DIGITALINDO ACADEMY
               </a>
               <p className={styles.academyDesc}>
-                Arvin Maulana merupakan lulusan resmi dari program inkubasi bisnis digital &amp; ekspor global.
+                Arvin Maolana merupakan lulusan resmi dari program inkubasi bisnis digital &amp; ekspor global.
               </p>
             </div>
           </div>
