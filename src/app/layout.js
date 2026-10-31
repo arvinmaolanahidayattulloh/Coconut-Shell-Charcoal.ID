@@ -6,8 +6,8 @@ export const metadata = {
   description: "Didirikan pada 30 Oktober 2026.",
   keywords: "arang tempurung kelapa, coconut shell charcoal, charcoal briquette, produsen arang, ekspor arang kelapa, PT Tunas Kembar Abadi",
   openGraph: {
-    title: "Coconut Shell Charcoal Indonesia - Arang Tempurung Kelapa Premium",
-    description: "Solusi energi terpercaya dengan arang tempurung kelapa berkualitas tinggi untuk kebutuhan industri, restoran, dan ekspor internasional.",
+    title: "Coconut Shell Charcoal Indonesia",
+    description: "Kebutuhan Industri, Restoran, dan Ekspor Internasional.",
     type: "website",
     locale: "id_ID",
   },
