@@ -5,8 +5,8 @@ import styles from "./WhyUs.module.css";
 
 const TILES = [
   {
-    value: "300 T",
-    label: "Kapasitas / Tahun",
+    value: "25 T",
+    label: "Kapasitas / Bulan",
     desc: "Menjamin ketersediaan pasokan briket skala besar.",
   },
   {
@@ -46,6 +46,11 @@ const STAGES = [
     num: "04",
     title: "Pengiriman Terjadwal",
     desc: "Distribusi aman menggunakan jaringan logistik darat dan laut langsung ke lokasi pabrik Anda atau pelabuhan tujuan.",
+  },
+  {
+    num: "05",
+    title: "Pembayaran Lunas",
+    desc: "Setelah Barang di Terima.",
   },
 ];
 
