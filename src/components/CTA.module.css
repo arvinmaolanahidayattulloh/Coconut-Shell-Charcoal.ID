@@ -157,7 +157,7 @@
 }
 
 /* =========================================
-   Bagian 2: Jaringan Kemitraan (Vertikal / Ke Bawah)
+   Bagian 2: Jaringan Kemitraan (Scroll Vertikal)
    ========================================= */
 .partnersContainer {
   margin-top: 100px;
@@ -171,13 +171,33 @@
   margin-bottom: 40px; 
 }
 
-/* Container Vertikal Ke Bawah */
+/* KOTAK SCROLL KE BAWAH (VERTIKAL) */
 .partnersListVertical {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 800px;
+  
+  width: 100%; /* MEMANJANG (Lebar penuh) */
+  max-height: 480px; /* Membatasi tinggi agar cuma memuat ~3 item */
+  overflow-y: auto; /* Memunculkan Scroll ke bawah */
+  
+  padding: 4px 12px 12px 4px; /* Ruang untuk bayangan kartu dan scrollbar */
   margin: 0 auto;
+  
+  /* Kustomisasi Scrollbar agar rapi */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+.partnersListVertical::-webkit-scrollbar {
+  width: 8px;
+}
+.partnersListVertical::-webkit-scrollbar-track {
+  background: transparent;
+}
+.partnersListVertical::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.2);
+  border-radius: 10px;
 }
 
 /* Kartu Mitra - Shape Background Terang */
@@ -308,24 +328,20 @@
   word-break: break-word;
 }
 
-/* Gambar Besar dengan Shape Mask (Kanan Kiri Bawah) */
+/* Gambar Besar Memanjang (TIDAK PENDEK/TERPOTONG) */
 .expandedImageWrapper {
   margin-top: 20px;
   width: 100%;
-  
-  /* Mask/Shape di Kanan Kiri Bawah Saja */
+  /* Lengkungan Shape di Kanan Kiri Bawah Saja */
   border-radius: 4px 4px 24px 24px; 
-  
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1); 
 }
 
 .expandedImage {
   width: 100%;
-  height: auto;
-  max-height: 400px;
+  height: auto; /* Gambar akan tampil utuh sesuai proporsi asli, tidak kepotong */
   display: block;
-  object-fit: cover;
 }
 
 /* Badge Styles */
