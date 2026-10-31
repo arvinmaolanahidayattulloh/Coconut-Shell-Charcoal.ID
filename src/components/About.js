@@ -6,8 +6,9 @@ import useCountUp from "@/hooks/useCountUp";
 import styles from "./About.module.css";
 
 export default function About() {
-  const produksi = useCountUp(50000, 2000);
-  const karyawan = useCountUp(200, 1800);
+  // Angka disesuaikan: 300 Ton, 6 Pekerja, 98% Kepuasan
+  const produksi = useCountUp(300, 2000);
+  const karyawan = useCountUp(6, 1800);
   const kepuasan = useCountUp(98, 1500);
 
   return (
@@ -21,7 +22,7 @@ export default function About() {
             <SplitTextReveal text="Arang Batok Kelapa Premium" delay={400} />
           </h2>
           <p className={styles.aboutText}>
-            Di Dirikan pada 19 Agustus 2026. Kami 
+            Didirikan pada 19 Agustus 2026. Kami 
             berdedikasi sebagai penyedia Coconut Shell Charcoal
             berkualitas Premium.
           </p>
@@ -54,15 +55,15 @@ export default function About() {
             <div className={styles.statsOverlay}>
               <div className={styles.statItem}>
                 <div className={styles.statValue} ref={produksi.ref}>
-                  {produksi.count.toLocaleString("id-ID")}
+                  {produksi.count}
                 </div>
-                <div className={styles.statDesc}>Ton/Tahun Produksi</div>
+                <div className={styles.statDesc}>Ton / Tahun</div>
               </div>
               <div className={styles.statItem}>
                 <div className={styles.statValue} ref={karyawan.ref}>
-                  {karyawan.count}+
+                  {karyawan.count}
                 </div>
-                <div className={styles.statDesc}>Tenaga Profesional</div>
+                <div className={styles.statDesc}>Pekerja</div>
               </div>
               <div className={styles.statItem}>
                 <div className={styles.statValue} ref={kepuasan.ref}>
