@@ -18,12 +18,12 @@ export default function Hero() {
         <RevealWrapper>
           <span className="eyebrow">Penyedia Kualitas Terbaik</span>
           <h1 className={styles.heroTitle}>
-            <SplitTextReveal text="Arang Batok Kelapa " delay={100} />
+            <SplitTextReveal text="Arang Tempurung Kelapa " delay={100} />
             <br />
             <span className={styles.titleAccent}>
               <SplitTextReveal text="Premium " delay={400} />
             </span>
-            <SplitTextReveal text="dari" delay={400} />
+            <SplitTextReveal text="Dari" delay={400} />
             <br />
             <SplitTextReveal text="Industri Indonesia" delay={700} />
           </h1>
