@@ -13,19 +13,9 @@ const PRODUCTS_MAP = {
 };
 
 const PRODUCTS_LIST = [
-  { name: "Batu Bara", price: 95, minOrder: 50 }, // USD/Ton
-  { name: "Arang Batok Kelapa", price: 1050, minOrder: 15 },
-  { name: "Arang Kayu", price: 780, minOrder: 15 },
-  { name: "Arang Bambu", price: 920, minOrder: 5 },
-  { name: "Arang Kemiri", price: 680, minOrder: 20 },
-  { name: "Arang Briket", price: 1100, minOrder: 15 },
-  { name: "Arang Serbuk Gergaji", price: 980, minOrder: 15 },
-  { name: "Arang Sekam Padi", price: 280, minOrder: 10 },
-  { name: "Arang Aktif / Karbon Aktif", price: 1400, minOrder: 5 },
-  { name: "Arang Binchotan", price: 1950, minOrder: 2 },
-  { name: "Arang Bonggol Jagung", price: 420, minOrder: 10 },
-  { name: "Arang Cangkang Sawit", price: 650, minOrder: 25 },
-  { name: "Arang Tulang", price: 850, minOrder: 5 }
+  { name: "Natural", price: 0, minOrder: 0 }, // USD/Ton
+  { name: "Karbon Active", price: 0, minOrder: 0 }
+  { name: "Briket", price: 850, minOrder: 0 }
 ];
 
 export function LeftPanel({ section = "beranda" }) {
@@ -669,8 +659,8 @@ export function RightPanel({ section = "beranda" }) {
                 </div>
               </div>
               <div className={styles.salesDetails}>
-                <div><span>WhatsApp:</span> <strong>+62 812-3456-789</strong></div>
-                <div><span>WeChat ID:</span> <strong>neokarbon_sales</strong></div>
+                <div><span>WhatsApp:</span> <strong>+62 815-681-52525</strong></div>
+                <div><span>WeChat ID:</span> <strong>ArvinMaolana</strong></div>
                 <div><span>Jam Kerja:</span> <strong>Senin-Sabtu (08:00 - 17:00 WIB)</strong></div>
               </div>
               <a
