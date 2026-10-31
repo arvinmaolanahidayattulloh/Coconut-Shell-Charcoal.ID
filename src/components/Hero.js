@@ -12,7 +12,7 @@ export default function Hero() {
   // Silakan ubah angka '5', '200', dan '15' sesuai dengan data aktual perusahaan Anda.
   const yearsCount = useCountUp(0, 5); 
   const clientsCount = useCountUp(1, 200); 
-  const countriesCount = useCountUp(1, 15); 
+  const countriesCount = useCountUp(0, 15); 
 
   return (
     <section className={`${styles.hero} wrap`} id="beranda">
