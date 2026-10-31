@@ -176,15 +176,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  
-  width: 100%; /* MEMANJANG (Lebar penuh) */
-  max-height: 480px; /* Membatasi tinggi agar cuma memuat ~3 item */
-  overflow-y: auto; /* Memunculkan Scroll ke bawah */
-  
-  padding: 4px 12px 12px 4px; /* Ruang untuk bayangan kartu dan scrollbar */
+  width: 100%;
+  max-height: 480px; 
+  overflow-y: auto; 
+  padding: 4px 12px 12px 4px; 
   margin: 0 auto;
-  
-  /* Kustomisasi Scrollbar agar rapi */
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
@@ -200,7 +196,7 @@
   border-radius: 10px;
 }
 
-/* Kartu Mitra - Shape Background Terang */
+/* Kartu Mitra */
 .partnerCard {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -236,7 +232,7 @@
   gap: 16px;
 }
 
-/* Logo Kecil di Kiri */
+/* Logo & Teks Header */
 .partnerLogoWrapper {
   width: 56px;
   height: 56px;
@@ -256,7 +252,6 @@
   object-fit: contain;
 }
 
-/* Teks Sebelah Kanan Logo */
 .partnerTitleArea {
   display: flex;
   flex-direction: column;
@@ -289,7 +284,6 @@
   flex-shrink: 0;
 }
 
-/* Animasi Buka Detail */
 .expandedContent {
   animation: fadeIn 0.3s ease forwards;
 }
@@ -299,13 +293,33 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* List Detail Informasi */
-.partnerDetails {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+/* =========================================
+   DESAIN GRID & DETAIL INFORMASI
+   ========================================= */
+.infoGrid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHeading {
+  font-size: 13px;
+  color: #c45e20; 
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  border-bottom: 1px dashed #e5e7eb;
+  padding-bottom: 6px;
 }
 
 .detailItem {
@@ -317,22 +331,104 @@
 }
 
 .detailLabel {
-  color: #6b7280; 
+  color: #6b7280;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .detailValue {
-  color: #111827; 
+  color: #111827;
   font-weight: 600;
   text-align: right;
   word-break: break-word;
 }
 
-/* Gambar Besar Memanjang (TIDAK PENDEK/TERPOTONG) */
-.expandedImageWrapper {
-  margin-top: 20px;
+/* Desain Khusus NIB & NPWP */
+.detailValueBadge {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #111827;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+/* Desain Khusus Rekening Bank */
+.detailValueHighlight {
+  color: #059669;
+  font-weight: 700;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  display: inline-block;
+}
+
+/* =========================================
+   BAGIAN PETA & ALAMAT OPERASIONAL
+   ========================================= */
+.locationSection {
+  margin-top: 24px;
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.addressBox {
+  margin-bottom: 16px;
+}
+
+.detailText {
+  color: #111827;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.coordinateText {
+  font-family: monospace;
+  color: #4b5563;
+  font-size: 12px;
+  background: #e5e7eb;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 8px;
+  border: 1px solid #d1d5db;
+}
+
+/* Container Iframe Peta */
+.mapContainer {
   width: 100%;
-  /* Lengkungan Shape di Kanan Kiri Bawah Saja */
+  height: 250px; 
+  border-radius: 12px;
+  overflow: hidden; 
+  position: relative;
+  border: 1px solid #d1d5db;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+}
+
+.mapContainer iframe {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: none;
+}
+
+/* =========================================
+   FOTO PABRIK / STOK
+   ========================================= */
+.expandedImageWrapper {
+  margin-top: 24px;
+  width: 100%;
   border-radius: 4px 4px 24px 24px; 
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1); 
@@ -340,11 +436,13 @@
 
 .expandedImage {
   width: 100%;
-  height: auto; /* Gambar akan tampil utuh sesuai proporsi asli, tidak kepotong */
+  height: auto; 
   display: block;
 }
 
-/* Badge Styles */
+/* =========================================
+   BADGE STATUS MITRA
+   ========================================= */
 .badgeVerified,
 .badgeSupplier {
   display: inline-flex;
@@ -368,7 +466,9 @@
   border: 1px solid #fed7aa;
 }
 
-/* Responsive Styles */
+/* =========================================
+   RESPONSIVE MOBILE
+   ========================================= */
 @media (max-width: 768px) {
   .partnersContainer {
     margin-top: 72px;
@@ -383,12 +483,21 @@
     flex-direction: row;
     align-items: flex-start;
   }
+  
+  .infoGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
   .detailItem {
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px;
+    gap: 4px;
   }
-  .detailValue {
+  
+  .detailValue,
+  .detailValueBadge,
+  .detailValueHighlight {
     text-align: left;
   }
 }
