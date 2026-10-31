@@ -55,7 +55,7 @@ export function LeftPanel({ section = "beranda" }) {
                 <span className={styles.founderOverlayTag}>FOUNDER &amp; CEO</span>
                 <h4 className={styles.founderOverlayName}>Arvin M. H</h4>
                 <p className={styles.founderOverlayQuote}>
-                  "Menghadirkan briket arang batok kelapa premium dengan standar mutu internasional."
+                  "Menghadirkan Arang Tempurung Kelapa."
                 </p>
               </div>
 
@@ -96,10 +96,10 @@ export function LeftPanel({ section = "beranda" }) {
                 rel="noopener noreferrer"
                 className={styles.academyLink}
               >
-                DIGITALINDO ACADEMY
+                Digitalindo Academy
               </a>
               <p className={styles.academyDesc}>
-                Arvin Maolana merupakan lulusan resmi dari program inkubasi bisnis digital &amp; ekspor global.
+                Arvin Maolana merupakan lulusan resmi dari program inkubasi bisnis digital.
               </p>
             </div>
           </div>
@@ -274,7 +274,7 @@ export function LeftPanel({ section = "beranda" }) {
             <div className={styles.comparisonTable}>
               <div className={styles.compRowHeader}>
                 <span>Metrik</span>
-                <span>TKA Premium</span>
+                <span>Charcoal</span>
                 <span>Biasa</span>
               </div>
               <div className={styles.compRow}>
@@ -321,7 +321,7 @@ export function LeftPanel({ section = "beranda" }) {
               </div>
               <div className={styles.addressBox}>
                 <h6>Surel Penjualan</h6>
-                <p>tunaskembarabadi@gmail.com</p>
+                <p>Info@CoconutShellCharcoal.ID</p>
               </div>
             </div>
           </div>
@@ -345,7 +345,7 @@ export function LeftPanel({ section = "beranda" }) {
 
 export function RightPanel({ section = "beranda" }) {
   const [messages, setMessages] = useState([
-    { sender: "agent", text: "Halo! Selamat datang di PT Tunas Kembar Abadi. Saya Arvin, Live Agent Anda." }
+    { sender: "agent", text: "Halo! Selamat datang di Coconut Shell Charcoal Indonesia. Saya Artificial Intelligence, Live Agent Anda." }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -439,8 +439,8 @@ export function RightPanel({ section = "beranda" }) {
                 <span className={styles.activeDot} />
               </div>
               <div>
-                <h4 className={styles.agentName}>Arvin (Live Support)</h4>
-                <span className={styles.agentStatus}>PT Tunas Kembar Abadi</span>
+                <h4 className={styles.agentName}>Artificial Intelligence</h4>
+                <span className={styles.agentStatus}>Coconut Shell Charcoal Indonesia</span>
               </div>
             </div>
 
@@ -652,14 +652,14 @@ export function RightPanel({ section = "beranda" }) {
 
             <div className={styles.salesCard}>
               <div className={styles.salesHeader}>
-                <div className={styles.salesAvatar}>AM</div>
+                <div className={styles.salesAvatar}>LP</div>
                 <div>
-                  <h6>Arvin Maolana</h6>
-                  <span>Founder & CEO</span>
+                  <h6>Layanan Pelanggan</h6>
+                  <span>Support & Inquiries</span>
                 </div>
               </div>
               <div className={styles.salesDetails}>
-                <div><span>WhatsApp:</span> <strong>+62 851-6815-2525</strong></div>
+                <div><span>WhatsApp:</span> <strong>+62 815-681-52525</strong></div>
                 <div><span>WeChat ID:</span> <strong>ArvinMaolana</strong></div>
                 <div><span>Jam Kerja:</span> <strong>Senin-Sabtu (08:00 - 17:00 WIB)</strong></div>
               </div>
@@ -669,7 +669,7 @@ export function RightPanel({ section = "beranda" }) {
                 rel="noopener noreferrer"
                 className={styles.salesWaBtn}
               >
-                Hubungi Arvin Sekarang
+                Hubungi Layanan Pelanggan
               </a>
             </div>
           </div>
