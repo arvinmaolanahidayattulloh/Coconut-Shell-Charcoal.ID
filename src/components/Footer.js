@@ -42,7 +42,7 @@ export default function Footer() {
                 />
               </svg>
             </span>
-            PT Tunas Kembar Abadi
+            Coconut Shell Charcoal Indonesia
           </a>
           <p className={styles.footerDesc}>
             Produsen dan distributor arang tempurung kelapa berkualitas
