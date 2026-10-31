@@ -1,3 +1,5 @@
+"use client";
+
 import SocialCard from "./SocialCard";
 import styles from "./Footer.module.css";
 
@@ -40,10 +42,10 @@ export default function Footer() {
                 />
               </svg>
             </span>
-            NeoKarbon
+            PT Tunas Kembar Abadi
           </a>
           <p className={styles.footerDesc}>
-            Produsen dan distributor briket batu bara serta arang berkualitas
+            Produsen dan distributor arang tempurung kelapa berkualitas
             tinggi untuk kebutuhan industri, restoran, dan ekspor
             internasional.
           </p>
@@ -93,8 +95,8 @@ export default function Footer() {
       </div>
 
       <div className={styles.footerBottom}>
-        <span>© 2026 Coconut Shell Charcoal Indonesia. Seluruh Hak Di Lindungi.</span>
-        <span>remium Indonesia</span>
+        <span>© 2026 Coconut Shell Charcoal Indonesia. Seluruh Hak Dilindungi.</span>
+        <span>Premium Indonesia</span>
       </div>
     </footer>
   );
