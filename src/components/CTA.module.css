@@ -176,20 +176,14 @@
   color: var(--color-white);
   font-size: var(--text-3xl);
   font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.partnersSubtitle {
-  color: var(--color-ash);
-  font-size: var(--text-lg);
-  margin-bottom: 48px;
+  margin-bottom: 40px; /* Jarak diperbesar karena subtitle dihapus */
 }
 
 .partnersList {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 24px;
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -200,34 +194,44 @@
   padding: 32px;
   text-align: left;
   transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .partnerCard:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-6px);
+}
+
+.activeCard {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(196, 94, 32, 0.3);
 }
 
 .partnerHeader {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
 }
 
+.partnerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .partnerLogoWrapper {
-  width: 90px;
-  height: 90px;
-  border-radius: 16px;
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.95); 
   padding: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .partnerLogo {
@@ -236,39 +240,86 @@
   object-fit: contain;
 }
 
-.partnerBadges {
+.partnerTitleArea {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: flex-end;
-}
-
-.partnerInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .partnerName {
   color: var(--color-white);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.3;
   margin: 0;
 }
 
-.partnerEmail {
-  display: inline-flex;
-  align-items: center;
+.partnerBadges {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  color: var(--color-ash);
-  font-size: 15px;
-  text-decoration: none;
-  transition: color 0.2s ease;
 }
 
-.partnerEmail:hover {
+.toggleIcon {
+  color: var(--color-ash);
+  flex-shrink: 0;
+}
+
+/* Bagian Detail Informasi List */
+.partnerDetails {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 12px;
+}
+
+.detailItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  gap: 16px;
+}
+
+.detailLabel {
+  color: var(--color-ash);
+  font-weight: 400;
+}
+
+.detailValue {
   color: var(--color-white);
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Gambar Besar Expandable */
+.expandedImageWrapper {
+  margin-top: 24px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  animation: fadeInDown 0.3s ease forwards;
+}
+
+.expandedImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  max-height: 350px;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Badge Styles */
@@ -276,21 +327,21 @@
 .badgeSupplier {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 30px;
+  padding: 4px 10px;
+  border-radius: 20px;
 }
 
 .badgeVerified {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.15); /* Warna Hijau */
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .badgeSupplier {
-  background: rgba(196, 94, 32, 0.15);
+  background: rgba(196, 94, 32, 0.15); /* Warna Orange */
   color: #fb923c;
   border: 1px solid rgba(196, 94, 32, 0.3);
 }
@@ -305,5 +356,21 @@
   }
   .partnersList {
     grid-template-columns: 1fr;
+  }
+  .partnerIdentity {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .partnerHeader {
+    align-items: flex-start;
+  }
+  .detailItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .detailValue {
+    text-align: left;
   }
 }
