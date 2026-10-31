@@ -14,72 +14,25 @@ export default function CTA() {
     setOpenPartner(openPartner === id ? null : id);
   };
 
-  // Data Mitra (1 Asli, 4 Lorem Ipsum)
+  // Data Mitra (1 Saja sesuai permintaan)
   const partnersData = [
     {
       id: "tka",
-      name: "PT. Tunas Kembar Abadi",
+      name: "PT. TUNAS KEMBAR ABADI",
       logo: "/mitra/TunasKembarAbadi/TunasKembarAbadi.png",
       date: "19 Agustus 2026",
       badges: ["Verified", "Supplier"],
-      anRekening: "Tunas Kembar Abadi PT",
+      anRekening: "PT. Tunas Kembar Abadi",
       noRekening: "BCA : 8692824902",
-      kapasitas: "300T / Tahun",
-      phone: "+62 851 681 52525",
-      email: "TunasKembarAbadi@Gmail.Com",
+      nib: "1908260098691",
+      npwp: "1000000010800297",
+      direktur: "ARVIN MAOLANA HIDAYATTULLOH",
+      alamatKantor: "Kemiri Muka, Beji, Kota Depok, Jawa Barat 16423",
+      alamatOperasional: "Tajur, Kec. Citeureup, Kabupaten Bogor, Jawa Barat 16810",
+      phone: "0851-6815-2525 / 0856-1261-039",
+      email: "tunaskembarabadi@gmail.com",
+      maps: "https://share.google/OiDF3CxmSjgxiOBWW",
       image: "/mitra/TunasKembarAbadi/Stock.jpg"
-    },
-    {
-      id: "mitra2",
-      name: "PT. Lorem Ipsum Alpha",
-      logo: "/logo-mitra.png",
-      date: "01 Januari 2024",
-      badges: ["Supplier"],
-      anRekening: "Lorem Ipsum Corp",
-      noRekening: "Mandiri : 1234567890",
-      kapasitas: "150T / Tahun",
-      phone: "+62 800 111 2222",
-      email: "alpha@loremipsum.com",
-      image: "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=600&q=80"
-    },
-    {
-      id: "mitra3",
-      name: "PT. Lorem Ipsum Beta",
-      logo: "/logo-mitra.png",
-      date: "15 Maret 2023",
-      badges: ["Supplier"],
-      anRekening: "Beta Ipsum Sejahtera",
-      noRekening: "BNI : 0987654321",
-      kapasitas: "200T / Tahun",
-      phone: "+62 800 333 4444",
-      email: "beta@loremipsum.com",
-      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80"
-    },
-    {
-      id: "mitra4",
-      name: "PT. Lorem Ipsum Gamma",
-      logo: "/logo-mitra.png",
-      date: "10 November 2025",
-      badges: ["Verified"],
-      anRekening: "Gamma Global",
-      noRekening: "BRI : 1122334455",
-      kapasitas: "100T / Tahun",
-      phone: "+62 800 555 6666",
-      email: "gamma@loremipsum.com",
-      image: "https://images.unsplash.com/photo-1665686376173-ada7a0031a85?auto=format&fit=crop&w=600&q=80"
-    },
-    {
-      id: "mitra5",
-      name: "PT. Lorem Ipsum Delta",
-      logo: "/logo-mitra.png",
-      date: "22 Februari 2022",
-      badges: ["Supplier"],
-      anRekening: "Delta Industri",
-      noRekening: "BCA : 5544332211",
-      kapasitas: "250T / Tahun",
-      phone: "+62 800 777 8888",
-      email: "delta@loremipsum.com",
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80"
     }
   ];
 
@@ -193,6 +146,15 @@ export default function CTA() {
               {openPartner === mitra.id && (
                 <div className={styles.expandedContent} onClick={(e) => e.stopPropagation()}>
                   <div className={styles.partnerDetails}>
+                    
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>NIB / NPWP</span>
+                      <span className={styles.detailValue}>{mitra.nib} / {mitra.npwp}</span>
+                    </div>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Direktur Utama</span>
+                      <span className={styles.detailValue}>{mitra.direktur}</span>
+                    </div>
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>A.N Rekening</span>
                       <span className={styles.detailValue}>{mitra.anRekening}</span>
@@ -202,17 +164,27 @@ export default function CTA() {
                       <span className={styles.detailValue}>{mitra.noRekening}</span>
                     </div>
                     <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Kapasitas Prod.</span>
-                      <span className={styles.detailValue}>{mitra.kapasitas}</span>
-                    </div>
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Nomor</span>
+                      <span className={styles.detailLabel}>Telepon</span>
                       <span className={styles.detailValue}>{mitra.phone}</span>
                     </div>
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>Email</span>
                       <span className={styles.detailValue}>{mitra.email}</span>
                     </div>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Alamat Terdaftar</span>
+                      <span className={styles.detailValue}>{mitra.alamatKantor}</span>
+                    </div>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Operasional & Maps</span>
+                      <span className={styles.detailValue}>
+                        {mitra.alamatOperasional} <br/>
+                        <a href={mitra.maps} target="_blank" rel="noopener noreferrer" style={{ color: '#0070f3', textDecoration: 'underline' }}>
+                          Buka di Google Maps
+                        </a>
+                      </span>
+                    </div>
+
                   </div>
 
                   <div className={styles.expandedImageWrapper}>
