@@ -2,12 +2,12 @@ import "./globals.css";
 import Script from "next/script";
 
 export const metadata = {
-  title: "Coconut Shell Charcoal ID",
-  description: "NeoKarbon Indonesia adalah produsen dan distributor briket batu bara serta arang berkualitas tinggi untuk kebutuhan industri, restoran, dan ekspor internasional. Sertifikasi ISO 9001.",
-  keywords: "briket batu bara, arang briket, charcoal briquette, produsen briket, ekspor briket, briket industri, NeoKarbon Indonesia",
+  title: "Coconut Shell Charcoal Indonesia",
+  description: "Didirikan pada 30 Oktober 2026.",
+  keywords: "arang tempurung kelapa, coconut shell charcoal, charcoal briquette, produsen arang, ekspor arang kelapa, PT Tunas Kembar Abadi",
   openGraph: {
-    title: "NeoKarbon Indonesia - Briket Batu Bara Premium",
-    description: "Solusi energi terpercaya dengan briket batu bara dan arang berkualitas tinggi. 10+ tahun pengalaman, 500+ klien industri.",
+    title: "Coconut Shell Charcoal Indonesia - Arang Tempurung Kelapa Premium",
+    description: "Solusi energi terpercaya dengan arang tempurung kelapa berkualitas tinggi untuk kebutuhan industri, restoran, dan ekspor internasional.",
     type: "website",
     locale: "id_ID",
   },
