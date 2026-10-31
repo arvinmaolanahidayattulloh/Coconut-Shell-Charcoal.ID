@@ -14,9 +14,10 @@ const PRODUCTS_MAP = {
 
 const PRODUCTS_LIST = [
   { name: "Natural", price: 0, minOrder: 0 }, // USD/Ton
-  { name: "Karbon Active", price: 0, minOrder: 0 }
+  { name: "Karbon Active", price: 0, minOrder: 0 } // <--- Kurang tanda koma di akhir baris ini
   { name: "Briket", price: 850, minOrder: 0 }
 ];
+
 
 export function LeftPanel({ section = "beranda" }) {
   const [leftTab, setLeftTab] = useState("calc");
