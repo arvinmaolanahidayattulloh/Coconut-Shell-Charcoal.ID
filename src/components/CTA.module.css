@@ -87,7 +87,7 @@
   z-index: 3;
 }
 
-.btnLight {
+.btnLight, .btnGhost {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -96,15 +96,18 @@
   font-weight: 500;
   padding: 14px 28px;
   border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.btnLight {
   border: 1px solid rgba(255, 255, 255, 0.8);
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
   color: var(--color-white);
-  cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-  white-space: nowrap;
 }
 
 .btnLight:hover {
@@ -114,22 +117,11 @@
 }
 
 .btnGhost {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 500;
-  padding: 14px 28px;
-  border-radius: var(--radius-full);
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   color: var(--color-white);
-  cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-  white-space: nowrap;
 }
 
 .btnGhost:hover {
@@ -139,25 +131,17 @@
 }
 
 @media (max-width: 860px) {
-  .cta {
-    padding: 56px 32px;
-  }
-  .ctaTitle {
-    font-size: var(--text-3xl);
-  }
+  .cta { padding: 56px 32px; }
+  .ctaTitle { font-size: var(--text-3xl); }
 }
 
 @media (max-width: 480px) {
-  .cta {
-    padding: 40px 24px;
-  }
-  .ctaTitle {
-    font-size: var(--text-2xl);
-  }
+  .cta { padding: 40px 24px; }
+  .ctaTitle { font-size: var(--text-2xl); }
 }
 
 /* =========================================
-   Bagian 2: Jaringan Kemitraan (Scroll Vertikal)
+   Bagian 2: Jaringan Kemitraan
    ========================================= */
 .partnersContainer {
   margin-top: 100px;
@@ -165,35 +149,20 @@
 }
 
 .partnersTitle {
-  color: var(--color-white);
+  color: #111827; /* PERBAIKAN: Warna diubah menjadi gelap agar senada */
   font-size: var(--text-3xl);
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 40px; 
 }
 
-/* KOTAK SCROLL KE BAWAH (VERTIKAL) */
+/* PERBAIKAN: max-height dan overflow-y dihapus agar tidak terpotong */
 .partnersListVertical {
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  max-height: 480px; 
-  overflow-y: auto; 
-  padding: 4px 12px 12px 4px; 
+  padding: 4px; 
   margin: 0 auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.2) transparent;
-}
-
-.partnersListVertical::-webkit-scrollbar {
-  width: 8px;
-}
-.partnersListVertical::-webkit-scrollbar-track {
-  background: transparent;
-}
-.partnersListVertical::-webkit-scrollbar-thumb {
-  background-color: rgba(255,255,255,0.2);
-  border-radius: 10px;
 }
 
 /* Kartu Mitra */
@@ -232,7 +201,6 @@
   gap: 16px;
 }
 
-/* Logo & Teks Header */
 .partnerLogoWrapper {
   width: 56px;
   height: 56px;
@@ -286,6 +254,7 @@
 
 .expandedContent {
   animation: fadeIn 0.3s ease forwards;
+  cursor: default; /* Kursor normal saat di dalam konten detail */
 }
 
 @keyframes fadeIn {
@@ -294,14 +263,14 @@
 }
 
 /* =========================================
-   DESAIN GRID & DETAIL INFORMASI
+   DESAIN GRID & DETAIL INFORMASI FULL
    ========================================= */
 .infoGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
-  margin-top: 20px;
-  padding-top: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  margin-top: 24px;
+  padding-top: 24px;
   border-top: 1px solid #e5e7eb;
 }
 
@@ -317,9 +286,9 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 700;
-  margin: 0 0 4px 0;
+  margin: 0 0 8px 0;
   border-bottom: 1px dashed #e5e7eb;
-  padding-bottom: 6px;
+  padding-bottom: 8px;
 }
 
 .detailItem {
@@ -343,7 +312,6 @@
   word-break: break-word;
 }
 
-/* Desain Khusus NIB & NPWP */
 .detailValueBadge {
   background: #f3f4f6;
   border: 1px solid #d1d5db;
@@ -356,7 +324,6 @@
   letter-spacing: 1px;
 }
 
-/* Desain Khusus Rekening Bank */
 .detailValueHighlight {
   color: #059669;
   font-weight: 700;
@@ -369,18 +336,27 @@
 }
 
 /* =========================================
-   BAGIAN PETA & ALAMAT OPERASIONAL
+   BAGIAN PETA & ALAMAT
    ========================================= */
 .locationSection {
-  margin-top: 24px;
+  margin-top: 32px;
   background: #f9fafb;
-  padding: 20px;
+  padding: 24px;
   border-radius: 16px;
   border: 1px solid #e5e7eb;
 }
 
+.addressGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
 .addressBox {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .detailText {
@@ -391,27 +367,15 @@
   margin: 0;
 }
 
-.coordinateText {
-  font-family: monospace;
-  color: #4b5563;
-  font-size: 12px;
-  background: #e5e7eb;
-  padding: 4px 8px;
-  border-radius: 6px;
-  display: inline-block;
-  margin-top: 8px;
-  border: 1px solid #d1d5db;
-}
-
-/* Container Iframe Peta */
 .mapContainer {
   width: 100%;
-  height: 250px; 
+  height: 280px; 
   border-radius: 12px;
   overflow: hidden; 
   position: relative;
   border: 1px solid #d1d5db;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+  margin-bottom: 16px;
 }
 
 .mapContainer iframe {
@@ -421,6 +385,22 @@
   top: 0;
   left: 0;
   border: none;
+}
+
+.btnMaps {
+  display: inline-block;
+  background: #c45e20;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.btnMaps:hover {
+  background: #a04b19;
 }
 
 /* =========================================
@@ -470,23 +450,14 @@
    RESPONSIVE MOBILE
    ========================================= */
 @media (max-width: 768px) {
-  .partnersContainer {
-    margin-top: 72px;
-  }
-  .partnersTitle {
-    font-size: var(--text-2xl);
-  }
-  .partnerCard {
-    padding: 20px;
-  }
-  .partnerIdentity {
-    flex-direction: row;
-    align-items: flex-start;
-  }
+  .partnersContainer { margin-top: 72px; }
+  .partnersTitle { font-size: var(--text-2xl); }
+  .partnerCard { padding: 20px; }
+  .partnerIdentity { flex-direction: row; align-items: flex-start; }
   
   .infoGrid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 32px;
   }
 
   .detailItem {
