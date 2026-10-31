@@ -22,7 +22,7 @@ export default function About() {
             <SplitTextReveal text="Arang Batok Kelapa Premium" delay={400} />
           </h2>
           <p className={styles.aboutText}>
-            Didirikan pada 19 Agustus 2026. Kami 
+            Didirikan pada 30 Oktober 2026. Kami 
             berdedikasi sebagai penyedia Coconut Shell Charcoal
             berkualitas Premium.
           </p>
