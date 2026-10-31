@@ -21,24 +21,42 @@ export default function CTA() {
       logo: "/mitra/TunasKembarAbadi/TunasKembarAbadi.png",
       date: "19 Agustus 2026",
       badges: ["Verified", "Supplier"],
-      anRekening: "PT. Tunas Kembar Abadi",
-      noRekening: "BCA : 8692824902",
+      
+      // 01 IDENTITAS & LEGALITAS PERUSAHAAN
+      skKemenkumham: "AHU-A114664.AH.01.30.TAHUN 2026",
+      tglPendirian: "19 AGUSTUS 2026",
       nib: "1908260098691",
       npwp: "1000000010800297",
-      direktur: "ARVIN MAOLANA HIDAYATTULLOH",
+      kbli: "47599",
       alamatKantor: "Kemiri Muka, Beji, Kota Depok, Jawa Barat 16423",
       alamatOperasional: "Tajur, Kec. Citeureup, Kabupaten Bogor, Jawa Barat 16810",
-      koordinat: "-6.536306, 106.892095", // Koordinat area Citeureup/Tajur
-      embedMap: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3964.123456789!2d106.892095!3d-6.536306!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMzInMTAuNyJTIDEwNsKwNTMnMzEuNSJF!5e0!3m2!1sid!2sid!4v1700000000000",
-      phone: "0851-6815-2525 / 0856-1261-039",
+      
+      // 02 INFORMASI PERBANKAN
+      bank: "BCA Bank Central Asia",
+      anRekening: "PT. Tunas Kembar Abadi",
+      noRekening: "8692824902",
+      swiftCode: "CENAIDJA",
+      
+      // 03 PENANGGUNG JAWAB
+      direktur: "ARVIN MAOLANA HIDAYATTULLOH",
+      jabatan: "Chief Executive Officer / Direktur",
+      nik: "3304031108040002",
+      
+      // 04 INFORMASI KONTAK & PETA
+      phone: "0851-6815-2525",
       email: "tunaskembarabadi@gmail.com",
+      
+      // Tautan Maps asli dan URL Embed Iframe (format iframe google maps)
+      mapsLink: "https://maps.app.goo.gl/JYLr9eo5BByxD5aV6?g_st=ac",
+      embedMap: "https://maps.google.com/maps?q=Tajur,%20Kec.%20Citeureup,%20Kabupaten%20Bogor,%20Jawa%20Barat&t=&z=14&ie=UTF8&iwloc=&output=embed",
+      
       image: "/mitra/TunasKembarAbadi/Stock.jpg"
     }
   ];
 
   return (
     <section className={`${styles.ctaSection} wrap`}>
-      {/* ... [BAGIAN CTA UTAMA TETAP SAMA] ... */}
+      {/* ================= BAGIAN 1: CTA UTAMA ================= */}
       <RevealWrapper className={styles.cta}>
         <div className={styles.ctaBg}></div>
         <div className={styles.ctaOverlay}></div>
@@ -95,20 +113,15 @@ export default function CTA() {
                 </div>
               </div>
 
-              {/* --- DETAIL KONTEN (MUNCUL JIKA DIKLIK) --- */}
+              {/* --- DETAIL KONTEN FULL DATA --- */}
               {openPartner === mitra.id && (
                 <div className={styles.expandedContent} onClick={(e) => e.stopPropagation()}>
                   
-                  {/* Grid Informasi Terstruktur */}
                   <div className={styles.infoGrid}>
                     
                     {/* Kolom 1: Legalitas */}
                     <div className={styles.infoSection}>
                       <h5 className={styles.sectionHeading}>Identitas & Legalitas</h5>
-                      <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Dirut</span>
-                        <span className={styles.detailValue}>{mitra.direktur}</span>
-                      </div>
                       <div className={styles.detailItem}>
                         <span className={styles.detailLabel}>NIB</span>
                         <span className={styles.detailValueBadge}>{mitra.nib}</span>
@@ -117,22 +130,63 @@ export default function CTA() {
                         <span className={styles.detailLabel}>NPWP</span>
                         <span className={styles.detailValueBadge}>{mitra.npwp}</span>
                       </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>SK KEMENKUMHAM</span>
+                        <span className={styles.detailValue}>{mitra.skKemenkumham}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Tgl Pendirian</span>
+                        <span className={styles.detailValue}>{mitra.tglPendirian}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Kode KBLI</span>
+                        <span className={styles.detailValueBadge}>{mitra.kbli}</span>
+                      </div>
                     </div>
 
-                    {/* Kolom 2: Perbankan & Kontak */}
+                    {/* Kolom 2: Penanggung Jawab & Kontak */}
                     <div className={styles.infoSection}>
-                      <h5 className={styles.sectionHeading}>Perbankan & Kontak</h5>
+                      <h5 className={styles.sectionHeading}>Penanggung Jawab & Kontak</h5>
                       <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>A.N Rek</span>
+                        <span className={styles.detailLabel}>Nama</span>
+                        <span className={styles.detailValue}>{mitra.direktur}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Jabatan</span>
+                        <span className={styles.detailValue}>{mitra.jabatan}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>NIK</span>
+                        <span className={styles.detailValue}>{mitra.nik}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Telepon</span>
+                        <span className={styles.detailValue}>{mitra.phone}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Email</span>
+                        <span className={styles.detailValue}>{mitra.email}</span>
+                      </div>
+                    </div>
+
+                    {/* Kolom 3: Perbankan */}
+                    <div className={styles.infoSection}>
+                      <h5 className={styles.sectionHeading}>Informasi Perbankan</h5>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Bank</span>
+                        <span className={styles.detailValue}>{mitra.bank}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>A.N Rekening</span>
                         <span className={styles.detailValue}>{mitra.anRekening}</span>
                       </div>
                       <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>No. Rek</span>
+                        <span className={styles.detailLabel}>No. Rekening</span>
                         <span className={styles.detailValueHighlight}>{mitra.noRekening}</span>
                       </div>
                       <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Telp</span>
-                        <span className={styles.detailValue}>{mitra.phone}</span>
+                        <span className={styles.detailLabel}>SWIFT Code</span>
+                        <span className={styles.detailValueBadge}>{mitra.swiftCode}</span>
                       </div>
                     </div>
 
@@ -140,14 +194,20 @@ export default function CTA() {
 
                   {/* Bagian Peta & Alamat Spesifik */}
                   <div className={styles.locationSection}>
-                    <h5 className={styles.sectionHeading}>Lokasi Operasional</h5>
+                    <h5 className={styles.sectionHeading}>Lokasi Terdaftar & Operasional</h5>
                     
-                    <div className={styles.addressBox}>
-                      <p className={styles.detailText}>{mitra.alamatOperasional}</p>
-                      <span className={styles.coordinateText}>📍 Koordinat: {mitra.koordinat}</span>
+                    <div className={styles.addressGrid}>
+                      <div className={styles.addressBox}>
+                        <span className={styles.detailLabel}>Alamat Terdaftar</span>
+                        <p className={styles.detailText}>{mitra.alamatKantor}</p>
+                      </div>
+                      <div className={styles.addressBox}>
+                        <span className={styles.detailLabel}>Alamat Operasional</span>
+                        <p className={styles.detailText}>{mitra.alamatOperasional}</p>
+                      </div>
                     </div>
 
-                    {/* Container Peta (Tidak akan pecah saat di-geser/zoom) */}
+                    {/* Container Peta Google Maps */}
                     <div className={styles.mapContainer}>
                       <iframe 
                         src={mitra.embedMap} 
@@ -157,6 +217,10 @@ export default function CTA() {
                         title="Peta Operasional"
                       ></iframe>
                     </div>
+                    
+                    <a href={mitra.mapsLink} target="_blank" rel="noopener noreferrer" className={styles.btnMaps}>
+                       Buka di Google Maps
+                    </a>
                   </div>
 
                   {/* Gambar Pabrik / Gudang */}
