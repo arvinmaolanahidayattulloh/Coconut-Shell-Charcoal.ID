@@ -176,7 +176,7 @@
   color: var(--color-white);
   font-size: var(--text-3xl);
   font-weight: 600;
-  margin-bottom: 40px; /* Jarak diperbesar karena subtitle dihapus */
+  margin-bottom: 40px; 
 }
 
 .partnersList {
@@ -187,25 +187,27 @@
   margin: 0 auto;
 }
 
+/* Kartu Mitra dengan Background Terang dan Teks Hitam */
 .partnerCard {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #ffffff; /* Latar belakang putih */
+  border: 1px solid #e5e7eb;
   border-radius: 20px;
   padding: 32px;
   text-align: left;
-  transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   cursor: pointer;
   user-select: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Bayangan halus */
 }
 
 .partnerCard:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
 }
 
 .activeCard {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(196, 94, 32, 0.3);
+  border-color: #c45e20; /* Warna aksen (orange) saat aktif */
+  box-shadow: 0 12px 30px rgba(196, 94, 32, 0.15);
 }
 
 .partnerHeader {
@@ -221,16 +223,17 @@
   gap: 20px;
 }
 
+/* Kotak Logo dibuat abu-abu sangat muda agar logo putih/transparan tetap terlihat, atau tetap putih */
 .partnerLogoWrapper {
   width: 72px;
   height: 72px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.95); 
+  background: #f9fafb; 
+  border: 1px solid #f3f4f6;
   padding: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
 }
 
@@ -246,10 +249,11 @@
   gap: 8px;
 }
 
+/* Teks Nama Perusahaan: Hitam */
 .partnerName {
-  color: var(--color-white);
+  color: #111827; 
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.3;
   margin: 0;
 }
@@ -260,8 +264,9 @@
   gap: 8px;
 }
 
+/* Ikon panah (Dropdown): Abu-abu gelap */
 .toggleIcon {
-  color: var(--color-ash);
+  color: #4b5563; 
   flex-shrink: 0;
 }
 
@@ -269,7 +274,7 @@
 .partnerDetails {
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid #e5e7eb; /* Garis abu-abu muda */
   display: grid;
   gap: 12px;
 }
@@ -282,14 +287,16 @@
   gap: 16px;
 }
 
+/* Label Deskripsi: Abu-abu sedang */
 .detailLabel {
-  color: var(--color-ash);
-  font-weight: 400;
+  color: #6b7280; 
+  font-weight: 500;
 }
 
+/* Nilai/Value (No. HP, Email, dll): Hitam */
 .detailValue {
-  color: var(--color-white);
-  font-weight: 500;
+  color: #111827; 
+  font-weight: 600;
   text-align: right;
   word-break: break-word;
 }
@@ -299,7 +306,7 @@
   margin-top: 24px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1); /* Bayangan disesuaikan untuk tema terang */
   animation: fadeInDown 0.3s ease forwards;
 }
 
@@ -322,28 +329,28 @@
   }
 }
 
-/* Badge Styles */
+/* Badge Styles untuk Background Terang */
 .badgeVerified,
 .badgeSupplier {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   padding: 4px 10px;
   border-radius: 20px;
 }
 
 .badgeVerified {
-  background: rgba(16, 185, 129, 0.15); /* Warna Hijau */
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: #ecfdf5; /* Hijau sangat muda */
+  color: #059669; /* Hijau solid */
+  border: 1px solid #a7f3d0;
 }
 
 .badgeSupplier {
-  background: rgba(196, 94, 32, 0.15); /* Warna Orange */
-  color: #fb923c;
-  border: 1px solid rgba(196, 94, 32, 0.3);
+  background: #fff7ed; /* Orange sangat muda */
+  color: #ea580c; /* Orange solid */
+  border: 1px solid #fed7aa;
 }
 
 /* Responsiveness Partners */
