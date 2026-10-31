@@ -55,7 +55,7 @@ export function LeftPanel({ section = "beranda" }) {
                 <span className={styles.founderOverlayTag}>FOUNDER &amp; CEO</span>
                 <h4 className={styles.founderOverlayName}>Arvin M. H</h4>
                 <p className={styles.founderOverlayQuote}>
-                  "Menyediakan &amp; Lorem Ipsum."
+                  "Menghadirkan briket arang batok kelapa premium dengan standar mutu internasional."
                 </p>
               </div>
 
@@ -274,7 +274,7 @@ export function LeftPanel({ section = "beranda" }) {
             <div className={styles.comparisonTable}>
               <div className={styles.compRowHeader}>
                 <span>Metrik</span>
-                <span>NeoKarbon</span>
+                <span>TKA Premium</span>
                 <span>Biasa</span>
               </div>
               <div className={styles.compRow}>
@@ -313,7 +313,7 @@ export function LeftPanel({ section = "beranda" }) {
             <div className={styles.addressList}>
               <div className={styles.addressBox}>
                 <h6>Kantor Pusat</h6>
-                <p>Menara Karbon Lantai 12, Sudirman, Jakarta Selatan, Indonesia.</p>
+                <p>Jl. Sarikaya No. 217 RT.6/RW.14, Depok Jaya, Pancoran Mas, Depok, Jawa Barat 16432</p>
               </div>
               <div className={styles.addressBox}>
                 <h6>Pusat Produksi (Plant)</h6>
@@ -321,7 +321,7 @@ export function LeftPanel({ section = "beranda" }) {
               </div>
               <div className={styles.addressBox}>
                 <h6>Surel Penjualan</h6>
-                <p>Info@CoconutShellCharcoal.ID</p>
+                <p>tunaskembarabadi@gmail.com</p>
               </div>
             </div>
           </div>
@@ -345,7 +345,7 @@ export function LeftPanel({ section = "beranda" }) {
 
 export function RightPanel({ section = "beranda" }) {
   const [messages, setMessages] = useState([
-    { sender: "agent", text: "Halo! Selamat datang di NeoKarbon Indonesia. Saya Andi, Live Agent Anda." }
+    { sender: "agent", text: "Halo! Selamat datang di PT Tunas Kembar Abadi. Saya Arvin, Live Agent Anda." }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -439,8 +439,8 @@ export function RightPanel({ section = "beranda" }) {
                 <span className={styles.activeDot} />
               </div>
               <div>
-                <h4 className={styles.agentName}>Andi (Live Support)</h4>
-                <span className={styles.agentStatus}>NeoKarbon - Online</span>
+                <h4 className={styles.agentName}>Arvin (Live Support)</h4>
+                <span className={styles.agentStatus}>PT Tunas Kembar Abadi</span>
               </div>
             </div>
 
@@ -450,7 +450,7 @@ export function RightPanel({ section = "beranda" }) {
                   <p>{msg.text}</p>
                   {msg.showWa && (
                     <a
-                      href="https://wa.me/628123456789"
+                      href="https://wa.me/6285168152525"
                       target="_blank"
                       rel="noopener noreferrer"
                       className={styles.chatWaBtn}
@@ -652,14 +652,14 @@ export function RightPanel({ section = "beranda" }) {
 
             <div className={styles.salesCard}>
               <div className={styles.salesHeader}>
-                <div className={styles.salesAvatar}>NK</div>
+                <div className={styles.salesAvatar}>AM</div>
                 <div>
-                  <h6>Hendra Wijaya</h6>
-                  <span>Export Sales Manager</span>
+                  <h6>Arvin Maolana</h6>
+                  <span>Founder & CEO</span>
                 </div>
               </div>
               <div className={styles.salesDetails}>
-                <div><span>WhatsApp:</span> <strong>+62 815-681-52525</strong></div>
+                <div><span>WhatsApp:</span> <strong>+62 851-6815-2525</strong></div>
                 <div><span>WeChat ID:</span> <strong>ArvinMaolana</strong></div>
                 <div><span>Jam Kerja:</span> <strong>Senin-Sabtu (08:00 - 17:00 WIB)</strong></div>
               </div>
