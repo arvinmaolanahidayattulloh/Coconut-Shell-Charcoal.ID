@@ -8,9 +8,11 @@ import Particles from "./Particles";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
-  const yearsCount = useCountUp(0, 1800);
-  const clientsCount = useCountUp(1, 2000);
-  const countriesCount = useCountUp(1, 1500);
+  // Angka disesuaikan agar lebih realistis. 
+  // Silakan ubah angka '5', '200', dan '15' sesuai dengan data aktual perusahaan Anda.
+  const yearsCount = useCountUp(0, 5); 
+  const clientsCount = useCountUp(1, 200); 
+  const countriesCount = useCountUp(1, 15); 
 
   return (
     <section className={`${styles.hero} wrap`} id="beranda">
@@ -28,9 +30,8 @@ export default function Hero() {
             <SplitTextReveal text="Industri Indonesia" delay={700} />
           </h1>
           <p className={styles.heroDesc}>
-            menyediakan arang
-            berkualitas tinggi dengan standar internasional. Solusi energi
-            terpercaya untuk kebutuhan industri, restoran, dan ekspor.
+            Menyediakan arang berkualitas tinggi dengan standar internasional. 
+            Solusi energi terpercaya untuk kebutuhan industri, restoran, dan ekspor.
           </p>
           <div className={styles.heroActions}>
             <MagneticButton as="a" href="#produk" className={styles.btnPrimary}>
@@ -39,7 +40,15 @@ export default function Hero() {
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </MagneticButton>
-            <MagneticButton as="a" href="#kontak" className={styles.btnSecondary}>
+            
+            {/* Tombol Hubungi Kami diubah ke WhatsApp */}
+            <MagneticButton 
+              as="a" 
+              href="https://wa.me/6285168152525" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.btnSecondary}
+            >
               Hubungi Kami
             </MagneticButton>
           </div>
