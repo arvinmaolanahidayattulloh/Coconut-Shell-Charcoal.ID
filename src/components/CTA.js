@@ -8,12 +8,80 @@ import MagneticButton from "./MagneticButton";
 import styles from "./CTA.module.css";
 
 export default function CTA() {
-  // State untuk melacak mitra mana yang sedang diklik/dibuka gambarnya
   const [openPartner, setOpenPartner] = useState(null);
 
   const togglePartner = (id) => {
     setOpenPartner(openPartner === id ? null : id);
   };
+
+  // Data Mitra (1 Asli, 4 Lorem Ipsum)
+  const partnersData = [
+    {
+      id: "tka",
+      name: "PT. Tunas Kembar Abadi Tbk",
+      logo: "/mitra/TunasKembarAbadi/TunasKembarAbadi.png",
+      date: "19 Agustus 2026",
+      badges: ["Verified", "Supplier"],
+      anRekening: "PT. Tunas Kembar Abadi",
+      noRekening: "BCA : 8692824902",
+      kapasitas: "300T / Tahun",
+      phone: "+62 851 681 52525",
+      email: "TunasKembarAbadi@Gmail.Com",
+      image: "/mitra/TunasKembarAbadi/Stock.jpg"
+    },
+    {
+      id: "mitra2",
+      name: "PT. Lorem Ipsum Alpha",
+      logo: "/logo-mitra.png",
+      date: "01 Januari 2024",
+      badges: ["Supplier"],
+      anRekening: "Lorem Ipsum Corp",
+      noRekening: "Mandiri : 1234567890",
+      kapasitas: "150T / Tahun",
+      phone: "+62 800 111 2222",
+      email: "alpha@loremipsum.com",
+      image: "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      id: "mitra3",
+      name: "PT. Lorem Ipsum Beta",
+      logo: "/logo-mitra.png",
+      date: "15 Maret 2023",
+      badges: ["Supplier"],
+      anRekening: "Beta Ipsum Sejahtera",
+      noRekening: "BNI : 0987654321",
+      kapasitas: "200T / Tahun",
+      phone: "+62 800 333 4444",
+      email: "beta@loremipsum.com",
+      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      id: "mitra4",
+      name: "PT. Lorem Ipsum Gamma",
+      logo: "/logo-mitra.png",
+      date: "10 November 2025",
+      badges: ["Verified"],
+      anRekening: "Gamma Global",
+      noRekening: "BRI : 1122334455",
+      kapasitas: "100T / Tahun",
+      phone: "+62 800 555 6666",
+      email: "gamma@loremipsum.com",
+      image: "https://images.unsplash.com/photo-1665686376173-ada7a0031a85?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      id: "mitra5",
+      name: "PT. Lorem Ipsum Delta",
+      logo: "/logo-mitra.png",
+      date: "22 Februari 2022",
+      badges: ["Supplier"],
+      anRekening: "Delta Industri",
+      noRekening: "BCA : 5544332211",
+      kapasitas: "250T / Tahun",
+      phone: "+62 800 777 8888",
+      email: "delta@loremipsum.com",
+      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80"
+    }
+  ];
 
   return (
     <section className={`${styles.ctaSection} wrap`}>
@@ -60,139 +128,109 @@ export default function CTA() {
         </div>
       </RevealWrapper>
 
-      {/* ================= BAGIAN 2: DAFTAR MITRA ================= */}
+      {/* ================= BAGIAN 2: DAFTAR MITRA (SCROLLABLE) ================= */}
       <RevealWrapper className={styles.partnersContainer} delay={0.2}>
         <h3 className={styles.partnersTitle}>Jaringan Kemitraan Kami</h3>
         
-        <div className={styles.partnersList}>
-          
-          {/* Mitra 1: PT. Tunas Kembar Abadi */}
-          <div 
-            className={`${styles.partnerCard} ${openPartner === 'tka' ? styles.activeCard : ''}`} 
-            onClick={() => togglePartner('tka')}
-          >
-            <div className={styles.partnerHeader}>
-              <div className={styles.partnerIdentity}>
-                <div className={styles.partnerLogoWrapper}>
-                  <img 
-                    src="/mitra/TunasKembarAbadi/TunasKembarAbadi.png" 
-                    alt="Logo PT Tunas Kembar Abadi" 
-                    className={styles.partnerLogo}
-                    onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=Logo+TKA" }} 
-                  />
-                </div>
-                <div className={styles.partnerTitleArea}>
-                  <h4 className={styles.partnerName}>PT. Tunas Kembar Abadi Tbk</h4>
-                  <div className={styles.partnerBadges}>
-                    <span className={styles.badgeVerified}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                      </svg>
-                      Verified
-                    </span>
-                    <span className={styles.badgeSupplier}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                        <line x1="12" y1="22.08" x2="12" y2="12" />
-                      </svg>
-                      Supplier
-                    </span>
+        <div className={styles.partnersScrollWrapper}>
+          <div className={styles.partnersList}>
+            
+            {partnersData.map((mitra) => (
+              <div 
+                key={mitra.id}
+                className={`${styles.partnerCard} ${openPartner === mitra.id ? styles.activeCard : ''}`} 
+                onClick={() => togglePartner(mitra.id)}
+              >
+                {/* Bagian Atas: Logo Kiri, Teks Kanan */}
+                <div className={styles.partnerHeader}>
+                  <div className={styles.partnerIdentity}>
+                    
+                    {/* Logo Kiri */}
+                    <div className={styles.partnerLogoWrapper}>
+                      <img 
+                        src={mitra.logo} 
+                        alt={`Logo ${mitra.name}`} 
+                        className={styles.partnerLogo}
+                        onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=Logo" }} 
+                      />
+                    </div>
+                    
+                    {/* Teks Kanan */}
+                    <div className={styles.partnerTitleArea}>
+                      <h4 className={styles.partnerName}>{mitra.name}</h4>
+                      <span className={styles.partnerDate}>Sejak {mitra.date}</span>
+                      <div className={styles.partnerBadges}>
+                        {mitra.badges.includes("Verified") && (
+                          <span className={styles.badgeVerified}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                            </svg>
+                            Verified
+                          </span>
+                        )}
+                        {mitra.badges.includes("Supplier") && (
+                          <span className={styles.badgeSupplier}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                              <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                            Supplier
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                  </div>
+                  
+                  {/* Ikon Toggle Panah */}
+                  <div className={styles.toggleIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: openPartner === mitra.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}>
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                   </div>
                 </div>
-              </div>
-              
-              <div className={styles.toggleIcon}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: openPartner === 'tka' ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}>
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </div>
-            </div>
 
-            <div className={styles.partnerDetails}>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>No. Rekening BCA</span>
-                <span className={styles.detailValue}>8692824902</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Kapasitas Produksi</span>
-                <span className={styles.detailValue}>300T / Tahun</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Nomor</span>
-                <span className={styles.detailValue}>+62 851 681 52525</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Email</span>
-                <span className={styles.detailValue}>TunasKembarAbadi@Gmail.Com</span>
-              </div>
-            </div>
+                {/* Info & Gambar (Muncul saat diklik) */}
+                {openPartner === mitra.id && (
+                  <div className={styles.expandedContent} onClick={(e) => e.stopPropagation()}>
+                    <div className={styles.partnerDetails}>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>A.N Rekening</span>
+                        <span className={styles.detailValue}>{mitra.anRekening}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>No. Rekening</span>
+                        <span className={styles.detailValue}>{mitra.noRekening}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Kapasitas Prod.</span>
+                        <span className={styles.detailValue}>{mitra.kapasitas}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Nomor</span>
+                        <span className={styles.detailValue}>{mitra.phone}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Email</span>
+                        <span className={styles.detailValue}>{mitra.email}</span>
+                      </div>
+                    </div>
 
-            {/* Gambar Besar (Tampil jika diklik) */}
-            {openPartner === 'tka' && (
-              <div className={styles.expandedImageWrapper} onClick={(e) => e.stopPropagation()}>
-                <img 
-                  src="/mitra/TunasKembarAbadi/Stock.jpg" 
-                  alt="Fasilitas Tunas Kembar Abadi" 
-                  className={styles.expandedImage} 
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Mitra 2: Contoh Perusahaan Lain (Sama strukturnya, bisa disesuaikan nanti) */}
-          <div 
-            className={`${styles.partnerCard} ${openPartner === 'mitra2' ? styles.activeCard : ''}`} 
-            onClick={() => togglePartner('mitra2')}
-          >
-            <div className={styles.partnerHeader}>
-              <div className={styles.partnerIdentity}>
-                <div className={styles.partnerLogoWrapper}>
-                  <img 
-                    src="/logo-mitra.png" 
-                    alt="Logo Mitra 2" 
-                    className={styles.partnerLogo}
-                    onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=Logo+Mitra" }} 
-                  />
-                </div>
-                <div className={styles.partnerTitleArea}>
-                  <h4 className={styles.partnerName}>PT. Nama Mitra Sejahtera</h4>
-                  <div className={styles.partnerBadges}>
-                    <span className={styles.badgeSupplier}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                        <line x1="12" y1="22.08" x2="12" y2="12" />
-                      </svg>
-                      Supplier
-                    </span>
+                    <div className={styles.expandedImageWrapper}>
+                      <img 
+                        src={mitra.image} 
+                        alt={`Foto Fasilitas ${mitra.name}`} 
+                        className={styles.expandedImage} 
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
+                
               </div>
-              <div className={styles.toggleIcon}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: openPartner === 'mitra2' ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}>
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </div>
-            </div>
+            ))}
 
-            <div className={styles.partnerDetails}>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Email</span>
-                <span className={styles.detailValue}>info@namamitra.com</span>
-              </div>
-            </div>
-
-            {/* Gambar Besar Mitra 2 */}
-            {openPartner === 'mitra2' && (
-              <div className={styles.expandedImageWrapper} onClick={(e) => e.stopPropagation()}>
-                <div style={{ width: '100%', height: '200px', backgroundColor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', color: '#888' }}>
-                  Gambar Belum Tersedia
-                </div>
-              </div>
-            )}
           </div>
-
         </div>
       </RevealWrapper>
       
