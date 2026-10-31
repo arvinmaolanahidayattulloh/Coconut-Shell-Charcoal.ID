@@ -1,17 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --color-ember: #c45e20;
-  --color-ember-light: #d4890a;
-  --color-ember-dark: #9a4a18;
-  --color-copper: #b87333;
-  --color-sienna: #8b4513;
+  /* Diubah menjadi tema Biru */
+  --color-ember: #2563eb;
+  --color-ember-light: #3b82f6;
+  --color-ember-dark: #1d4ed8;
+  
+  --color-copper: #38bdf8;       /* (Opsional) Aksen tembaga bisa disesuaikan ke bluish */
+  --color-sienna: #0284c7;       /* (Opsional) Aksen sienna kayu disesuaikan */
 
   --color-carbon: #1a1a1a;
   --color-carbon-deep: #111111;
   --color-graphite: #4d4d4d;
   --color-stone: #6b6b6b;
   --color-ash: #999999;
+  /* ... sisa kode di bawahnya tetap sama ... */
+
 
   --color-smoke: #e8e5e0;
   --color-cream: #f4f2ef;
