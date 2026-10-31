@@ -18,12 +18,18 @@ export default function CTA() {
           <SplitTextReveal text="Siap Bermitra dengan Kami?" delay={200} />
         </h2>
         <p className={styles.ctaDesc}>
-          Dapatkan penawaran terbaik untuk kebutuhan briket batu bara dan
+          Dapatkan penawaran terbaik untuk kebutuhan
           arang Anda. Tim kami siap membantu konsultasi dari pemilihan produk
           hingga pengiriman ke lokasi.
         </p>
         <div className={styles.ctaActions}>
-          <MagneticButton as="a" href="#kontak" className={styles.btnLight}>
+          <MagneticButton 
+            as="a" 
+            href="https://wa.me/6285168152525" 
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.btnLight}
+          >
             Hubungi Kami
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path
