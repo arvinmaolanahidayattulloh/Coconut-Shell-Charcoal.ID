@@ -10,9 +10,9 @@ import styles from "./Hero.module.css";
 export default function Hero() {
   // Angka disesuaikan agar lebih realistis. 
   // Silakan ubah angka '5', '200', dan '15' sesuai dengan data aktual perusahaan Anda.
-  const yearsCount = useCountUp(0, 5); 
-  const clientsCount = useCountUp(1, 200); 
-  const countriesCount = useCountUp(0, 15); 
+  const yearsCount = useCountUp(1, 2000); 
+  const clientsCount = useCountUp(1, 2000); 
+  const countriesCount = useCountUp(0, 2000); 
 
   return (
     <section className={`${styles.hero} wrap`} id="beranda">
@@ -20,14 +20,14 @@ export default function Hero() {
         <RevealWrapper>
           <span className="eyebrow">Penyedia Kualitas Terbaik</span>
           <h1 className={styles.heroTitle}>
-            <SplitTextReveal text="Arang Tempurung Kelapa " delay={100} />
+            <SplitTextReveal text="Arang Batok Kelapa " delay={100} />
             <br />
             <span className={styles.titleAccent}>
               <SplitTextReveal text="Premium " delay={400} />
             </span>
-            <SplitTextReveal text="Dari" delay={400} />
+            <SplitTextReveal text="From" delay={400} />
             <br />
-            <SplitTextReveal text="Industri Indonesia" delay={700} />
+            <SplitTextReveal text="Indonesia" delay={700} />
           </h1>
           <p className={styles.heroDesc}>
             Menyediakan arang berkualitas tinggi dengan standar internasional. 
@@ -55,15 +55,21 @@ export default function Hero() {
           <div className={styles.heroStats}>
             <div className={styles.stat}>
               <span className={styles.statNumber} ref={yearsCount.ref}>
-                {yearsCount.count}+
+                {yearsCount.count}
               </span>
-              <span className={styles.statLabel}>Tahun Pengalaman</span>
+              <span className={styles.statLabel}>thn pengalaman.</span>
+            </div>
+            <div className={styles.stat}>
+              <span className={styles.statLabel}>Flexible from 19 Agustus 2026</span>
             </div>
             <div className={styles.stat}>
               <span className={styles.statNumber} ref={clientsCount.ref}>
-                {clientsCount.count}+
+                {clientsCount.count}
               </span>
-              <span className={styles.statLabel}>Klien Industri</span>
+              <span className={styles.statLabel}>Klien industri</span>
+            </div>
+            <div className={styles.stat}>
+              <span className={styles.statLabel}>PT. INAGRIN</span>
             </div>
             <div className={styles.stat}>
               <span className={styles.statNumber} ref={countriesCount.ref}>

@@ -8,13 +8,14 @@ import About from "@/components/About";
 import Products from "@/components/Products";
 import WhyUs from "@/components/WhyUs";
 import CTA from "@/components/CTA";
+import PriceChart from "@/components/PriceChart";
 import Footer from "@/components/Footer";
+import AdBanner from "@/components/AdBanner";
 import { LeftPanel, RightPanel } from "@/components/SidePanels";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
 
-  // Scroll spy tracking for active section (used for header navigation pills highlight)
   useEffect(() => {
     const handleScroll = () => {
       const sectionIds = ["beranda", "tentang", "produk", "keunggulan", "kontak"];
@@ -40,14 +41,14 @@ export default function Home() {
     };
 
     window.addEventListener("scroll", handleScroll);
-    handleScroll(); // Initial run
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
     <>
       <Header />
-      
+
       <div className="pageFlexLayout">
         <div className="mainLayoutContainer">
           <main>
@@ -58,6 +59,8 @@ export default function Home() {
             </div>
 
             <Partners />
+
+            <AdBanner slot="1001" format="horizontal" className="adSection" />
 
             <div className="sectionWrapper">
               <LeftPanel section="tentang" />
@@ -71,6 +74,8 @@ export default function Home() {
               <RightPanel section="produk" />
             </div>
 
+            <AdBanner slot="1002" format="horizontal" className="adSection" />
+
             <div className="sectionWrapper">
               <LeftPanel section="keunggulan" />
               <WhyUs />
@@ -78,6 +83,10 @@ export default function Home() {
             </div>
 
             <CTA />
+
+            <PriceChart />
+
+            <AdBanner slot="1003" format="horizontal" className="adSection" />
 
             <div className="sectionWrapper">
               <LeftPanel section="kontak" />

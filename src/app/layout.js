@@ -1,5 +1,4 @@
 import "./globals.css";
-import Script from "next/script";
 
 export const metadata = {
   title: "Coconut Shell Charcoal Indonesia",
@@ -19,14 +18,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
-      <body>
-        {children}
-        <Script
-          id="adsense-init"
-          strategy="afterInteractive"
+      <head>
+        <script
+          async
           crossOrigin="anonymous"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1764656449083941"
         />
+      </head>
+      <body>
+        {children}
       </body>
     </html>
   );
