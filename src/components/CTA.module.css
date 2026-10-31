@@ -157,7 +157,7 @@
 }
 
 /* =========================================
-   Bagian 2: Jaringan Kemitraan (Scrollable)
+   Bagian 2: Jaringan Kemitraan (Vertikal / Ke Bawah)
    ========================================= */
 .partnersContainer {
   margin-top: 100px;
@@ -171,72 +171,52 @@
   margin-bottom: 40px; 
 }
 
-/* Wrapper untuk Scroll Horizontal */
-.partnersScrollWrapper {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
-  padding-bottom: 32px;
-  /* Menyembunyikan scrollbar bawaan di beberapa browser untuk estetika */
-  scrollbar-width: none; 
-}
-.partnersScrollWrapper::-webkit-scrollbar {
-  display: none;
-}
-
-.partnersList {
+/* Container Vertikal Ke Bawah */
+.partnersListVertical {
   display: flex;
-  gap: 24px;
-  width: max-content;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 0 16px;
 }
 
-/* Kartu Mitra - Background Terang */
+/* Kartu Mitra - Shape Background Terang */
 .partnerCard {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 20px;
-  padding: 24px;
+  padding: 24px 28px;
   text-align: left;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
   user-select: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  
-  /* Ukuran diatur agar 3 item muat dalam layar Desktop normal */
-  width: 360px;
-  scroll-snap-align: center;
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .partnerCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .activeCard {
   border-color: #c45e20; 
-  box-shadow: 0 12px 30px rgba(196, 94, 32, 0.15);
+  box-shadow: 0 8px 28px rgba(196, 94, 32, 0.15);
 }
 
 .partnerHeader {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 16px;
 }
 
 .partnerIdentity {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
 }
 
-/* Logo Kecil Kiri */
+/* Logo Kecil di Kiri */
 .partnerLogoWrapper {
   width: 56px;
   height: 56px;
@@ -256,7 +236,7 @@
   object-fit: contain;
 }
 
-/* Teks Kanan Logo */
+/* Teks Sebelah Kanan Logo */
 .partnerTitleArea {
   display: flex;
   flex-direction: column;
@@ -265,7 +245,7 @@
 
 .partnerName {
   color: #111827; 
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.3;
   margin: 0;
@@ -275,28 +255,27 @@
   color: #6b7280;
   font-size: 12px;
   font-weight: 500;
-  margin-bottom: 4px;
 }
 
 .partnerBadges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-top: 2px;
 }
 
 .toggleIcon {
-  color: #9ca3af; 
+  color: #4b5563; 
   flex-shrink: 0;
-  margin-top: 4px;
 }
 
-/* Animasi Kemunculan Detail */
+/* Animasi Buka Detail */
 .expandedContent {
   animation: fadeIn 0.3s ease forwards;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -313,7 +292,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px;
   gap: 16px;
 }
 
@@ -329,7 +308,7 @@
   word-break: break-word;
 }
 
-/* Gambar Besar dengan Mask Shape */
+/* Gambar Besar dengan Shape Mask (Kanan Kiri Bawah) */
 .expandedImageWrapper {
   margin-top: 20px;
   width: 100%;
@@ -338,12 +317,13 @@
   border-radius: 4px 4px 24px 24px; 
   
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1); 
 }
 
 .expandedImage {
   width: 100%;
-  height: 200px;
+  height: auto;
+  max-height: 400px;
   display: block;
   object-fit: cover;
 }
@@ -354,7 +334,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 20px;
@@ -372,7 +352,7 @@
   border: 1px solid #fed7aa;
 }
 
-/* Responsiveness Horizontal Scroll */
+/* Responsive Styles */
 @media (max-width: 768px) {
   .partnersContainer {
     margin-top: 72px;
@@ -381,6 +361,18 @@
     font-size: var(--text-2xl);
   }
   .partnerCard {
-    width: 300px; /* Di mobile diperkecil agar mudah digeser */
+    padding: 20px;
+  }
+  .partnerIdentity {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .detailItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .detailValue {
+    text-align: left;
   }
 }
