@@ -27,8 +27,7 @@ export default function CTA() {
       tglPendirian: "19 AGUSTUS 2026",
       nib: "1908260098691",
       npwp: "1000000010800297",
-      kbli: "47599",
-      alamatKantor: "Kemiri Muka, Beji, Kota Depok, Jawa Barat 16423",
+      hsCode: "4402.20.10", // Menggantikan KBLI
       alamatOperasional: "Tajur, Kec. Citeureup, Kabupaten Bogor, Jawa Barat 16810",
       
       // 02 INFORMASI PERBANKAN
@@ -39,16 +38,17 @@ export default function CTA() {
       
       // 03 PENANGGUNG JAWAB
       direktur: "ARVIN MAOLANA HIDAYATTULLOH",
-      jabatan: "Chief Executive Officer / Direktur",
+      jabatan: "Direktur", // Diubah hanya Direktur
       nik: "3304031108040002",
       
       // 04 INFORMASI KONTAK & PETA
       phone: "0851-6815-2525",
       email: "tunaskembarabadi@gmail.com",
       
-      // Tautan Maps asli dan URL Embed Iframe (format iframe google maps)
+      // Tautan Maps asli dan URL Embed
       mapsLink: "https://maps.app.goo.gl/JYLr9eo5BByxD5aV6?g_st=ac",
-      embedMap: "https://maps.google.com/maps?q=Tajur,%20Kec.%20Citeureup,%20Kabupaten%20Bogor,%20Jawa%20Barat&t=&z=14&ie=UTF8&iwloc=&output=embed",
+      // Embed menggunakan titik koordinat/query yang mengarah ke area yang sama
+      embedMap: "https://maps.google.com/maps?q=-6.536306,106.892095&t=&z=15&ie=UTF8&iwloc=&output=embed", 
       
       image: "/mitra/TunasKembarAbadi/Stock.jpg"
     }
@@ -139,8 +139,8 @@ export default function CTA() {
                         <span className={styles.detailValue}>{mitra.tglPendirian}</span>
                       </div>
                       <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Kode KBLI</span>
-                        <span className={styles.detailValueBadge}>{mitra.kbli}</span>
+                        <span className={styles.detailLabel}>HS Code</span>
+                        <span className={styles.detailValueBadge}>{mitra.hsCode}</span>
                       </div>
                     </div>
 
@@ -194,17 +194,10 @@ export default function CTA() {
 
                   {/* Bagian Peta & Alamat Spesifik */}
                   <div className={styles.locationSection}>
-                    <h5 className={styles.sectionHeading}>Lokasi Terdaftar & Operasional</h5>
+                    <h5 className={styles.sectionHeading}>Lokasi Operasional</h5>
                     
-                    <div className={styles.addressGrid}>
-                      <div className={styles.addressBox}>
-                        <span className={styles.detailLabel}>Alamat Terdaftar</span>
-                        <p className={styles.detailText}>{mitra.alamatKantor}</p>
-                      </div>
-                      <div className={styles.addressBox}>
-                        <span className={styles.detailLabel}>Alamat Operasional</span>
-                        <p className={styles.detailText}>{mitra.alamatOperasional}</p>
-                      </div>
+                    <div className={styles.addressBox}>
+                      <p className={styles.detailText}>{mitra.alamatOperasional}</p>
                     </div>
 
                     {/* Container Peta Google Maps */}
