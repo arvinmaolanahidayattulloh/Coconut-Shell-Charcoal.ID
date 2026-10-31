@@ -66,7 +66,7 @@ export default function CTA() {
             <div className={styles.partnerHeader}>
               <div className={styles.partnerLogoWrapper}>
                 <img 
-                  src="/logo-tka.png" 
+                  src="/TunasKembarAbadi.png" 
                   alt="Logo PT Tunas Kembar Abadi" 
                   className={styles.partnerLogo}
                   onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=Gambar+TKA" }} 
