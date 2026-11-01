@@ -564,7 +564,7 @@ export default function PriceChart() {
     <section className={styles.priceSection} id="harga">
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
-          <span className={styles.eyebrow}>COCONUT SHELL CHARCOAL. ID</span>
+          <span className={styles.eyebrow}>Coconut Shell Charcoal .ID</span>
           
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
