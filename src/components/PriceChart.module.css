@@ -256,7 +256,8 @@
   color: #c45e20;
 }
 
-.chartFull {
+/* Seluruh kartu PriceChart (judul, harga, statistik, chart) memenuhi layar */
+.cardFull {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -265,11 +266,27 @@
   height: 100dvh;
   border: none;
   border-radius: 0;
-  padding: 16px;
+  box-shadow: none;
+  padding: 24px 32px;
   background: #ffffff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.cardFull .priceMain {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+}
+
+/* Area chart mengisi sisa ruang di bawah harga */
+.chartInFull {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
 }
 
 @media (max-width: 768px) {
@@ -292,5 +309,8 @@
   .priceCard { padding: 24px 16px; border-radius: 18px; }
   .bigPrice { font-size: 32px; }
   .priceStats { flex-wrap: wrap; gap: 12px; }
-  .chartFull { padding: 10px; }
+  .cardFull { padding: 12px; border-radius: 0; }
+  .cardFull .bigPrice { font-size: 28px; }
+  .cardFull .eyebrow { font-size: 20px; }
+  .chartInFull { padding: 10px; }
 }
