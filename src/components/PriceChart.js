@@ -89,6 +89,57 @@ function uniqSorted(list) {
   return out.sort((a, b) => a.time - b.time);
 }
 
+// Animasi halus untuk pergeseran/zoom chart (ease-out)
+function animateRange(ts, to, animRef, ms = 420) {
+  cancelAnimationFrame(animRef.current);
+  const from = ts.getVisibleLogicalRange();
+  if (!from) { ts.setVisibleLogicalRange(to); return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / ms);
+    const e = 1 - Math.pow(1 - k, 3);
+    ts.setVisibleLogicalRange({
+      from: from.from + (to.from - from.from) * e,
+      to: from.to + (to.to - from.to) * e
+    });
+    if (k < 1) animRef.current = requestAnimationFrame(step);
+  };
+  animRef.current = requestAnimationFrame(step);
+}
+
+// Angka berubah halus (count up/down). Lompatan besar (ganti mata uang) langsung tanpa animasi.
+function useSmooth(target, ms = 400) {
+  const [v, setV] = useState(target);
+  const curRef = useRef(target);
+  useEffect(() => {
+    if (!isFinite(target)) return;
+    const from = curRef.current;
+    if (!from || Math.abs(target - from) > Math.abs(from) * 0.2) {
+      curRef.current = target;
+      setV(target);
+      return;
+    }
+    let raf;
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / ms);
+      const e = 1 - Math.pow(1 - k, 3);
+      const val = from + (target - from) * e;
+      curRef.current = val;
+      setV(val);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
+}
+
+function Smooth({ value, render, ms }) {
+  const v = useSmooth(value, ms);
+  return <>{render(v)}</>;
+}
+
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("btc"); 
@@ -96,6 +147,7 @@ export default function PriceChart() {
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
   const [isFull, setIsFull] = useState(false);
+  const [fade, setFade] = useState(false);
   
   const [cur, setCur] = useState("IDR");
   const [rates, setRates] = useState(null);
@@ -110,6 +162,14 @@ export default function PriceChart() {
   const seriesRef = useRef({ candle: null, area: null });
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
+  const lastRef = useRef(null);   // harga terakhir (sudah dikali kurs) untuk memusatkan chart
+  const animRef = useRef(0);
+  const fitRef = useRef(() => {});
+  const applyRef = useRef(() => {});
+  const legendRef = useRef(() => {});
+  const modeRef = useRef("btc");
+  const rateRef = useRef(1);
+  const ivRef = useRef("1m");
   
   const dsRef = useRef({
     gold: { raw: [], mult: () => GRAMS * MARKUP / OZ },
@@ -135,18 +195,29 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
+  // Chart dibuat SEKALI (tidak dibuat ulang saat ganti interval) supaya perubahan terasa halus
   useEffect(() => {
     if (!chartContainerRef.current) return;
+
+    // Harga terakhir selalu di tengah sumbu harga
+    const centerProvider = (orig) => {
+      const res = orig();
+      const last = lastRef.current;
+      if (!res || !res.priceRange || last == null) return res;
+      const { minValue, maxValue } = res.priceRange;
+      const half = Math.max(maxValue - last, last - minValue) * 1.12 || Math.abs(last) * 0.0005;
+      return { ...res, priceRange: { minValue: last - half, maxValue: last + half } };
+    };
 
     const chart = createChart(chartContainerRef.current, {
       autoSize: true,
       layout: { background: { type: "solid", color: "transparent" }, textColor: "#787b86", fontFamily: "system-ui, sans-serif", fontSize: 11 },
       grid: { vertLines: { color: "#f0f3fa" }, horzLines: { color: "#f0f3fa" } },
-      rightPriceScale: { borderColor: "#e0e3eb", scaleMargins: { top: 0.22, bottom: 0.08 } },
+      rightPriceScale: { borderColor: "#e0e3eb", scaleMargins: { top: 0.12, bottom: 0.12 } },
       leftPriceScale: { visible: false },
       timeScale: { 
         borderColor: "#e0e3eb", 
-        timeVisible: IV[iv]?.step < 86400, 
+        timeVisible: IV[ivRef.current]?.step < 86400, 
         secondsVisible: false, 
         rightOffset: 2,
         fixLeftEdge: false,
@@ -158,36 +229,45 @@ export default function PriceChart() {
 
     const candle = chart.addCandlestickSeries({
       upColor: "#089981", downColor: "#f23645", borderVisible: false,
-      wickUpColor: "#089981", wickDownColor: "#f23645"
+      wickUpColor: "#089981", wickDownColor: "#f23645",
+      autoscaleInfoProvider: centerProvider
     });
 
     const area = chart.addAreaSeries({
       lineColor: "#2962ff", lineWidth: 2,
       topColor: "rgba(41, 98, 255, 0.28)", bottomColor: "rgba(41, 98, 255, 0.02)",
-      visible: false
+      visible: false,
+      autoscaleInfoProvider: centerProvider
     });
 
     chartRef.current = chart;
     seriesRef.current = { candle, area };
 
-    return () => chart.remove();
-  }, [iv]); 
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      chart.remove();
+      chartRef.current = null;
+    };
+  }, []);
 
+  // Tampilan jam hanya untuk interval di bawah 1 hari
   useEffect(() => {
     if (!chartRef.current) return;
-    seriesRef.current.candle.applyOptions({ visible: type === "candle" });
-    seriesRef.current.area.applyOptions({ visible: type === "area" });
-  }, [type]);
+    chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
+  }, [iv]);
 
-  const fitView = useCallback(() => {
+  const fitView = useCallback((smooth = false) => {
     const d = dsRef.current[mode];
     if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
-    if (range) {
-      ts.fitContent();
+    const target = range ? { from: -0.5, to: n + 1 } : { from: Math.max(0, n - 100), to: n + 1 };
+    if (smooth) {
+      animateRange(ts, target, animRef);
     } else {
-      ts.setVisibleLogicalRange({ from: Math.max(0, n - 100), to: n + 1 });
+      cancelAnimationFrame(animRef.current);
+      if (range) ts.fitContent();
+      else ts.setVisibleLogicalRange(target);
     }
   }, [mode, range]);
 
@@ -229,7 +309,7 @@ export default function PriceChart() {
       document.body.style.overflow = "hidden";
       window.addEventListener("keydown", onKey);
     }
-    const t = setTimeout(() => fitView(), 150);
+    const t = setTimeout(() => fitView(true), 150);
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
@@ -268,6 +348,7 @@ export default function PriceChart() {
     
     seriesRef.current.candle.setData(cs);
     seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
+    lastRef.current = cs.length ? cs[cs.length - 1].close : null;
   }, [mode, rate]);
 
   const updateLegend = useCallback(() => {
@@ -292,10 +373,40 @@ export default function PriceChart() {
     }));
   }, [mode, rate]);
 
+  // Ref selalu menunjuk fungsi/nilai terbaru (dipakai efek & timer tanpa membuat ulang koneksi)
+  fitRef.current = fitView;
+  applyRef.current = applyData;
+  legendRef.current = updateLegend;
+  modeRef.current = mode;
+  rateRef.current = rate;
+  ivRef.current = iv;
+
+  // Ganti Currency / Candle / Area / Mode: fade halus, data diterapkan ulang,
+  // lalu chart bergeser mulus ke harga sekarang (di tengah)
+  useEffect(() => {
+    const applyVis = () => {
+      if (!seriesRef.current.candle) return;
+      seriesRef.current.candle.applyOptions({ visible: type === "candle" });
+      seriesRef.current.area.applyOptions({ visible: type === "area" });
+    };
+    const d = dsRef.current[mode];
+    if (!chartRef.current || !d || !d.raw.length) { applyVis(); return; }
+    setFade(true);
+    const t = setTimeout(() => {
+      applyVis();
+      applyData();
+      updateLegend();
+      fitView(true);
+      setFade(false);
+    }, 180);
+    return () => clearTimeout(t);
+  }, [mode, rate, type]);
+
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
     const currentToken = tokenRef.current;
+    setFade(true);
     
     const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : 300);
     const binanceIv = IV[iv]?.bin || "1m";
@@ -348,22 +459,27 @@ export default function PriceChart() {
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
       const sinceNote = (d) => (d.raw.length && d.raw.length < count - 2) ? `RIWAYAT SEJAK ${dateFmt.format(new Date(d.raw[0].time * 1000)).toUpperCase()}` : "";
       
-      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[mode]) }));
-      applyData();
-      fitView();
-      setTimeout(() => { if (currentToken === tokenRef.current) fitView(); }, 300);
-      updateLegend();
+      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[modeRef.current]) }));
+      applyRef.current();
+      legendRef.current();
+      fitRef.current(true);
+      setFade(false);
+      setTimeout(() => { if (currentToken === tokenRef.current) fitRef.current(true); }, 350);
     }).catch(e => {
       if (currentToken !== tokenRef.current) return;
+      setFade(false);
       setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false, error: e.message });
       setLegend(p => ({ ...p, availText: "" }));
     });
-  }, [iv, range, mode, rates, applyData, fitView, updateLegend]); 
+  }, [iv, range, rates]);
 
   useEffect(() => {
     if (!rates) return;
+    let disposed = false;
+    let tb, tt;
 
     const connectBinance = () => {
+      if (disposed) return;
       try {
         const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
         ws.onopen = () => setStatus({ text: "LIVE", isLive: true, error: null });
@@ -373,12 +489,13 @@ export default function PriceChart() {
           if (d.s === "BTCUSDT") livePrices.current.btcBn = parseFloat(d.p);
           if (d.s === "PAXGUSDT") livePrices.current.gold = parseFloat(d.p);
         };
-        ws.onclose = () => setTimeout(connectBinance, 3000);
+        ws.onclose = () => { if (!disposed) tb = setTimeout(connectBinance, 3000); };
         wsRef.current.binance = ws;
       } catch(e) {}
     };
 
     const connectBitstamp = () => {
+      if (disposed) return;
       try {
         const w = new WebSocket("wss://ws.bitstamp.net");
         w.onopen = () => w.send(JSON.stringify({ event: "bts:subscribe", data: { channel: "live_trades_btcusd" } }));
@@ -388,7 +505,7 @@ export default function PriceChart() {
             if (m.event === "trade" && m.data) livePrices.current.btcBs = parseFloat(m.data.price_str || m.data.price);
           } catch(e) {}
         };
-        w.onclose = () => setTimeout(connectBitstamp, 3000);
+        w.onclose = () => { if (!disposed) tt = setTimeout(connectBitstamp, 3000); };
         wsRef.current.bitstamp = w;
       } catch(e) {}
     };
@@ -397,6 +514,10 @@ export default function PriceChart() {
     connectBitstamp();
 
     const timer = setInterval(() => {
+      const curMode = modeRef.current;
+      const curRate = rateRef.current;
+      const step = IV[ivRef.current].step;
+
       ["gold", "btc"].forEach(key => {
         const d = dsRef.current[key];
         const pRaw = key === "gold" ? livePrices.current.gold : (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
@@ -404,7 +525,6 @@ export default function PriceChart() {
         if (pRaw == null || !d.raw.length) return;
         
         const last = d.raw[d.raw.length - 1];
-        const step = IV[iv].step;
         const nowT = Math.floor(Date.now() / 1000) + WIB;
 
         let cdl;
@@ -419,22 +539,26 @@ export default function PriceChart() {
           cdl = last;
         }
 
-        if (key === mode) {
-          const m = d.mult() * rate;
-          const s = { time: cdl.time, open: cdl.open * m, high: cdl.high * m, low: cdl.low * m, close: cdl.close * m };
-          seriesRef.current.candle.update(s);
-          seriesRef.current.area.update({ time: s.time, value: s.close });
+        if (key === curMode) {
+          const m = d.mult() * curRate;
+          const sv = { time: cdl.time, open: cdl.open * m, high: cdl.high * m, low: cdl.low * m, close: cdl.close * m };
+          lastRef.current = sv.close;
+          seriesRef.current.candle.update(sv);
+          seriesRef.current.area.update({ time: sv.time, value: sv.close });
         }
       });
-      updateLegend();
+      legendRef.current();
     }, 1000);
 
     return () => {
+      disposed = true;
       clearInterval(timer);
+      clearTimeout(tb);
+      clearTimeout(tt);
       if (wsRef.current.binance) wsRef.current.binance.close();
       if (wsRef.current.bitstamp) wsRef.current.bitstamp.close();
     };
-  }, [mode, iv, rate, updateLegend]);
+  }, [rates]);
 
   return (
     <section className={styles.priceSection} id="harga">
@@ -473,11 +597,11 @@ export default function PriceChart() {
         
         {/* translate="no" dan notranslate agar Google Translate tidak merusak/membekukan angka harga */}
         <div className={`notranslate ${styles.priceMain}`} translate="no">
-          <div className={styles.bigPrice}>{curObj.symbol}{fmt(legend.val, dec)}<span className={styles.bigPriceUnit}> / TON</span></div>
+          <div className={styles.bigPrice}><Smooth value={legend.val} render={v => curObj.symbol + fmt(v, dec)} /><span className={styles.bigPriceUnit}> / TON</span></div>
           <div className={styles.priceStats}>
-            <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} {legend.isUp ? "+" : ""}{fmt(legend.chg, dec)} ({legend.isUp ? "+" : ""}{fmt(legend.pct, 2)}%)</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>TERTINGGI</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.high, dec)}</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>TERENDAH</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.low, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} <Smooth value={legend.chg} render={v => (v >= 0 ? "+" : "") + fmt(v, dec)} /> (<Smooth value={legend.pct} render={v => (v >= 0 ? "+" : "") + fmt(v, 2) + "%"} />)</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>TERTINGGI</span><span className={styles.statVal}><Smooth value={legend.high} render={v => curObj.symbol + fmt(v, dec)} /></span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>TERENDAH</span><span className={styles.statVal}><Smooth value={legend.low} render={v => curObj.symbol + fmt(v, dec)} /></span></div>
           </div>
         </div>
         
@@ -551,7 +675,7 @@ export default function PriceChart() {
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
 
           {/* CHART */}
-          <div style={isFull
+          <div className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`} style={isFull
             ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
             : { position: 'relative', width: '100%', height: '480px' }}>
 
