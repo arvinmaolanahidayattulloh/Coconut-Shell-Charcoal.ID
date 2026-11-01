@@ -261,13 +261,11 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  box-sizing: border-box;
   border: none;
   border-radius: 0;
   box-shadow: none;
-  padding: 24px 32px;
+  padding: max(24px, env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(32px, env(safe-area-inset-left));
   background: #ffffff;
   display: flex;
   flex-direction: column;
@@ -287,6 +285,10 @@
   display: flex;
   flex-direction: column;
   padding: 16px;
+}
+
+.chartInFull > :first-child {
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -309,7 +311,7 @@
   .priceCard { padding: 24px 16px; border-radius: 18px; }
   .bigPrice { font-size: 32px; }
   .priceStats { flex-wrap: wrap; gap: 12px; }
-  .cardFull { padding: 12px; border-radius: 0; }
+  .cardFull { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); border-radius: 0; }
   .cardFull .bigPrice { font-size: 28px; }
   .cardFull .eyebrow { font-size: 20px; }
   .chartInFull { padding: 10px; }
