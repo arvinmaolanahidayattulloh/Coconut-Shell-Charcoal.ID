@@ -405,3 +405,39 @@
   color: #9ca3af;
   letter-spacing: 0.5px;
 }
+
+/* ===== ANIMASI HALUS ===== */
+.chartFade {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.chartFadeOut {
+  opacity: 0.15;
+  transform: scale(0.995);
+}
+
+.cardFull {
+  animation: fullIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fullIn {
+  from { opacity: 0.4; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modeBtn,
+.currencyOption,
+.fullBtn,
+.liveIndicator,
+.liveText {
+  transition: all 0.2s ease;
+}
+
+.up, .down {
+  transition: color 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chartFade, .cardFull, .currencyDropdown { transition: none; animation: none; }
+}
+
