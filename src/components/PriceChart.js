@@ -95,6 +95,7 @@ export default function PriceChart() {
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
+  const [isFull, setIsFull] = useState(false);
   
   const [cur, setCur] = useState("IDR");
   const [rates, setRates] = useState(null);
@@ -188,6 +189,21 @@ export default function PriceChart() {
       ts.setVisibleLogicalRange({ from: Math.max(0, n - 100), to: n + 1 });
     }
   }, [mode, range]);
+
+  // Mode layar penuh: kunci scroll, tombol Esc, dan sesuaikan ulang chart
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") setIsFull(false); };
+    if (isFull) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", onKey);
+    }
+    const t = setTimeout(() => fitView(), 150);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+      clearTimeout(t);
+    };
+  }, [isFull, fitView]);
 
   const applyData = useCallback(() => {
     const d = dsRef.current[mode];
@@ -407,8 +423,8 @@ export default function PriceChart() {
 
         {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
         
-        {/* Atribut translate="no" dan notranslate ditambahkan agar Google Translate tidak merusak/membekukan angka harga */}
-        <div className={styles.priceMain} translate="no" className={`notranslate ${styles.priceMain}`}>
+        {/* translate="no" dan notranslate agar Google Translate tidak merusak/membekukan angka harga */}
+        <div className={`notranslate ${styles.priceMain}`} translate="no">
           <div className={styles.bigPrice}>{curObj.symbol}{fmt(legend.val, dec)}<span className={styles.bigPriceUnit}> / TON</span></div>
           <div className={styles.priceStats}>
             <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} {legend.isUp ? "+" : ""}{fmt(legend.chg, dec)} ({legend.isUp ? "+" : ""}{fmt(legend.pct, 2)}%)</span></div>
@@ -417,12 +433,12 @@ export default function PriceChart() {
           </div>
         </div>
         
-        <div className={styles.chartContainer}>
+        <div className={`${styles.chartContainer} ${isFull ? styles.chartFull : ""}`}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
             
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
               
-              {/* TOMBOL SWITCH 2-IN-1: 🔓/🔐 & ⭐ */}
+              {/* TOMBOL SWITCH 2-IN-1 */}
               <div style={{ 
                 display: 'inline-flex', 
                 background: '#f3f4f6', 
@@ -494,11 +510,28 @@ export default function PriceChart() {
                 <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>CANDLE</button>
                 <button className={`${styles.currencyBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>AREA</button>
               </div>
+
+              {/* TOMBOL FULL TAB */}
+              <button
+                type="button"
+                className={styles.fullBtn}
+                onClick={() => setIsFull(f => !f)}
+                aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}
+              >
+                {isFull ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                )}
+                {isFull ? "TUTUP" : "FULL"}
+              </button>
             </div>
 
           </div>
 
-          <div style={{ position: 'relative', width: '100%', height: '480px' }}>
+          <div style={isFull
+            ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
+            : { position: 'relative', width: '100%', height: '480px' }}>
             
             {marketClosed && mode === "gold" && (
               <div style={{
