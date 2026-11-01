@@ -44,7 +44,7 @@
 
 .eyebrow {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 600;
   letter-spacing: -0.03em;
   color: #c45e20;
@@ -288,7 +288,7 @@
   padding: 16px;
 }
 
-.chartInFull .toolbar {
+.cardFull .toolbar {
   flex-shrink: 0;
 }
 
@@ -314,7 +314,7 @@
   .priceStats { flex-wrap: wrap; gap: 12px; }
   .cardFull { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); border-radius: 0; }
   .cardFull .bigPrice { font-size: 28px; }
-  .cardFull .eyebrow { font-size: 20px; }
+  .cardFull .eyebrow { font-size: 24px; }
   .chartInFull { padding: 10px; }
 }
 
@@ -345,9 +345,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #f3f4f6;
+  margin-bottom: 16px;
 }
 
 .toolbarGroup {
@@ -392,12 +390,10 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* Dropdown interval membuka ke atas */
-.dropUp {
-  top: auto;
-  bottom: 42px;
-  right: 0;
-  left: auto;
+/* Dropdown interval */
+.toolbar .currencyDropdown {
+  right: auto;
+  left: 0;
   width: 160px;
   max-height: 320px;
 }
