@@ -1,279 +1,380 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart, CrosshairMode } from "lightweight-charts";
 import styles from "./PriceChart.module.css";
 
 // ==========================================
-// KONSTANTA & RUMUS
+// KONSTANTA & KONFIGURASI DARI SCRIPT ASLI
 // ==========================================
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
-const BTC_FACTOR = 0.909;
+const BTC_FACTOR = 0.01; // Sesuai script yang Anda berikan
+const WIB = 7 * 3600; // Penyesuaian offset waktu ke WIB
 
-const INTERVALS = [
-  { id: "1m", bin: "1m", step: 60 },
-  { id: "5m", bin: "5m", step: 300 },
-  { id: "15m", bin: "15m", step: 900 },
-  { id: "30m", bin: "30m", step: 1800 },
-  { id: "1h", bin: "1h", step: 3600 },
-  { id: "4h", bin: "4h", step: 14400 },
-  { id: "1D", bin: "1d", step: 86400 },
-  { id: "3D", bin: "3d", step: 259200 },
-];
+const IV = {
+  "1m":  { step: 60,     bin: "1m",  label: "1m" },
+  "5m":  { step: 300,    bin: "5m",  label: "5m" },
+  "15m": { step: 900,    bin: "15m", label: "15m" },
+  "30m": { step: 1800,   bin: "30m", label: "30m" },
+  "1h":  { step: 3600,   bin: "1h",  label: "1h" },
+  "4h":  { step: 14400,  bin: "4h",  label: "4h" },
+  "12h": { step: 43200,  bin: "12h", label: "12h" },
+  "1d":  { step: 86400,  bin: "1d",  label: "1D" },
+  "3d":  { step: 259200, bin: "3d",  label: "3D" }
+};
 
-const RANGES = [
-  { id: "1D", iv: "5m", count: 288 },
-  { id: "5D", iv: "15m", count: 480 },
-  { id: "1M", iv: "1h", count: 720 },
-  { id: "3M", iv: "4h", count: 540 },
-  { id: "6M", iv: "12h", count: 360 }, // 12h interval
-  { id: "YTD", iv: "1d", count: "YTD" },
-  { id: "1Y", iv: "1d", count: 365 },
-  { id: "5Y", iv: "3d", count: 609 },
-  { id: "10Y", iv: "1w", count: 520 }, // 1w untuk menghindari limit 1000 Binance
-];
+const RANGES = {
+  "1D":  { iv: "5m",  count: 288 },
+  "5D":  { iv: "15m", count: 480 },
+  "1M":  { iv: "1h",  count: 720 },
+  "3M":  { iv: "4h",  count: 540 },
+  "6M":  { iv: "12h", count: 360 },
+  "YTD": { iv: "1d",  count: 0 }, // Dihitung dinamis
+  "1Y":  { iv: "1d",  count: 365 },
+  "5Y":  { iv: "3d",  count: 609 },
+  "10Y": { iv: "3d",  count: 1217 }
+};
+
+const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
 
 const CURRENCIES = [
   { code: "IDR", symbol: "Rp" },
-  { code: "USD", symbol: "$" },
+  { code: "USD", symbol: "$" }
 ];
 
 function fmt(num, dec) {
   return new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(num);
 }
 
-// Cek Jam Buka Pasar XAUUSD (Jumat 22:00 UTC - Minggu 22:00 UTC = Tutup)
-function isXauMarketOpen() {
-  const now = new Date();
-  const day = now.getUTCDay();
-  const hour = now.getUTCHours();
-  if (day === 6) return false;
-  if (day === 5 && hour >= 22) return false;
-  if (day === 0 && hour < 22) return false;
-  return true;
+function ytdDays() {
+  const n = new Date();
+  return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
+}
+
+// Fungsi Fetch dengan Fallback Host
+async function getJson(path, attempt = 0) {
+  try {
+    const r = await fetch(HOSTS[attempt] + path);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } catch (e) {
+    if (attempt + 1 < HOSTS.length) return getJson(path, attempt + 1);
+    throw e;
+  }
+}
+
+// Pengurutan dan Penghapusan Duplikat
+function uniqSorted(list) {
+  const seen = {};
+  const out = [];
+  list.forEach(c => {
+    if (!seen[c.time]) { seen[c.time] = 1; out.push(c); }
+  });
+  return out.sort((a, b) => a.time - b.time);
 }
 
 export default function PriceChart() {
-  // --- STATES ---
-  const [mode, setMode] = useState("gold"); // gold | btc
-  const [chartType, setChartType] = useState("candle"); // candle | area
-  const [activeInterval, setActiveInterval] = useState("1h");
-  const [activeRange, setActiveRange] = useState("1M");
+  // --- STATES SESUAI SCRIPT ---
+  const [mode, setMode] = useState("gold");
+  const [iv, setIv] = useState("5m");
+  const [range, setRange] = useState("1D");
+  const [type, setType] = useState("candle");
+  const [calib, setCalib] = useState(1);
+  const [manualXau, setManualXau] = useState("");
   
-  const [rates, setRates] = useState(null);
   const [cur, setCur] = useState("IDR");
-  const [live, setLive] = useState(false);
-  const [priceData, setPriceData] = useState({ current: 0, high: 0, low: 0, change: 0, isUp: true });
+  const [rates, setRates] = useState(null);
+  
+  const [status, setStatus] = useState({ text: "Menghubungkan...", isLive: false, error: null });
+  const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, rawText: "", availText: "", isUp: true, high: 0, low: 0 });
 
   // --- REFS ---
-  const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({ candle: null, area: null });
-  const dataHistoryRef = useRef([]); // Simpan history mentah
-  const wsRef = useRef(null);
-  const livePrices = useRef({ gold: null, btc: null });
+  const chartContainerRef = useRef(null);
+  
+  const dsRef = useRef({
+    gold: { raw: [], mult: () => calib * GRAMS * MARKUP / OZ },
+    btc:  { raw: [], mult: () => BTC_FACTOR }
+  });
+  const tokenRef = useRef(0);
+  const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, btcSrc: "Bitstamp" });
+  const wsRef = useRef({ binance: null, bitstamp: null, poll: null, retry: 0 });
 
-  // 1. Initial Load & Cek Pasar
+  const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
+  const dec = cur === "IDR" ? 0 : 2;
+
+  // 1. Fetch Kurs Mata Uang Dasar
   useEffect(() => {
-    if (!isXauMarketOpen()) setMode("btc");
-    
-    // Fetch Kurs
     fetch("/api/prices").then(r => r.json()).then(d => {
       if (d.rates) setRates(d.rates);
     }).catch(() => {});
   }, []);
 
-  const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
-  const curObj = CURRENCIES.find((c) => c.code === cur) || CURRENCIES[0];
-  const dec = cur === "IDR" ? 0 : 2;
-  const multiplier = mode === "gold" ? (GRAMS * MARKUP) / OZ : BTC_FACTOR;
-  const marketOpen = mode === "gold" ? isXauMarketOpen() : true;
-
-  // 2. Inisialisasi Lightweight Charts (Hanya dirender sekali)
+  // 2. Inisialisasi Lightweight Charts
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
     const chart = createChart(chartContainerRef.current, {
-      height: 480,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#9ca3af', fontFamily: 'system-ui, sans-serif' },
-      grid: { vertLines: { color: '#f3f4f6' }, horzLines: { color: '#f3f4f6' } },
-      crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: '#e5e7eb', autoScale: true },
-      timeScale: { borderColor: '#e5e7eb', timeVisible: true, secondsVisible: false },
-      localization: { locale: 'id-ID' }
+      autoSize: true,
+      layout: { background: { type: "solid", color: "transparent" }, textColor: "#787b86", fontFamily: "system-ui, sans-serif", fontSize: 11 },
+      grid: { vertLines: { color: "#f0f3fa" }, horzLines: { color: "#f0f3fa" } },
+      rightPriceScale: { borderColor: "#e0e3eb", scaleMargins: { top: 0.22, bottom: 0.08 } },
+      leftPriceScale: { visible: false },
+      timeScale: { borderColor: "#e0e3eb", timeVisible: IV[iv].step < 86400, secondsVisible: false, rightOffset: 4 },
+      crosshair: { mode: 0 },
+      localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
     });
 
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: '#22c55e', downColor: '#ef4444', borderVisible: false, wickUpColor: '#22c55e', wickDownColor: '#ef4444'
+    const candle = chart.addCandlestickSeries({
+      upColor: "#089981", downColor: "#f23645", borderVisible: false,
+      wickUpColor: "#089981", wickDownColor: "#f23645",
+      priceFormat: { type: "price", precision: 4, minMove: 0.0001 }
     });
 
-    const areaSeries = chart.addAreaSeries({
-      lineColor: '#c45e20', topColor: 'rgba(196, 94, 32, 0.2)', bottomColor: 'rgba(196, 94, 32, 0.0)'
+    const area = chart.addAreaSeries({
+      lineColor: "#2962ff", lineWidth: 2,
+      topColor: "rgba(41, 98, 255, 0.28)", bottomColor: "rgba(41, 98, 255, 0.02)",
+      priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
+      visible: false
     });
 
     chartRef.current = chart;
-    seriesRef.current = { candle: candleSeries, area: areaSeries };
+    seriesRef.current = { candle, area };
 
-    // Responsive resize
-    const handleResize = () => { chart.applyOptions({ width: chartContainerRef.current.clientWidth }); };
-    window.addEventListener('resize', handleResize);
+    return () => chart.remove();
+  }, []); // Hanya run sekali
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      chart.remove();
-    };
-  }, []);
-
-  // 3. Update Visibilitas Tipe Grafik (Candle vs Area)
+  // 3. Update Setelan Tipe & Waktu Chart
   useEffect(() => {
-    if (!seriesRef.current.candle) return;
-    seriesRef.current.candle.applyOptions({ visible: chartType === "candle" });
-    seriesRef.current.area.applyOptions({ visible: chartType === "area" });
-  }, [chartType]);
+    if (!chartRef.current) return;
+    seriesRef.current.candle.applyOptions({ visible: type === "candle" });
+    seriesRef.current.area.applyOptions({ visible: type === "area" });
+    chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv].step < 86400 } });
+  }, [type, iv]);
 
-  // 4. Fetch Sejarah Data (Berjalan setiap Mode, Interval, atau Range berubah)
-  useEffect(() => {
-    if (!chartRef.current || !rates) return;
+  // --- FUNGSI UTAMA DARI SCRIPT ---
+  const fitView = useCallback(() => {
+    const n = dsRef.current[mode].raw.length;
+    if (!n || !chartRef.current) return;
+    const ts = chartRef.current.timeScale();
+    if (range) ts.fitContent();
+    else ts.setVisibleLogicalRange({ from: Math.max(0, n - 120), to: n + 4 });
+  }, [mode, range]);
+
+  const applyData = useCallback(() => {
+    const d = dsRef.current[mode];
+    const m = d.mult() * rate;
     
-    // Tentukan parameter Binance API
-    let binanceInterval = "1h";
-    let limit = 500;
+    const cs = d.raw.map(x => ({
+      time: x.time,
+      open: x.open * m,
+      high: x.high * m,
+      low: x.low * m,
+      close: x.close * m
+    }));
+    
+    seriesRef.current.candle.setData(cs);
+    seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
+  }, [mode, rate]);
 
-    if (activeRange) {
-      const rOpt = RANGES.find(r => r.id === activeRange);
-      binanceInterval = rOpt.iv;
-      if (rOpt.count === "YTD") {
-        const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        limit = Math.max(2, Math.ceil((now - startOfYear) / 86400000));
-      } else {
-        limit = rOpt.count;
-      }
-      // Sinkronkan UI tombol Interval
-      const matchIv = INTERVALS.find(i => i.bin === binanceInterval);
-      if (matchIv) setActiveInterval(matchIv.id);
+  const updateLegend = useCallback(() => {
+    const d = dsRef.current[mode];
+    if (!d.raw.length) return;
+
+    const m = d.mult() * rate;
+    const f = d.raw[0].open * m;
+    const last = d.raw[d.raw.length - 1].close;
+    const l = last * m;
+    
+    const highs = d.raw.map(x => x.high * m);
+    const lows = d.raw.map(x => x.low * m);
+
+    let rawText = "";
+    if (mode === "gold") {
+      const xau = last * calib;
+      rawText = `XAUUSD ${fmt(xau, 2)} · per gram ${fmt(xau / OZ, 4)}`;
     } else {
-      binanceInterval = INTERVALS.find(i => i.id === activeInterval).bin;
+      rawText = `BTCUSD ${fmt(last, 2)}`;
     }
 
-    const symbol = mode === "gold" ? "PAXGUSDT" : "BTCUSDT";
+    const diff = l - f;
+    const pct = f ? (diff / f) * 100 : 0;
 
-    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInterval}&limit=${limit}`)
-      .then(res => res.json())
-      .then(data => {
-        // Format untuk Lightweight Charts (waktu dalam Unix Seconds)
-        const formatted = data.map(d => {
-          const finalMultiplier = multiplier * rate;
-          return {
-            time: Math.floor(d[0] / 1000), // convert to seconds
-            open: parseFloat(d[1]) * finalMultiplier,
-            high: parseFloat(d[2]) * finalMultiplier,
-            low: parseFloat(d[3]) * finalMultiplier,
-            close: parseFloat(d[4]) * finalMultiplier,
-            value: parseFloat(d[4]) * finalMultiplier // Untuk Area chart
-          };
-        });
+    setLegend(prev => ({
+      ...prev,
+      val: l, chg: diff, pct: pct, isUp: diff >= 0, rawText,
+      high: Math.max(...highs), low: Math.min(...lows)
+    }));
+  }, [mode, rate, calib]);
 
-        // Hapus duplikat waktu jika ada
-        const uniqueData = formatted.filter((v, i, a) => a.findIndex(t => (t.time === v.time)) === i);
-        dataHistoryRef.current = uniqueData;
+  // 4. Fetch History Data (Paginasi Lengkap)
+  useEffect(() => {
+    if (!rates) return;
+    tokenRef.current += 1;
+    const currentToken = tokenRef.current;
+    
+    const count = range === "YTD" ? ytdDays() : (RANGES[range]?.count || 1000);
+    
+    dsRef.current.gold.raw = [];
+    dsRef.current.btc.raw = [];
+    setLegend(p => ({ ...p, availText: "Memuat riwayat…" }));
 
-        // Set data ke Chart
-        seriesRef.current.candle.setData(uniqueData);
-        seriesRef.current.area.setData(uniqueData);
+    const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
+      const n = Math.min(left, 1000);
+      const path = `/api/v3/klines?symbol=${symbol}&interval=${IV[interval].bin}&limit=${n}${endMs ? "&endTime=" + endMs : ""}`;
+      const rows = await getJson(path);
+      const cs = rows.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
+      all = cs.concat(all);
+      left -= rows.length;
+      if (left > 0 && rows.length === n) return fetchBinancePage(symbol, interval, left, rows[0][0] - 1, all);
+      return uniqSorted(all);
+    };
 
-        // Fitur Range (Zoom Fit)
-        if (activeRange) {
-          chartRef.current.timeScale().fitContent();
+    const fetchBitstampPage = async (interval, left, endSec = Math.floor(Date.now() / 1000), all = []) => {
+      const step = IV[interval].step;
+      const n = Math.min(left, 1000);
+      const url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${n}&start=${endSec - step * n}&end=${endSec}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      const rows = j?.data?.ohlc || [];
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      all = cs.concat(all);
+      left -= n;
+      if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
+      return uniqSorted(all);
+    };
+
+    const pGold = fetchBinancePage("PAXGUSDT", iv, count);
+    let btcSrc = "Bitstamp";
+    const pBtc = fetchBitstampPage(iv, count).then(cs => {
+      if (!cs.length) throw new Error("data kosong"); return cs;
+    }).catch(() => {
+      btcSrc = "Binance"; return fetchBinancePage("BTCUSDT", iv, count);
+    });
+
+    Promise.all([pGold, pBtc]).then(res => {
+      if (currentToken !== tokenRef.current) return;
+      livePrices.current.btcSrc = btcSrc;
+      dsRef.current.gold.raw = res[0];
+      dsRef.current.btc.raw = res[1];
+
+      const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
+      const sinceNote = (d) => (d.raw.length && d.raw.length < count - 2) ? `Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
+      
+      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[mode]) }));
+      applyData();
+      fitView();
+      setTimeout(() => { if (currentToken === tokenRef.current) fitView(); }, 400);
+      updateLegend();
+    }).catch(e => {
+      if (currentToken !== tokenRef.current) return;
+      setStatus({ text: "Gagal memuat riwayat.", isLive: false, error: e.message });
+      setLegend(p => ({ ...p, availText: "" }));
+    });
+  }, [iv, range, mode, rates]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 5. Tick Updater Live & WebSockets
+  useEffect(() => {
+    if (!rates) return;
+
+    // WebSocket Binance
+    const connectBinance = () => {
+      try {
+        const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
+        ws.onopen = () => { wsRef.current.retry = 0; setStatus({ text: "Live", isLive: true, error: null }); };
+        ws.onmessage = (ev) => {
+          const d = JSON.parse(ev.data).data;
+          if (!d || !d.p) return;
+          if (d.s === "BTCUSDT") livePrices.current.btcBn = parseFloat(d.p);
+          if (d.s === "PAXGUSDT") livePrices.current.gold = parseFloat(d.p);
+        };
+        ws.onclose = () => {
+          wsRef.current.retry++;
+          setTimeout(connectBinance, Math.min(1000 * wsRef.current.retry, 5000));
+        };
+        wsRef.current.binance = ws;
+      } catch(e) {}
+    };
+
+    // WebSocket Bitstamp
+    const connectBitstamp = () => {
+      try {
+        const w = new WebSocket("wss://ws.bitstamp.net");
+        w.onopen = () => w.send(JSON.stringify({ event: "bts:subscribe", data: { channel: "live_trades_btcusd" } }));
+        w.onmessage = (ev) => {
+          try {
+            const m = JSON.parse(ev.data);
+            if (m.event === "trade" && m.data) livePrices.current.btcBs = parseFloat(m.data.price_str || m.data.price);
+            else if (m.event === "bts:request_reconnect") w.close();
+          } catch(e) {}
+        };
+        w.onclose = () => setTimeout(connectBitstamp, 3000);
+        wsRef.current.bitstamp = w;
+      } catch(e) {}
+    };
+
+    connectBinance();
+    connectBitstamp();
+
+    // Loop Update Tick per detik
+    const timer = setInterval(() => {
+      ["gold", "btc"].forEach(key => {
+        const d = dsRef.current[key];
+        const pRaw = key === "gold" ? livePrices.current.gold : (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
+        
+        if (pRaw == null || !d.raw.length) return;
+        
+        const last = d.raw[d.raw.length - 1];
+        const step = IV[iv].step;
+        const nowT = Math.floor(Date.now() / 1000) + WIB;
+        
+        let cdl;
+        if (nowT >= last.time + step) {
+          const t = last.time + step * Math.floor((nowT - last.time) / step);
+          cdl = { time: t, open: pRaw, high: pRaw, low: pRaw, close: pRaw };
+          d.raw.push(cdl);
         } else {
-          // Tampilkan 120 candle terakhir seperti TradingView
-          const total = uniqueData.length;
-          chartRef.current.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 120), to: total + 4 });
+          last.high = Math.max(last.high, pRaw);
+          last.low = Math.min(last.low, pRaw);
+          last.close = pRaw;
+          cdl = last;
         }
 
-        // Update Statistik UI
-        if (uniqueData.length > 0) {
-          const first = uniqueData[0].close;
-          const last = uniqueData[uniqueData.length - 1].close;
-          const high = Math.max(...uniqueData.map(d => d.high));
-          const low = Math.min(...uniqueData.map(d => d.low));
-          const chg = (((last - first) / first) * 100).toFixed(2);
-          setPriceData({ current: last, high, low, change: chg, isUp: parseFloat(chg) >= 0 });
+        if (key === mode) {
+          const m = d.mult() * rate;
+          const s = { time: cdl.time, open: cdl.open * m, high: cdl.high * m, low: cdl.low * m, close: cdl.close * m };
+          seriesRef.current.candle.update(s);
+          seriesRef.current.area.update({ time: s.time, value: s.close });
         }
       });
-  }, [mode, activeInterval, activeRange, rates, multiplier, rate]);
-
-  // 5. WebSocket (Live Ticker)
-  useEffect(() => {
-    const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
-    ws.onopen = () => setLive(true);
-    ws.onmessage = (ev) => {
-      const data = JSON.parse(ev.data).data;
-      if (!data || !data.p) return;
-      if (data.s === "PAXGUSDT") livePrices.current.gold = parseFloat(data.p);
-      if (data.s === "BTCUSDT") livePrices.current.btc = parseFloat(data.p);
-    };
-    ws.onclose = () => setLive(false);
-    return () => ws.close();
-  }, []);
-
-  // 6. Tick Updater (Perbarui lilin terakhir tiap 1 detik)
-  useEffect(() => {
-    if (!marketOpen || !rates) return;
-
-    const timer = setInterval(() => {
-      const history = dataHistoryRef.current;
-      if (!history.length) return;
-
-      const currentRawPrice = livePrices.current[mode];
-      if (!currentRawPrice) return;
-
-      const finalPrice = currentRawPrice * multiplier * rate;
-      const lastCandle = history[history.length - 1];
-      const nowSec = Math.floor(Date.now() / 1000);
-      
-      const activeStep = INTERVALS.find(i => i.id === activeInterval)?.step || 3600;
-
-      // Logika pembentukan candle baru
-      let newTick;
-      if (nowSec >= lastCandle.time + activeStep) {
-        // Bikin Candle Baru
-        const nextTime = lastCandle.time + activeStep * Math.floor((nowSec - lastCandle.time) / activeStep);
-        newTick = { time: nextTime, open: finalPrice, high: finalPrice, low: finalPrice, close: finalPrice, value: finalPrice };
-        history.push(newTick);
-      } else {
-        // Update Candle Lama
-        newTick = { ...lastCandle };
-        newTick.high = Math.max(newTick.high, finalPrice);
-        newTick.low = Math.min(newTick.low, finalPrice);
-        newTick.close = finalPrice;
-        newTick.value = finalPrice;
-        history[history.length - 1] = newTick;
-      }
-
-      // Render pembaruan ke Chart
-      seriesRef.current.candle.update(newTick);
-      seriesRef.current.area.update(newTick);
-
-      // Update Angka Raksasa di UI
-      setPriceData(prev => ({
-        ...prev,
-        current: finalPrice,
-        high: Math.max(prev.high, finalPrice),
-        low: Math.min(prev.low, finalPrice)
-      }));
-
+      updateLegend();
     }, 1000);
-    return () => clearInterval(timer);
-  }, [mode, activeInterval, multiplier, rate, marketOpen]);
 
-  // Handler Klik Menu
-  const handleIntervalClick = (iv) => { setActiveInterval(iv); setActiveRange(null); };
-  const handleRangeClick = (rng) => { setActiveRange(rng); };
+    return () => {
+      clearInterval(timer);
+      if (wsRef.current.binance) wsRef.current.binance.close();
+      if (wsRef.current.bitstamp) wsRef.current.bitstamp.close();
+    };
+  }, [mode, iv, rate, calib, updateLegend]);
 
-  if (!rates) return <div className={styles.loading}><div className={styles.spinner}></div><span>Memuat Engine Chart...</span></div>;
+  // Handler Menu
+  const handleRange = (r) => { setRange(r); setIv(RANGES[r].iv); };
+  const handleIv = (v) => { setIv(v); setRange(null); };
+  const handleManualCalib = (e) => {
+    const v = parseFloat(e.target.value);
+    const rawData = dsRef.current.gold.raw;
+    const rawPrice = rawData.length ? rawData[rawData.length - 1].close : livePrices.current.gold;
+    setManualXau(e.target.value);
+    setCalib((isFinite(v) && v > 0 && rawPrice) ? v / rawPrice : 1);
+    if (mode === "gold") applyData();
+    updateLegend();
+  };
+
+  const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
 
   return (
     <section className={styles.priceSection} id="harga">
@@ -283,36 +384,31 @@ export default function PriceChart() {
           
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
-              <span className={`${styles.liveDot} ${live && marketOpen ? styles.liveDotActive : ""}`}></span>
-              <span className={styles.liveText} style={{ color: live && marketOpen ? "#22c55e" : "#9ca3af" }}>
-                {live && marketOpen ? "LIVE" : "PASAR TUTUP"}
+              <span className={`${styles.liveDot} ${status.isLive ? styles.liveDotActive : ""}`}></span>
+              <span className={styles.liveText} style={{ color: status.isLive ? "#22c55e" : (status.error ? "#ef4444" : "#9ca3af") }}>
+                {status.text}
               </span>
             </div>
 
-            {/* Mata Uang Dropdown */}
-            <select 
-              value={cur} 
-              onChange={(e) => setCur(e.target.value)} 
-              className={styles.currencyBtn} 
-              style={{ padding: '6px 12px', outline: 'none' }}
-            >
+            <select value={cur} onChange={(e) => setCur(e.target.value)} className={styles.currencyBtn} style={{ padding: '6px 12px', outline: 'none' }}>
               {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
             </select>
           </div>
         </div>
+
+        {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
         
         <div className={styles.priceMain}>
-          <div className={styles.bigPrice}>{curObj.symbol}{fmt(priceData.current, dec)}<span className={styles.bigPriceUnit}> / ton</span></div>
+          <div className={styles.bigPrice}>{curObj.symbol}{fmt(legend.val, dec)}<span className={styles.bigPriceUnit}> / ton</span></div>
           <div className={styles.priceStats}>
-            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${priceData.isUp ? styles.up : styles.down}`}>{priceData.isUp ? "\u25B2" : "\u25BC"} {priceData.change}%</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(priceData.high, dec)}</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(priceData.low, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} {legend.isUp ? "+" : ""}{fmt(legend.chg, dec)} ({legend.isUp ? "+" : ""}{fmt(legend.pct, 2)}%)</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.high, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.low, dec)}</span></div>
           </div>
         </div>
         
         <div className={styles.chartContainer}>
-          
-          {/* TOOLBAR CONTROLS (SEPERTI GAMBAR) */}
+          {/* TOOLBAR CONTROLS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
             
             {/* Baris 1: Assets */}
@@ -323,34 +419,45 @@ export default function PriceChart() {
 
             {/* Baris 2: Intervals */}
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-              {INTERVALS.map((iv) => (
-                <button key={iv.id} className={`${styles.currencyBtn} ${activeInterval === iv.id && !activeRange ? styles.currencyActive : ""}`} 
-                  onClick={() => handleIntervalClick(iv.id)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: activeInterval === iv.id && !activeRange ? '#fef3ec' : 'transparent' }}>
-                  {iv.id}
+              {["1m","5m","15m","30m","1h","4h","1d","3d"].map(v => (
+                <button key={v} className={`${styles.currencyBtn} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => handleIv(v)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: iv === v && !range ? '#fef3ec' : 'transparent' }}>
+                  {IV[v].label}
                 </button>
               ))}
             </div>
 
             {/* Baris 3: Ranges */}
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-              {RANGES.map((rng) => (
-                <button key={rng.id} className={`${styles.currencyBtn} ${activeRange === rng.id ? styles.currencyActive : ""}`} 
-                  onClick={() => handleRangeClick(rng.id)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: activeRange === rng.id ? '#fef3ec' : 'transparent' }}>
-                  {rng.id}
+              {["1D","5D","1M","3M","6M","YTD","1Y","5Y","10Y"].map(r => (
+                <button key={r} className={`${styles.currencyBtn} ${range === r ? styles.currencyActive : ""}`} onClick={() => handleRange(r)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: range === r ? '#fef3ec' : 'transparent' }}>
+                  {r}
                 </button>
               ))}
             </div>
 
-            {/* Baris 4: Tipe Grafik */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className={`${styles.currencyBtn} ${chartType === "candle" ? styles.currencyActive : ""}`} onClick={() => setChartType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>Candle</button>
-              <button className={`${styles.currencyBtn} ${chartType === "area" ? styles.currencyActive : ""}`} onClick={() => setChartType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>Area</button>
+            {/* Baris 4: Tipe Grafik & Kalibrasi */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>Candle</button>
+                <button className={`${styles.currencyBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>Area</button>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderLeft: '1px solid #e5e7eb', paddingLeft: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#9ca3af' }}>Kalibrasi XAU:</span>
+                <input type="number" step="0.01" min="0" placeholder="mis. 4000.00" value={manualXau} onChange={handleManualCalib} disabled={mode !== "gold"} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #e5e7eb', fontSize: '12px', width: '110px' }} />
+                <button onClick={() => { setManualXau(""); setCalib(1); if(mode === "gold") applyData(); updateLegend(); }} disabled={mode !== "gold"} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '12px', cursor: mode === "gold" ? 'pointer' : 'not-allowed' }}>Reset</button>
+              </div>
+            </div>
+            
+            {/* Raw Legend info */}
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+              {legend.rawText} {legend.availText && `| ${legend.availText}`}
             </div>
 
           </div>
 
           {/* AREA CHART */}
-          <div ref={chartContainerRef} style={{ width: '100%', position: 'relative' }}></div>
+          <div ref={chartContainerRef} style={{ width: '100%', height: '480px', position: 'relative' }}></div>
           
         </div>
       </div>
