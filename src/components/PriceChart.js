@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import styles from "./PriceChart.module.css";
 
-const K = 0.177946;
+// Konstanta Rumus Baru
+const OZ = 31.1034768;
+const GRAMS = 5;
+const MARKUP = 1.125;
+const BTC_FACTOR = 0.01;
 
 const CURRENCIES = [
   { code: "IDR", symbol: "Rp" },
@@ -23,86 +27,132 @@ function fmt(num, dec) {
 }
 
 export default function PriceChart() {
-  const [xau, setXau] = useState(null);
+  const [mode, setMode] = useState("gold"); // 'gold' atau 'btc'
   const [rates, setRates] = useState(null);
   const [candles, setCandles] = useState([]);
   const [cur, setCur] = useState("IDR");
   const [dropOpen, setDropOpen] = useState(false);
   const [tip, setTip] = useState(null);
   const [live, setLive] = useState(false);
+  
   const canvasRef = useRef(null);
-  const curCandle = useRef(null);
-  const seeded = useRef(false);
+  const wsRef = useRef(null);
+  const livePrices = useRef({ gold: null, btc: null }); // Menyimpan harga tick terakhir dari WebSocket
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
-  const curObj = CURRENCIES.find((c) => c.code === cur);
+  const curObj = CURRENCIES.find((c) => c.code === cur) || CURRENCIES[0];
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
 
-  const fetchAll = useCallback(async () => {
-    try {
-      const res = await fetch("/api/prices");
-      if (!res.ok) return;
-      const d = await res.json();
-      if (d.error) return;
-      if (d.xauusd) setXau(d.xauusd);
-      if (d.rates) setRates(d.rates);
-      setLive(true);
+  // Multiplier berdasarkan rumus
+  const multiplier = mode === "gold" ? (GRAMS * MARKUP) / OZ : BTC_FACTOR;
 
-      if (d.xauusd) {
-        const now = new Date();
-        const p = d.xauusd.mid * K;
-
-        if (!seeded.current) {
-          seeded.current = true;
-          const seed = [];
-          for (let i = 29; i >= 1; i--) {
-            const t = new Date(now.getTime() - i * 60000);
-            const v = (Math.random() - 0.5) * p * 0.002;
-            const o = p + v;
-            const c = o + (Math.random() - 0.5) * p * 0.001;
-            seed.push({ time: t, open: o, high: Math.max(o, c) + Math.random() * p * 0.0005, low: Math.min(o, c) - Math.random() * p * 0.0005, close: c });
-          }
-          setCandles(seed);
-          curCandle.current = { time: now, open: p, high: p, low: p, close: p };
-          return;
-        }
-
-        if (!curCandle.current || now - new Date(curCandle.current.time) > 60000) {
-          if (curCandle.current) {
-            setCandles((prev) => {
-              const u = [...prev, { ...curCandle.current }];
-              if (u.length > 60) u.shift();
-              return u;
-            });
-          }
-          curCandle.current = { time: now, open: p, high: p, low: p, close: p };
-        } else {
-          curCandle.current.close = p;
-          curCandle.current.high = Math.max(curCandle.current.high, p);
-          curCandle.current.low = Math.min(curCandle.current.low, p);
-        }
-      }
-    } catch (e) {}
+  // 1. Fetch Kurs Mata Uang (Sekali saat render)
+  useEffect(() => {
+    fetch("/api/prices")
+      .then((res) => res.json())
+      .then((d) => {
+        if (d.rates) setRates(d.rates);
+      })
+      .catch(() => console.log("Gagal memuat kurs mata uang"));
   }, []);
 
+  // 2. Koneksi WebSocket Binance (Sekali saat render)
   useEffect(() => {
-    fetchAll();
-    const id = setInterval(fetchAll, 15000);
-    return () => clearInterval(id);
-  }, [fetchAll]);
+    const connectWs = () => {
+      const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
+      ws.onopen = () => setLive(true);
+      ws.onmessage = (ev) => {
+        const data = JSON.parse(ev.data).data;
+        if (!data || !data.p) return;
+        const p = parseFloat(data.p);
+        if (data.s === "PAXGUSDT") livePrices.current.gold = p;
+        if (data.s === "BTCUSDT") livePrices.current.btc = p;
+      };
+      ws.onclose = () => {
+        setLive(false);
+        setTimeout(connectWs, 3000); // Reconnect otomatis
+      };
+      wsRef.current = ws;
+    };
+    connectWs();
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+    };
+  }, []);
 
-  const all = curCandle.current ? [...candles, curCandle.current] : candles;
-  const cRated = all.map((c) => ({ time: c.time, open: c.open * rate, high: c.high * rate, low: c.low * rate, close: c.close * rate }));
+  // 3. Fetch History (Saat mode berubah: XAU / BTC)
+  useEffect(() => {
+    setCandles([]); // Reset chart saat ganti mode
+    const symbol = mode === "gold" ? "PAXGUSDT" : "BTCUSDT";
+    
+    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=60`)
+      .then((r) => r.json())
+      .then((data) => {
+        const formatted = data.map((d) => ({
+          time: new Date(d[0]),
+          open: parseFloat(d[1]),
+          high: parseFloat(d[2]),
+          low: parseFloat(d[3]),
+          close: parseFloat(d[4]),
+        }));
+        setCandles(formatted);
+      })
+      .catch(() => console.log("Gagal memuat riwayat harga"));
+  }, [mode]);
+
+  // 4. Tick Updater: Memperbarui State Candle berdasarkan harga live (Per 1 detik)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCandles((prev) => {
+        if (!prev.length) return prev;
+        const last = prev[prev.length - 1];
+        const now = new Date();
+        const currentPrice = livePrices.current[mode];
+        
+        if (!currentPrice) return prev;
+
+        // Jika menit sudah berganti, buat candle baru
+        if (now.getMinutes() !== last.time.getMinutes()) {
+          const newCandle = { time: now, open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice };
+          const updated = [...prev, newCandle];
+          if (updated.length > 60) updated.shift(); // Jaga maksimal 60 candle (1 jam)
+          return updated;
+        } else {
+          // Update candle terakhir
+          const updated = [...prev];
+          const mut = { ...last };
+          mut.high = Math.max(mut.high, currentPrice);
+          mut.low = Math.min(mut.low, currentPrice);
+          mut.close = currentPrice;
+          updated[updated.length - 1] = mut;
+          return updated;
+        }
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [mode]);
+
+  // Kalkulasi harga final dengan multiplier (XAU/BTC) dan nilai tukar (Kurs)
+  const cRated = candles.map((c) => ({
+    time: c.time,
+    open: c.open * multiplier * rate,
+    high: c.high * multiplier * rate,
+    low: c.low * multiplier * rate,
+    close: c.close * multiplier * rate,
+  }));
+
   const highs = cRated.map((c) => c.high);
   const lows = cRated.map((c) => c.low);
   const hVal = highs.length ? Math.max(...highs) : 0;
   const lVal = lows.length ? Math.min(...lows) : 0;
+  
   const fc = cRated[0]?.close || 0;
   const lc = cRated[cRated.length - 1]?.close || 0;
   const chg = fc ? (((lc - fc) / fc) * 100).toFixed(2) : "0.00";
   const isUp = parseFloat(chg) >= 0;
-  const price = xau ? xau.mid * K * rate : 0;
+  const price = lc; // Harga utama di-set dari candle terakhir
 
+  // 5. Canvas Renderer
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || cRated.length < 2) return;
@@ -128,6 +178,7 @@ export default function PriceChart() {
     const fr = mx - mn;
     const gY = (v) => pad.top + cH - ((v - mn) / fr) * cH;
 
+    // Grid Horizontal
     ctx.strokeStyle = "rgba(0,0,0,0.06)";
     ctx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
@@ -138,6 +189,7 @@ export default function PriceChart() {
       ctx.stroke();
     }
 
+    // Label Harga Y-Axis
     ctx.font = "11px system-ui, sans-serif";
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "left";
@@ -147,9 +199,11 @@ export default function PriceChart() {
       ctx.fillText(rate > 1000 ? (v / 1e6).toFixed(2) + " jt" : fmt(v, 2), w - pad.right + 8, y + 4);
     }
 
+    // Menggambar Candlestick
     const n = cRated.length;
     const gap = cW / n;
     const bw = Math.max(4, Math.min(20, gap * 0.6));
+    
     for (let i = 0; i < n; i++) {
       const c = cRated[i];
       const x = pad.left + gap * i + gap / 2;
@@ -174,6 +228,7 @@ export default function PriceChart() {
       ctx.strokeRect(x - bw / 2, bt, bw, bh);
     }
 
+    // Label Waktu X-Axis
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "center";
     const lbl = Math.min(6, n);
@@ -197,21 +252,52 @@ export default function PriceChart() {
     if (idx < 0 || idx >= n) { setTip(null); return; }
     const c = cRated[idx];
     const t = new Date(c.time);
-    setTip({ x: Math.min(Math.max(x, 100), rect.width - 180), date: t.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + " " + t.getHours().toString().padStart(2, "0") + ":" + t.getMinutes().toString().padStart(2, "0"), open: c.open, high: c.high, low: c.low, close: c.close });
+    setTip({ 
+      x: Math.min(Math.max(x, 100), rect.width - 180), 
+      date: t.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + " " + t.getHours().toString().padStart(2, "0") + ":" + t.getMinutes().toString().padStart(2, "0"), 
+      open: c.open, high: c.high, low: c.low, close: c.close 
+    });
   };
 
-  if (!xau) return (<section className={styles.priceSection} id="harga"><div className={styles.loading}><div className={styles.spinner}></div><span>Memuat data harga realtime...</span></div></section>);
+  if (candles.length === 0) return (
+    <section className={styles.priceSection} id="harga">
+      <div className={styles.loading}>
+        <div className={styles.spinner}></div>
+        <span>Memuat data riwayat dari Binance...</span>
+      </div>
+    </section>
+  );
 
   return (
     <section className={styles.priceSection} id="harga">
       <div className={styles.priceCard}>
         <div className={styles.priceHeader}>
           <span className={styles.eyebrow}>Coconut Shell Charcoal</span>
+          
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
               <span className={`${styles.liveDot} ${live ? styles.liveDotActive : ""}`}></span>
               <span className={styles.liveText}>{live ? "LIVE" : "OFFLINE"}</span>
             </div>
+
+            {/* Mode Selector (XAU/BTC) */}
+            <div style={{ display: 'flex', gap: '4px', marginRight: '8px' }}>
+              <button 
+                className={`${styles.currencyBtn} ${mode === "gold" ? styles.currencyActive : ""}`} 
+                onClick={() => setMode("gold")}
+                style={{ padding: '6px 12px' }}
+              >
+                XAU
+              </button>
+              <button 
+                className={`${styles.currencyBtn} ${mode === "btc" ? styles.currencyActive : ""}`} 
+                onClick={() => setMode("btc")}
+                style={{ padding: '6px 12px' }}
+              >
+                BTC
+              </button>
+            </div>
+
             <div className={styles.currencySelector}>
               <button className={styles.currencyBtn} onClick={() => setDropOpen(!dropOpen)} type="button">
                 {cur}
@@ -230,14 +316,16 @@ export default function PriceChart() {
             </div>
           </div>
         </div>
+        
         <div className={styles.priceMain}>
           <div className={styles.bigPrice}>{curObj.symbol}{fmt(price, dec)}<span className={styles.bigPriceUnit}> / ton</span></div>
           <div className={styles.priceStats}>
-            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${isUp ? styles.up : styles.down}`}>{isUp ? "\u25B2" : "\u25BC"} {parseFloat(chg) > 0 ? "+" : ""}{chg}%</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(hVal, dec)}</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(lVal, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan (1J)</span><span className={`${styles.statVal} ${isUp ? styles.up : styles.down}`}>{isUp ? "\u25B2" : "\u25BC"} {parseFloat(chg) > 0 ? "+" : ""}{chg}%</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi (1J)</span><span className={styles.statVal}>{curObj.symbol}{fmt(hVal, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Terendah (1J)</span><span className={styles.statVal}>{curObj.symbol}{fmt(lVal, dec)}</span></div>
           </div>
         </div>
+        
         <div className={styles.chartContainer}>
           <div className={styles.chartArea} onMouseMove={onHover} onMouseLeave={() => setTip(null)}>
             <canvas ref={canvasRef} className={styles.canvas} />
