@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import styles from "./PriceChart.module.css";
 
-// Konstanta Rumus Baru
+// Konstanta Rumus
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
@@ -26,8 +26,23 @@ function fmt(num, dec) {
   return new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(num);
 }
 
+// Fungsi Pengecekan Jam Buka Pasar XAUUSD (Forex/Metals)
+// Waktu UTC: Tutup Jumat 22:00 UTC s/d Minggu 22:00 UTC
+function isXauMarketOpen() {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0 (Minggu) s/d 6 (Sabtu)
+  const hour = now.getUTCHours();
+
+  if (day === 6) return false; // Sabtu: Tutup 24 Jam
+  if (day === 5 && hour >= 22) return false; // Jumat: Tutup setelah jam 22:00 UTC
+  if (day === 0 && hour < 22) return false; // Minggu: Tutup sebelum jam 22:00 UTC
+
+  return true;
+}
+
 export default function PriceChart() {
-  const [mode, setMode] = useState("gold"); // 'gold' atau 'btc'
+  const [mode, setMode] = useState("gold"); // Default awal, akan dioverride oleh useEffect
+  const [isClient, setIsClient] = useState(false);
   const [rates, setRates] = useState(null);
   const [candles, setCandles] = useState([]);
   const [cur, setCur] = useState("IDR");
@@ -37,16 +52,29 @@ export default function PriceChart() {
   
   const canvasRef = useRef(null);
   const wsRef = useRef(null);
-  const livePrices = useRef({ gold: null, btc: null }); // Menyimpan harga tick terakhir dari WebSocket
+  const livePrices = useRef({ gold: null, btc: null });
+
+  // 1. Cek Jam Buka Pasar saat pertama kali dirender (mencegah hydration error di Next.js)
+  useEffect(() => {
+    setIsClient(true);
+    if (!isXauMarketOpen()) {
+      setMode("btc"); // Alihkan otomatis ke BTC jika XAUUSD tutup
+    }
+  }, []);
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const curObj = CURRENCIES.find((c) => c.code === cur) || CURRENCIES[0];
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
-
-  // Multiplier berdasarkan rumus
   const multiplier = mode === "gold" ? (GRAMS * MARKUP) / OZ : BTC_FACTOR;
+  
+  // Status Pasar Saat Ini
+  const marketOpen = mode === "gold" ? isXauMarketOpen() : true;
+  const displayLive = live && marketOpen;
+  let liveStatusText = "OFFLINE";
+  if (displayLive) liveStatusText = "LIVE";
+  else if (mode === "gold" && !marketOpen) liveStatusText = "PASAR TUTUP";
 
-  // 1. Fetch Kurs Mata Uang (Sekali saat render)
+  // 2. Fetch Kurs Mata Uang
   useEffect(() => {
     fetch("/api/prices")
       .then((res) => res.json())
@@ -56,7 +84,7 @@ export default function PriceChart() {
       .catch(() => console.log("Gagal memuat kurs mata uang"));
   }, []);
 
-  // 2. Koneksi WebSocket Binance (Sekali saat render)
+  // 3. Koneksi WebSocket Binance
   useEffect(() => {
     const connectWs = () => {
       const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
@@ -70,7 +98,7 @@ export default function PriceChart() {
       };
       ws.onclose = () => {
         setLive(false);
-        setTimeout(connectWs, 3000); // Reconnect otomatis
+        setTimeout(connectWs, 3000);
       };
       wsRef.current = ws;
     };
@@ -80,9 +108,10 @@ export default function PriceChart() {
     };
   }, []);
 
-  // 3. Fetch History (Saat mode berubah: XAU / BTC)
+  // 4. Fetch History saat Mode Berubah
   useEffect(() => {
-    setCandles([]); // Reset chart saat ganti mode
+    if (!isClient) return;
+    setCandles([]);
     const symbol = mode === "gold" ? "PAXGUSDT" : "BTCUSDT";
     
     fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=60`)
@@ -98,10 +127,12 @@ export default function PriceChart() {
         setCandles(formatted);
       })
       .catch(() => console.log("Gagal memuat riwayat harga"));
-  }, [mode]);
+  }, [mode, isClient]);
 
-  // 4. Tick Updater: Memperbarui State Candle berdasarkan harga live (Per 1 detik)
+  // 5. Tick Updater
   useEffect(() => {
+    if (!isClient || !marketOpen) return; // Hentikan update per detik jika pasar tutup
+
     const timer = setInterval(() => {
       setCandles((prev) => {
         if (!prev.length) return prev;
@@ -111,14 +142,12 @@ export default function PriceChart() {
         
         if (!currentPrice) return prev;
 
-        // Jika menit sudah berganti, buat candle baru
         if (now.getMinutes() !== last.time.getMinutes()) {
           const newCandle = { time: now, open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice };
           const updated = [...prev, newCandle];
-          if (updated.length > 60) updated.shift(); // Jaga maksimal 60 candle (1 jam)
+          if (updated.length > 60) updated.shift();
           return updated;
         } else {
-          // Update candle terakhir
           const updated = [...prev];
           const mut = { ...last };
           mut.high = Math.max(mut.high, currentPrice);
@@ -130,9 +159,8 @@ export default function PriceChart() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [mode]);
+  }, [mode, isClient, marketOpen]);
 
-  // Kalkulasi harga final dengan multiplier (XAU/BTC) dan nilai tukar (Kurs)
   const cRated = candles.map((c) => ({
     time: c.time,
     open: c.open * multiplier * rate,
@@ -150,9 +178,9 @@ export default function PriceChart() {
   const lc = cRated[cRated.length - 1]?.close || 0;
   const chg = fc ? (((lc - fc) / fc) * 100).toFixed(2) : "0.00";
   const isUp = parseFloat(chg) >= 0;
-  const price = lc; // Harga utama di-set dari candle terakhir
+  const price = lc;
 
-  // 5. Canvas Renderer
+  // 6. Canvas Renderer
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || cRated.length < 2) return;
@@ -178,7 +206,6 @@ export default function PriceChart() {
     const fr = mx - mn;
     const gY = (v) => pad.top + cH - ((v - mn) / fr) * cH;
 
-    // Grid Horizontal
     ctx.strokeStyle = "rgba(0,0,0,0.06)";
     ctx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
@@ -189,7 +216,6 @@ export default function PriceChart() {
       ctx.stroke();
     }
 
-    // Label Harga Y-Axis
     ctx.font = "11px system-ui, sans-serif";
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "left";
@@ -199,7 +225,6 @@ export default function PriceChart() {
       ctx.fillText(rate > 1000 ? (v / 1e6).toFixed(2) + " jt" : fmt(v, 2), w - pad.right + 8, y + 4);
     }
 
-    // Menggambar Candlestick
     const n = cRated.length;
     const gap = cW / n;
     const bw = Math.max(4, Math.min(20, gap * 0.6));
@@ -228,7 +253,6 @@ export default function PriceChart() {
       ctx.strokeRect(x - bw / 2, bt, bw, bh);
     }
 
-    // Label Waktu X-Axis
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "center";
     const lbl = Math.min(6, n);
@@ -259,7 +283,7 @@ export default function PriceChart() {
     });
   };
 
-  if (candles.length === 0) return (
+  if (!isClient || candles.length === 0) return (
     <section className={styles.priceSection} id="harga">
       <div className={styles.loading}>
         <div className={styles.spinner}></div>
@@ -276,8 +300,10 @@ export default function PriceChart() {
           
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
-              <span className={`${styles.liveDot} ${live ? styles.liveDotActive : ""}`}></span>
-              <span className={styles.liveText}>{live ? "LIVE" : "OFFLINE"}</span>
+              <span className={`${styles.liveDot} ${displayLive ? styles.liveDotActive : ""}`}></span>
+              <span className={styles.liveText} style={{ color: displayLive ? "#22c55e" : "#9ca3af" }}>
+                {liveStatusText}
+              </span>
             </div>
 
             {/* Mode Selector (XAU/BTC) */}
