@@ -10,7 +10,6 @@ const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
 const WIB = 7 * 3600; 
 
-// Interval Waktu (Tanpa berulang-ulang)
 const IV = {
   "1m":  { step: 60,     bin: "1m",  label: "1M" },
   "5m":  { step: 300,    bin: "5m",  label: "5M" },
@@ -23,7 +22,6 @@ const IV = {
   "3d":  { step: 259200, bin: "3d",  label: "3D" }
 };
 
-// Rentang Waktu (Tanpa berulang-ulang)
 const RANGES = {
   "1D":  { iv: "5m",  count: 288, label: "1D" },
   "5D":  { iv: "15m", count: 480, label: "5D" },
@@ -409,7 +407,8 @@ export default function PriceChart() {
 
         {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
         
-        <div className={styles.priceMain}>
+        {/* Atribut translate="no" dan notranslate ditambahkan agar Google Translate tidak merusak/membekukan angka harga */}
+        <div className={styles.priceMain} translate="no" className={`notranslate ${styles.priceMain}`}>
           <div className={styles.bigPrice}>{curObj.symbol}{fmt(legend.val, dec)}<span className={styles.bigPriceUnit}> / TON</span></div>
           <div className={styles.priceStats}>
             <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} {legend.isUp ? "+" : ""}{fmt(legend.chg, dec)} ({legend.isUp ? "+" : ""}{fmt(legend.pct, 2)}%)</span></div>
@@ -463,7 +462,7 @@ export default function PriceChart() {
                 </button>
               </div>
 
-              {/* DROPDOWN WAKTU (LANGSUNG KE INTINYA TANPA KATA BERULANG) */}
+              {/* DROPDOWN WAKTU */}
               <div className={styles.currencySelector}>
                 <button className={styles.currencyBtn} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
                   INTERVAL : {range ? range : IV[iv]?.label}
