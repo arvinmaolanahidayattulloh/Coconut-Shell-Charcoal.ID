@@ -444,7 +444,7 @@ export default function PriceChart() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {marketClosed ? "🔐" : "🔓"}
+                  {marketClosed ? "🔒" : "🔐"}
                 </button>
 
                 <button 
@@ -521,7 +521,7 @@ export default function PriceChart() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>⚠️</span>
-                <span><strong>PASAR TUTUP. PERDAGANGAN LIBUR.</strong> (BUKA KEMBALI SENIN PUKUL 22:00 UTC).</span>
+                <span><strong>PASAR TUTUP. PERDAGANGAN LIBUR.</strong> Buka kembali Senin Pukul 22:00 UTC.</span>
               </div>
             </div>
           )}
