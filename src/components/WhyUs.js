@@ -7,7 +7,7 @@ const TILES = [
   {
     value: "25 T",
     label: "Kapasitas / Bulan",
-    desc: "Menjamin ketersediaan pasokan briket skala besar.",
+    desc: "Menjamin ketersediaan pasokan Coconut Shell Charcoal skala besar.",
   },
   {
     value: "98%",
@@ -29,28 +29,28 @@ const TILES = [
 const STAGES = [
   {
     num: "01",
-    title: "Konsultasi & Sampel",
-    desc: "Diskusi spesifikasi teknis kalori, kadar air, dan abu, dilanjutkan pengiriman sampel briket untuk pengujian tungku Anda.",
+    title: "Konsultasi",
+    desc: "Spesifikasi teknis ditentukan bersama, meliputi fixed carbon, kadar air, kadar abu, dan ukuran.",
   },
   {
     num: "02",
-    title: "Penawaran & Kontrak",
-    desc: "Transparansi harga berbasis volume pemesanan serta penandatanganan kesepakatan suplai jangka panjang.",
+    title: "Paid Sample",
+    desc: "Sampel diberikan secara berbayar untuk pengujian pada tungku dan laboratorium sebelum PO diterbitkan.",
   },
   {
     num: "03",
-    title: "Produksi & Kontrol Mutu",
-    desc: "Pengolahan briket di pabrik terintegrasi kami dengan pengujian lab per batch untuk menjaga konsistensi kualitas.",
+    title: "Pembayaran",
+    desc: "Harga berbasis EXW sesuai volume pemesanan. Pembayaran sebesar 100% wajib dilakukan pada saat PO diterbitkan.",
   },
   {
     num: "04",
-    title: "Pengiriman Terjadwal",
-    desc: "Distribusi aman menggunakan jaringan logistik darat dan laut langsung ke lokasi pabrik Anda atau pelabuhan tujuan.",
+    title: "Produksi",
+    desc: "Produksi diselesaikan dalam waktu 30 hari sejak PO diterbitkan. Pengambilan barang dapat dilakukan secara parsial.",
   },
   {
     num: "05",
-    title: "Pembayaran Lunas",
-    desc: "Setelah Barang di Terima.",
+    title: "Finish",
+    desc: "Barang diambil langsung di pabrik (EXW) atau dikirim ke lokasi pembeli sesuai jadwal yang disepakati.",
   },
 ];
 
@@ -85,7 +85,7 @@ export default function WhyUs() {
         <RevealWrapper className={styles.timelineSection} delay={2}>
           <div className={styles.timelineHeader}>
             <h3>Alur Proses Kerja</h3>
-            <p>Tahapan pemesanan briket profesional kami</p>
+            <p>Ketentuan pemesanan Coconut Shell Charcoal</p>
           </div>
           
           <div className={styles.timeline}>
