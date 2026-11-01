@@ -8,8 +8,6 @@ import Particles from "./Particles";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
-  // Angka disesuaikan agar lebih realistis. 
-  // Silakan ubah angka '5', '200', dan '15' sesuai dengan data aktual perusahaan Anda.
   const yearsCount = useCountUp(1, 2000); 
   const clientsCount = useCountUp(1, 2000); 
   const countriesCount = useCountUp(0, 2000); 
@@ -41,7 +39,7 @@ export default function Hero() {
               </svg>
             </MagneticButton>
             
-            {/* Tombol Hubungi Kami diubah ke WhatsApp */}
+            {/* Tombol Hubungi Kami ke WhatsApp */}
             <MagneticButton 
               as="a" 
               href="https://wa.me/6285168152525" 
@@ -52,24 +50,20 @@ export default function Hero() {
               Hubungi Kami
             </MagneticButton>
           </div>
+          
+          {/* Bagian Statistik yang telah dibersihkan dari bug layout */}
           <div className={styles.heroStats}>
             <div className={styles.stat}>
               <span className={styles.statNumber} ref={yearsCount.ref}>
                 {yearsCount.count}
               </span>
-              <span className={styles.statLabel}>thn pengalaman.</span>
-            </div>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>Flexible from 19 Agustus 2026</span>
+              <span className={styles.statLabel}>Thn Pengalaman</span>
             </div>
             <div className={styles.stat}>
               <span className={styles.statNumber} ref={clientsCount.ref}>
                 {clientsCount.count}
               </span>
-              <span className={styles.statLabel}>Klien industri</span>
-            </div>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>PT. INAGRIN</span>
+              <span className={styles.statLabel}>Klien Industri</span>
             </div>
             <div className={styles.stat}>
               <span className={styles.statNumber} ref={countriesCount.ref}>
