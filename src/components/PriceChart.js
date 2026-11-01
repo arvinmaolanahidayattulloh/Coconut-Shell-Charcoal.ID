@@ -10,8 +10,8 @@ import styles from "./PriceChart.module.css";
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
-const BTC_FACTOR = 0.01; // Sesuai script yang Anda berikan
-const WIB = 7 * 3600; // Penyesuaian offset waktu ke WIB
+const BTC_FACTOR = 0.909; 
+const WIB = 7 * 3600; 
 
 const IV = {
   "1m":  { step: 60,     bin: "1m",  label: "1m" },
@@ -31,7 +31,7 @@ const RANGES = {
   "1M":  { iv: "1h",  count: 720 },
   "3M":  { iv: "4h",  count: 540 },
   "6M":  { iv: "12h", count: 360 },
-  "YTD": { iv: "1d",  count: 0 }, // Dihitung dinamis
+  "YTD": { iv: "1d",  count: 0 }, 
   "1Y":  { iv: "1d",  count: 365 },
   "5Y":  { iv: "3d",  count: 609 },
   "10Y": { iv: "3d",  count: 1217 }
@@ -53,7 +53,6 @@ function ytdDays() {
   return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
-// Fungsi Fetch dengan Fallback Host
 async function getJson(path, attempt = 0) {
   try {
     const r = await fetch(HOSTS[attempt] + path);
@@ -65,7 +64,6 @@ async function getJson(path, attempt = 0) {
   }
 }
 
-// Pengurutan dan Penghapusan Duplikat
 function uniqSorted(list) {
   const seen = {};
   const out = [];
@@ -76,7 +74,6 @@ function uniqSorted(list) {
 }
 
 export default function PriceChart() {
-  // --- STATES SESUAI SCRIPT ---
   const [mode, setMode] = useState("gold");
   const [iv, setIv] = useState("5m");
   const [range, setRange] = useState("1D");
@@ -90,7 +87,6 @@ export default function PriceChart() {
   const [status, setStatus] = useState({ text: "Menghubungkan...", isLive: false, error: null });
   const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, rawText: "", availText: "", isUp: true, high: 0, low: 0 });
 
-  // --- REFS ---
   const chartRef = useRef(null);
   const seriesRef = useRef({ candle: null, area: null });
   const chartContainerRef = useRef(null);
@@ -106,14 +102,12 @@ export default function PriceChart() {
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const dec = cur === "IDR" ? 0 : 2;
 
-  // 1. Fetch Kurs Mata Uang Dasar
   useEffect(() => {
     fetch("/api/prices").then(r => r.json()).then(d => {
       if (d.rates) setRates(d.rates);
     }).catch(() => {});
   }, []);
 
-  // 2. Inisialisasi Lightweight Charts
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -145,9 +139,8 @@ export default function PriceChart() {
     seriesRef.current = { candle, area };
 
     return () => chart.remove();
-  }, []); // Hanya run sekali
+  }, []); 
 
-  // 3. Update Setelan Tipe & Waktu Chart
   useEffect(() => {
     if (!chartRef.current) return;
     seriesRef.current.candle.applyOptions({ visible: type === "candle" });
@@ -155,7 +148,6 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv].step < 86400 } });
   }, [type, iv]);
 
-  // --- FUNGSI UTAMA DARI SCRIPT ---
   const fitView = useCallback(() => {
     const n = dsRef.current[mode].raw.length;
     if (!n || !chartRef.current) return;
@@ -210,7 +202,6 @@ export default function PriceChart() {
     }));
   }, [mode, rate, calib]);
 
-  // 4. Fetch History Data (Paginasi Lengkap)
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -275,13 +266,11 @@ export default function PriceChart() {
       setStatus({ text: "Gagal memuat riwayat.", isLive: false, error: e.message });
       setLegend(p => ({ ...p, availText: "" }));
     });
-  }, [iv, range, mode, rates]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [iv, range, mode, rates]); 
 
-  // 5. Tick Updater Live & WebSockets
   useEffect(() => {
     if (!rates) return;
 
-    // WebSocket Binance
     const connectBinance = () => {
       try {
         const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
@@ -300,7 +289,6 @@ export default function PriceChart() {
       } catch(e) {}
     };
 
-    // WebSocket Bitstamp
     const connectBitstamp = () => {
       try {
         const w = new WebSocket("wss://ws.bitstamp.net");
@@ -320,7 +308,6 @@ export default function PriceChart() {
     connectBinance();
     connectBitstamp();
 
-    // Loop Update Tick per detik
     const timer = setInterval(() => {
       ["gold", "btc"].forEach(key => {
         const d = dsRef.current[key];
@@ -361,7 +348,6 @@ export default function PriceChart() {
     };
   }, [mode, iv, rate, calib, updateLegend]);
 
-  // Handler Menu
   const handleRange = (r) => { setRange(r); setIv(RANGES[r].iv); };
   const handleIv = (v) => { setIv(v); setRange(null); };
   const handleManualCalib = (e) => {
@@ -408,16 +394,12 @@ export default function PriceChart() {
         </div>
         
         <div className={styles.chartContainer}>
-          {/* TOOLBAR CONTROLS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
-            
-            {/* Baris 1: Assets */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button className={`${styles.currencyBtn} ${mode === "gold" ? styles.currencyActive : ""}`} onClick={() => setMode("gold")}>XAUUSD</button>
               <button className={`${styles.currencyBtn} ${mode === "btc" ? styles.currencyActive : ""}`} onClick={() => setMode("btc")}>BTC</button>
             </div>
 
-            {/* Baris 2: Intervals */}
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
               {["1m","5m","15m","30m","1h","4h","1d","3d"].map(v => (
                 <button key={v} className={`${styles.currencyBtn} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => handleIv(v)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: iv === v && !range ? '#fef3ec' : 'transparent' }}>
@@ -426,7 +408,6 @@ export default function PriceChart() {
               ))}
             </div>
 
-            {/* Baris 3: Ranges */}
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
               {["1D","5D","1M","3M","6M","YTD","1Y","5Y","10Y"].map(r => (
                 <button key={r} className={`${styles.currencyBtn} ${range === r ? styles.currencyActive : ""}`} onClick={() => handleRange(r)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: range === r ? '#fef3ec' : 'transparent' }}>
@@ -435,7 +416,6 @@ export default function PriceChart() {
               ))}
             </div>
 
-            {/* Baris 4: Tipe Grafik & Kalibrasi */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>Candle</button>
@@ -449,16 +429,11 @@ export default function PriceChart() {
               </div>
             </div>
             
-            {/* Raw Legend info */}
             <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
               {legend.rawText} {legend.availText && `| ${legend.availText}`}
             </div>
-
           </div>
-
-          {/* AREA CHART */}
           <div ref={chartContainerRef} style={{ width: '100%', height: '480px', position: 'relative' }}></div>
-          
         </div>
       </div>
     </section>
