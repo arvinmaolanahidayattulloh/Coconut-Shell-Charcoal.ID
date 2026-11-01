@@ -1,12 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createChart, CrosshairMode } from "lightweight-charts";
+import { createChart } from "lightweight-charts";
 import styles from "./PriceChart.module.css";
 
-// ==========================================
-// KONSTANTA & KONFIGURASI
-// ==========================================
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
@@ -14,30 +11,30 @@ const BTC_FACTOR = 0.00909;
 const WIB = 7 * 3600; 
 
 const IV = {
-  "1t":  { type: "tick", count: 1,    label: "1 Tick" },
-  "10t": { type: "tick", count: 10,   label: "10 Ticks" },
-  "1000t":{ type: "tick", count: 1000, label: "1000 Ticks" },
-  "1m":  { type: "time", step: 60,     bin: "1m",  label: "1m" },
-  "5m":  { type: "time", step: 300,    bin: "5m",  label: "5m" },
-  "15m": { type: "time", step: 900,    bin: "15m", label: "15m" },
-  "30m": { type: "time", step: 1800,   bin: "30m", label: "30m" },
-  "1h":  { type: "time", step: 3600,   bin: "1h",  label: "1h" },
-  "4h":  { type: "time", step: 14400,  bin: "4h",  label: "4h" },
-  "12h": { type: "time", step: 43200,  bin: "12h", label: "12h" },
+  "1t":  { type: "tick", count: 1,    label: "1 TICK" },
+  "10t": { type: "tick", count: 10,   label: "10 TICKS" },
+  "1000t":{ type: "tick", count: 1000, label: "1000 TICKS" },
+  "1m":  { type: "time", step: 60,     bin: "1m",  label: "1M" },
+  "5m":  { type: "time", step: 300,    bin: "5m",  label: "5M" },
+  "15m": { type: "time", step: 900,    bin: "15m", label: "15M" },
+  "30m": { type: "time", step: 1800,   bin: "30m", label: "30M" },
+  "1h":  { type: "time", step: 3600,   bin: "1h",  label: "1H" },
+  "4h":  { type: "time", step: 14400,  bin: "4h",  label: "4H" },
+  "12h": { type: "time", step: 43200,  bin: "12h", label: "12H" },
   "1d":  { type: "time", step: 86400,  bin: "1d",  label: "1D" },
   "3d":  { type: "time", step: 259200, bin: "3d",  label: "3D" }
 };
 
 const RANGES = {
-  "1D":  { iv: "5m",  count: 288, label: "Rentang: 1 Hari (1D)" },
-  "5D":  { iv: "15m", count: 480, label: "Rentang: 5 Hari (5D)" },
-  "1M":  { iv: "1h",  count: 720, label: "Rentang: 1 Bulan (1M)" },
-  "3M":  { iv: "4h",  count: 540, label: "Rentang: 3 Bulan (3M)" },
-  "6M":  { iv: "12h", count: 360, label: "Rentang: 6 Bulan (6M)" },
-  "YTD": { iv: "1d",  count: 0,   label: "Rentang: Tahun Ini (YTD)" },
-  "1Y":  { iv: "1d",  count: 365, label: "Rentang: 1 Tahun (1Y)" },
-  "5Y":  { iv: "3d",  count: 609, label: "Rentang: 5 Tahun (5Y)" },
-  "10Y": { iv: "3d",  count: 1217, label: "Rentang: 10 Tahun (10Y)" }
+  "1D":  { iv: "5m",  count: 288, label: "RENTANG: 1 HARI (1D)" },
+  "5D":  { iv: "15m", count: 480, label: "RENTANG: 5 HARI (5D)" },
+  "1M":  { iv: "1h",  count: 720, label: "RENTANG: 1 BULAN (1M)" },
+  "3M":  { iv: "4h",  count: 540, label: "RENTANG: 3 BULAN (3M)" },
+  "6M":  { iv: "12h", count: 360, label: "RENTANG: 6 BULAN (6M)" },
+  "YTD": { iv: "1d",  count: 0,   label: "RENTANG: TAHUN INI (YTD)" },
+  "1Y":  { iv: "1d",  count: 365, label: "RENTANG: 1 TAHUN (1Y)" },
+  "5Y":  { iv: "3d",  count: 609, label: "RENTANG: 5 TAHUN (5Y)" },
+  "10Y": { iv: "3d",  count: 1217, label: "RENTANG: 10 TAHUN (10Y)" }
 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
@@ -64,15 +61,14 @@ function ytdDays() {
   return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
-// Cek Market XAU (Buka Senin 22:00 UTC - Jumat 22:00 UTC)
 function isXauMarketOpen() {
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
-  if (day === 6) return false; // Sabtu Tutup
-  if (day === 0) return false; // Minggu Tutup
-  if (day === 5 && hour >= 22) return false; // Jumat malam tutup
-  if (day === 1 && hour < 22) return false;  // Senin pagi sebelum 22 UTC (opsional, umumnya buka Senin dini hari)
+  if (day === 6) return false;
+  if (day === 0) return false;
+  if (day === 5 && hour >= 22) return false;
+  if (day === 1 && hour < 22) return false;
   return true;
 }
 
@@ -98,7 +94,7 @@ function uniqSorted(list) {
 
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
-  const [mode, setMode] = useState("btc"); // Default awal sementara sebelum dicek
+  const [mode, setMode] = useState("btc"); 
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -109,7 +105,7 @@ export default function PriceChart() {
   const [curDropOpen, setCurDropOpen] = useState(false);
   const [timeDropOpen, setTimeDropOpen] = useState(false);
   
-  const [status, setStatus] = useState({ text: "Menghubungkan...", isLive: false, error: null });
+  const [status, setStatus] = useState({ text: "MENGHUBUNGKAN...", isLive: false, error: null });
   const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, availText: "", isUp: true, high: 0, low: 0 });
 
   const chartRef = useRef(null);
@@ -128,7 +124,6 @@ export default function PriceChart() {
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
 
-  // Cek Status Pasar XAU saat pertama load dan set mode otomatis (Buka -> Gembok Terbuka, Tutup -> Bintang)
   useEffect(() => {
     const open = isXauMarketOpen();
     setMarketClosed(!open);
@@ -141,7 +136,6 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // Inisialisasi Lightweight Charts (fixRightEdge: true agar tidak bisa ditarik kosong ke kanan)
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -237,7 +231,6 @@ export default function PriceChart() {
     }));
   }, [mode, rate]);
 
-  // Fetch History Tanpa Batas
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -249,7 +242,7 @@ export default function PriceChart() {
     
     dsRef.current.gold.raw = [];
     dsRef.current.btc.raw = [];
-    setLegend(p => ({ ...p, availText: "Memuat riwayat tanpa batas…" }));
+    setLegend(p => ({ ...p, availText: "MEMUAT RIWAYAT TANPA BATAS..." }));
 
     const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
       const n = Math.min(left, 1000);
@@ -301,7 +294,7 @@ export default function PriceChart() {
       dsRef.current.btc.raw = bData;
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-      const sinceNote = (d) => (d.raw.length && d.raw.length < count - 2) ? `Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
+      const sinceNote = (d) => (d.raw.length && d.raw.length < count - 2) ? `RIWAYAT SEJAK ${dateFmt.format(new Date(d.raw[0].time * 1000)).toUpperCase()}` : "";
       
       setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[mode]) }));
       applyData();
@@ -310,19 +303,18 @@ export default function PriceChart() {
       updateLegend();
     }).catch(e => {
       if (currentToken !== tokenRef.current) return;
-      setStatus({ text: "Gagal memuat riwayat.", isLive: false, error: e.message });
+      setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false, error: e.message });
       setLegend(p => ({ ...p, availText: "" }));
     });
   }, [iv, range, mode, rates, applyData, fitView, updateLegend]); 
 
-  // WebSocket Live Updates
   useEffect(() => {
     if (!rates) return;
 
     const connectBinance = () => {
       try {
         const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
-        ws.onopen = () => setStatus({ text: "Live", isLive: true, error: null });
+        ws.onopen = () => setStatus({ text: "LIVE", isLive: true, error: null });
         ws.onmessage = (ev) => {
           const d = JSON.parse(ev.data).data;
           if (!d || !d.p) return;
@@ -404,7 +396,7 @@ export default function PriceChart() {
     <section className={styles.priceSection} id="harga">
       <div className={styles.priceCard}>
         <div className={styles.priceHeader}>
-          <span className={styles.eyebrow}>Coconut Shell Charcoal</span>
+          <span className={styles.eyebrow}>COCONUT SHELL CHARCOAL</span>
           
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
@@ -414,7 +406,6 @@ export default function PriceChart() {
               </span>
             </div>
 
-            {/* CURRENCY DROPDOWN */}
             <div className={styles.currencySelector}>
               <button className={styles.currencyBtn} onClick={() => setCurDropOpen(!curDropOpen)} type="button">
                 {cur}
@@ -437,19 +428,17 @@ export default function PriceChart() {
         {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
         
         <div className={styles.priceMain}>
-          <div className={styles.bigPrice}>{curObj.symbol}{fmt(legend.val, dec)}<span className={styles.bigPriceUnit}> / ton</span></div>
+          <div className={styles.bigPrice}>{curObj.symbol}{fmt(legend.val, dec)}<span className={styles.bigPriceUnit}> / TON</span></div>
           <div className={styles.priceStats}>
-            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} {legend.isUp ? "+" : ""}{fmt(legend.chg, dec)} ({legend.isUp ? "+" : ""}{fmt(legend.pct, 2)}%)</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.high, dec)}</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.low, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} {legend.isUp ? "+" : ""}{fmt(legend.chg, dec)} ({legend.isUp ? "+" : ""}{fmt(legend.pct, 2)}%)</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>TERTINGGI</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.high, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>TERENDAH</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.low, dec)}</span></div>
           </div>
         </div>
         
         <div className={styles.chartContainer}>
-          {/* TOOLBAR CONTROLS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
             
-            {/* TOMBOL SWITCH 2-IN-1 SHAPE LONJONG DI BAWAH CURRENCY */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
               
               <div style={{ 
@@ -460,7 +449,6 @@ export default function PriceChart() {
                 border: '1px solid #e5e7eb',
                 gap: '4px'
               }}>
-                {/* Tombol XAU (Gembok Terbuka jika Buka, Gembok Terkunci jika Tutup) */}
                 <button 
                   onClick={() => setMode("gold")}
                   style={{
@@ -473,10 +461,9 @@ export default function PriceChart() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {marketClosed ? "🔒" : "🔓"} XAUUSD {marketClosed && "(Tutup)"}
+                  {marketClosed ? "🔒" : "🔓"} XAUUSD {marketClosed && "(TUTUP)"}
                 </button>
 
-                {/* Tombol BTC (Bintang) */}
                 <button 
                   onClick={() => setMode("btc")}
                   style={{
@@ -493,10 +480,9 @@ export default function PriceChart() {
                 </button>
               </div>
 
-              {/* WAKTU DROPDOWN */}
               <div className={styles.currencySelector}>
                 <button className={styles.currencyBtn} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
-                  🕒 Waktu: {range ? `Range (${range})` : `Interval (${IV[iv]?.label})`}
+                  🕒 WAKTU: {range ? `RANGE (${range})` : `INTERVAL (${IV[iv]?.label})`}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
                 {timeDropOpen && (
@@ -511,7 +497,7 @@ export default function PriceChart() {
                     <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#9ca3af' }}>INTERVAL WAKTU</div>
                     {["1m","5m","15m","30m","1h","4h","12h","1d","3d"].map(v => (
                       <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
-                        <span>Interval: {IV[v].label}</span>
+                        <span>INTERVAL: {IV[v].label}</span>
                       </button>
                     ))}
                     <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
@@ -527,17 +513,15 @@ export default function PriceChart() {
 
             </div>
 
-            {/* TIPE GRAFIK */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '4px' }}>
-                <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>Candle</button>
-                <button className={`${styles.currencyBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>Area</button>
+                <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>CANDLE</button>
+                <button className={`${styles.currencyBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>AREA</button>
               </div>
             </div>
 
           </div>
 
-          {/* AREA CHART & WATERMARK ICON GEMBOK TERKUNCI JIKA XAU TUTUP */}
           <div style={{ position: 'relative', width: '100%', height: '480px' }}>
             
             {marketClosed && mode === "gold" && (
@@ -552,7 +536,6 @@ export default function PriceChart() {
             <div ref={chartContainerRef} style={{ width: '100%', height: '100%', position: 'relative', zIndex: 2 }}></div>
           </div>
 
-          {/* PERINGATAN MERAH DI BAWAH MARKET (JIKA XAU TUTUP DAN DIPILIH) */}
           {marketClosed && mode === "gold" && (
             <div style={{
               marginTop: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca',
@@ -561,17 +544,8 @@ export default function PriceChart() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>⚠️</span>
-                <span><strong>Pasar XAUUSD Tutup.</strong> Perdagangan emas libur akhir pekan (Buka kembali Senin pukul 22:00 UTC). Menampilkan data penutupan terakhir.</span>
+                <span><strong>PASAR XAUUSD TUTUP.</strong> PERDAGANGAN EMAS LIBUR AKHIR PEKAN (BUKA KEMBALI SENIN PUKUL 22:00 UTC).</span>
               </div>
-              <button 
-                onClick={() => setMode("btc")}
-                style={{
-                  background: '#dc2626', color: '#fff', border: 'none', padding: '4px 10px',
-                  borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
-                }}
-              >
-                Beralih ke BTC ⭐
-              </button>
             </div>
           )}
           
