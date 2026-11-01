@@ -13,16 +13,20 @@ const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
 const WIB = 7 * 3600; 
 
+// Urutan Waktu dari Terkecil ke Terjauh (Termasuk Tick & Interval Standar)
 const IV = {
-  "1m":  { step: 60,     bin: "1m",  label: "1m" },
-  "5m":  { step: 300,    bin: "5m",  label: "5m" },
-  "15m": { step: 900,    bin: "15m", label: "15m" },
-  "30m": { step: 1800,   bin: "30m", label: "30m" },
-  "1h":  { step: 3600,   bin: "1h",  label: "1h" },
-  "4h":  { step: 14400,  bin: "4h",  label: "4h" },
-  "12h": { step: 43200,  bin: "12h", label: "12h" },
-  "1d":  { step: 86400,  bin: "1d",  label: "1D" },
-  "3d":  { step: 259200, bin: "3d",  label: "3D" }
+  "1t":  { type: "tick", count: 1,    label: "1 Tick" },
+  "10t": { type: "tick", count: 10,   label: "10 Ticks" },
+  "1000t":{ type: "tick", count: 1000, label: "1000 Ticks" },
+  "1m":  { type: "time", step: 60,     bin: "1m",  label: "1m" },
+  "5m":  { type: "time", step: 300,    bin: "5m",  label: "5m" },
+  "15m": { type: "time", step: 900,    bin: "15m", label: "15m" },
+  "30m": { type: "time", step: 1800,   bin: "30m", label: "30m" },
+  "1h":  { type: "time", step: 3600,   bin: "1h",  label: "1h" },
+  "4h":  { type: "time", step: 14400,  bin: "4h",  label: "4h" },
+  "12h": { type: "time", step: 43200,  bin: "12h", label: "12h" },
+  "1d":  { type: "time", step: 86400,  bin: "1d",  label: "1D" },
+  "3d":  { type: "time", step: 259200, bin: "3d",  label: "3D" }
 };
 
 const RANGES = {
@@ -93,16 +97,13 @@ function uniqSorted(list) {
 
 export default function PriceChart() {
   const [mode, setMode] = useState("gold"); // 'gold' atau 'btc'
-  const [iv, setIv] = useState("5m");
-  const [range, setRange] = useState("1D");
+  const [iv, setIv] = useState("1m");       // Default view 1 menit
+  const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
-  const [calib, setCalib] = useState(1);
-  const [manualXau, setManualXau] = useState("");
   
   const [cur, setCur] = useState("IDR");
   const [rates, setRates] = useState(null);
   
-  // Dropdown States
   const [curDropOpen, setCurDropOpen] = useState(false);
   const [timeDropOpen, setTimeDropOpen] = useState(false);
   
@@ -115,7 +116,7 @@ export default function PriceChart() {
   const chartContainerRef = useRef(null);
   
   const dsRef = useRef({
-    gold: { raw: [], mult: () => calib * GRAMS * MARKUP / OZ },
+    gold: { raw: [], mult: () => GRAMS * MARKUP / OZ },
     btc:  { raw: [], mult: () => BTC_FACTOR }
   });
   const tokenRef = useRef(0);
@@ -126,19 +127,15 @@ export default function PriceChart() {
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
 
-  // Cek Status Pasar XAU berkala
+  // Cek Status Pasar XAU
   useEffect(() => {
     const checkMarket = () => {
-      const open = isXauMarketOpen();
-      setMarketClosed(!open);
-      if (!open && mode === "gold") {
-        setMode("btc"); // Alihkan otomatis ke BTC jika XAU tutup
-      }
+      setMarketClosed(!isXauMarketOpen());
     };
     checkMarket();
     const interval = setInterval(checkMarket, 30000);
     return () => clearInterval(interval);
-  }, [mode]);
+  }, []);
 
   useEffect(() => {
     fetch("/api/prices").then(r => r.json()).then(d => {
@@ -146,7 +143,7 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // Inisialisasi Lightweight Charts
+  // Inisialisasi Lightweight Charts & Mencegah Geser Melewati Harga Terbaru
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -156,7 +153,14 @@ export default function PriceChart() {
       grid: { vertLines: { color: "#f0f3fa" }, horzLines: { color: "#f0f3fa" } },
       rightPriceScale: { borderColor: "#e0e3eb", scaleMargins: { top: 0.22, bottom: 0.08 } },
       leftPriceScale: { visible: false },
-      timeScale: { borderColor: "#e0e3eb", timeVisible: IV[iv]?.step < 86400, secondsVisible: false, rightOffset: 4 },
+      timeScale: { 
+        borderColor: "#e0e3eb", 
+        timeVisible: IV[iv]?.type === "time" && IV[iv]?.step < 86400, 
+        secondsVisible: false, 
+        rightOffset: 2,
+        fixLeftEdge: false,
+        fixRightEdge: true // Mengunci agar chart mentok tidak bisa ditarik kosong ke kanan melewati harga terbaru
+      },
       crosshair: { mode: 0 },
       localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
     });
@@ -176,21 +180,24 @@ export default function PriceChart() {
     seriesRef.current = { candle, area };
 
     return () => chart.remove();
-  }, []); 
+  }, [iv]); 
 
   useEffect(() => {
     if (!chartRef.current) return;
     seriesRef.current.candle.applyOptions({ visible: type === "candle" });
     seriesRef.current.area.applyOptions({ visible: type === "area" });
-    chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
-  }, [type, iv]);
+  }, [type]);
 
   const fitView = useCallback(() => {
-    const n = dsRef.current[mode].raw.length;
-    if (!n || !chartRef.current) return;
+    const d = dsRef.current[mode];
+    if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
+    const n = d.raw.length;
     const ts = chartRef.current.timeScale();
-    if (range) ts.fitContent();
-    else ts.setVisibleLogicalRange({ from: Math.max(0, n - 120), to: n + 4 });
+    if (range) {
+      ts.fitContent();
+    } else {
+      ts.setVisibleLogicalRange({ from: Math.max(0, n - 100), to: n + 1 });
+    }
   }, [mode, range]);
 
   const applyData = useCallback(() => {
@@ -224,8 +231,8 @@ export default function PriceChart() {
 
     let rawText = "";
     if (mode === "gold") {
-      const xau = last * calib;
-      rawText = `XAUUSD ${fmt(xau, 2)} · per gram ${fmt(xau / OZ, 4)}`;
+      const xau = last;
+      rawText = `XAUUSD (PAXG) ${fmt(xau, 2)} · per gram ${fmt(xau / OZ, 4)}`;
     } else {
       rawText = `BTCUSD ⭐ ${fmt(last, 2)}`;
     }
@@ -238,15 +245,17 @@ export default function PriceChart() {
       val: l, chg: diff, pct: pct, isUp: diff >= 0, rawText,
       high: Math.max(...highs), low: Math.min(...lows)
     }));
-  }, [mode, rate, calib]);
+  }, [mode, rate]);
 
-  // Fetch History Tanpa Batas (Paginasi Otomatis)
+  // Fetch History Tanpa Batas
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
     const currentToken = tokenRef.current;
     
-    const count = range === "YTD" ? ytdDays() : (RANGES[range]?.count || 1000);
+    const isTickMode = IV[iv]?.type === "tick";
+    const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : (isTickMode ? IV[iv].count : 300));
+    const binanceIv = isTickMode ? "1m" : IV[iv].bin;
     
     dsRef.current.gold.raw = [];
     dsRef.current.btc.raw = [];
@@ -254,7 +263,7 @@ export default function PriceChart() {
 
     const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
       const n = Math.min(left, 1000);
-      const path = `/api/v3/klines?symbol=${symbol}&interval=${IV[interval].bin}&limit=${n}${endMs ? "&endTime=" + endMs : ""}`;
+      const path = `/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${n}${endMs ? "&endTime=" + endMs : ""}`;
       const rows = await getJson(path);
       const cs = rows.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
       all = cs.concat(all);
@@ -264,7 +273,7 @@ export default function PriceChart() {
     };
 
     const fetchBitstampPage = async (interval, left, endSec = Math.floor(Date.now() / 1000), all = []) => {
-      const step = IV[interval].step;
+      const step = IV[iv]?.step || 60;
       const n = Math.min(left, 1000);
       const url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${n}&start=${endSec - step * n}&end=${endSec}`;
       const r = await fetch(url);
@@ -278,19 +287,28 @@ export default function PriceChart() {
       return uniqSorted(all);
     };
 
-    const pGold = fetchBinancePage("PAXGUSDT", iv, count);
+    const pGold = fetchBinancePage("PAXGUSDT", binanceIv, count);
     let btcSrc = "Bitstamp";
-    const pBtc = fetchBitstampPage(iv, count).then(cs => {
+    const pBtc = isTickMode ? fetchBinancePage("BTCUSDT", binanceIv, count) : fetchBitstampPage(binanceIv, count).then(cs => {
       if (!cs.length) throw new Error("data kosong"); return cs;
     }).catch(() => {
-      btcSrc = "Binance"; return fetchBinancePage("BTCUSDT", iv, count);
+      btcSrc = "Binance"; return fetchBinancePage("BTCUSDT", binanceIv, count);
     });
 
     Promise.all([pGold, pBtc]).then(res => {
       if (currentToken !== tokenRef.current) return;
       livePrices.current.btcSrc = btcSrc;
-      dsRef.current.gold.raw = res[0];
-      dsRef.current.btc.raw = res[1];
+      
+      let gData = res[0];
+      let bData = res[1];
+
+      if (isTickMode) {
+        gData = gData.slice(-IV[iv].count);
+        bData = bData.slice(-IV[iv].count);
+      }
+
+      dsRef.current.gold.raw = gData;
+      dsRef.current.btc.raw = bData;
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
       const sinceNote = (d) => (d.raw.length && d.raw.length < count - 2) ? `Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
@@ -298,7 +316,7 @@ export default function PriceChart() {
       setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[mode]) }));
       applyData();
       fitView();
-      setTimeout(() => { if (currentToken === tokenRef.current) fitView(); }, 400);
+      setTimeout(() => { if (currentToken === tokenRef.current) fitView(); }, 300);
       updateLegend();
     }).catch(e => {
       if (currentToken !== tokenRef.current) return;
@@ -307,7 +325,7 @@ export default function PriceChart() {
     });
   }, [iv, range, mode, rates, applyData, fitView, updateLegend]); 
 
-  // WebSocket Live Updates
+  // WebSocket Live Updates dengan Animasi Halus
   useEffect(() => {
     if (!rates) return;
 
@@ -352,19 +370,27 @@ export default function PriceChart() {
         if (pRaw == null || !d.raw.length) return;
         
         const last = d.raw[d.raw.length - 1];
-        const step = IV[iv].step;
-        const nowT = Math.floor(Date.now() / 1000) + WIB;
-        
+        const isTickMode = IV[iv]?.type === "tick";
+
         let cdl;
-        if (nowT >= last.time + step) {
-          const t = last.time + step * Math.floor((nowT - last.time) / step);
-          cdl = { time: t, open: pRaw, high: pRaw, low: pRaw, close: pRaw };
+        if (isTickMode) {
+          const nowT = Math.floor(Date.now() / 1000) + WIB;
+          cdl = { time: nowT, open: pRaw, high: pRaw, low: pRaw, close: pRaw };
           d.raw.push(cdl);
+          if (d.raw.length > IV[iv].count) d.raw.shift();
         } else {
-          last.high = Math.max(last.high, pRaw);
-          last.low = Math.min(last.low, pRaw);
-          last.close = pRaw;
-          cdl = last;
+          const step = IV[iv].step;
+          const nowT = Math.floor(Date.now() / 1000) + WIB;
+          if (nowT >= last.time + step) {
+            const t = last.time + step * Math.floor((nowT - last.time) / step);
+            cdl = { time: t, open: pRaw, high: pRaw, low: pRaw, close: pRaw };
+            d.raw.push(cdl);
+          } else {
+            last.high = Math.max(last.high, pRaw);
+            last.low = Math.min(last.low, pRaw);
+            last.close = pRaw;
+            cdl = last;
+          }
         }
 
         if (key === mode) {
@@ -382,7 +408,7 @@ export default function PriceChart() {
       if (wsRef.current.binance) wsRef.current.binance.close();
       if (wsRef.current.bitstamp) wsRef.current.bitstamp.close();
     };
-  }, [mode, iv, rate, calib, updateLegend]);
+  }, [mode, iv, rate, updateLegend]);
 
   return (
     <section className={styles.priceSection} id="harga">
@@ -398,10 +424,10 @@ export default function PriceChart() {
               </span>
             </div>
 
-            {/* CURRENCY DROPDOWN */}
+            {/* CURRENCY DROPDOWN TANPA KURUNG PADA TOMBOL UTAMA */}
             <div className={styles.currencySelector}>
               <button className={styles.currencyBtn} onClick={() => setCurDropOpen(!curDropOpen)} type="button">
-                {cur} ({curObj.symbol})
+                {cur}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: curDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               {curDropOpen && (
@@ -425,7 +451,7 @@ export default function PriceChart() {
           <div className={styles.priceStats}>
             <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} {legend.isUp ? "+" : ""}{fmt(legend.chg, dec)} ({legend.isUp ? "+" : ""}{fmt(legend.pct, 2)}%)</span></div>
             <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.high, dec)}</span></div>
-            <div className5={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.low, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(legend.low, dec)}</span></div>
           </div>
         </div>
         
@@ -433,50 +459,57 @@ export default function PriceChart() {
           {/* TOOLBAR CONTROLS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
             
-            {/* BARIS 1: TOMBOL ON/OFF XAU & BTC */}
+            {/* BARIS 1: TOMBOL ON/OFF 2-IN-1 SWITCH (XAUUSD & BTC) */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               
-              {/* Tombol XAU dengan status Market Close & Gembok */}
               <button 
                 className={`${styles.currencyBtn} ${mode === "gold" ? styles.currencyActive : ""}`} 
-                onClick={() => { if(!marketClosed) setMode("gold"); }} 
+                onClick={() => setMode("gold")}
                 style={{ 
-                  opacity: marketClosed ? 0.6 : 1, 
-                  background: marketClosed ? "#e5e7eb" : undefined,
-                  cursor: marketClosed ? "not-allowed" : "pointer"
+                  borderColor: mode === "gold" ? "#c45e20" : "#e5e7eb",
+                  background: mode === "gold" ? "#fef3ec" : "#ffffff"
                 }}
-                title={marketClosed ? "Pasar XAUUSD Sedang Tutup" : "Aktifkan XAUUSD"}
               >
-                {marketClosed && "🔒 "} XAUUSD {marketClosed && "(TUTUP)"}
+                {marketClosed && "🔒 "} XAUUSD {marketClosed && "(Tutup)"}
               </button>
 
-              {/* Tombol BTC dengan Bintang */}
               <button 
                 className={`${styles.currencyBtn} ${mode === "btc" ? styles.currencyActive : ""}`} 
                 onClick={() => setMode("btc")}
+                style={{ 
+                  borderColor: mode === "btc" ? "#c45e20" : "#e5e7eb",
+                  background: mode === "btc" ? "#fef3ec" : "#ffffff"
+                }}
               >
                 BTC ⭐
               </button>
 
-              {/* WAKTU DROPDOWN (PILIHAN INTERVAL & RANGE SEPERTI CURRENCY) */}
+              {/* WAKTU DROPDOWN (DARI TERKECIL HINGGA TERJAUH/TICK) */}
               <div className={styles.currencySelector} style={{ marginLeft: 'auto' }}>
                 <button className={styles.currencyBtn} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
-                  🕒 Waktu: {range ? `Range (${range})` : `Interval (${iv})`}
+                  🕒 Waktu: {range ? `Range (${range})` : `Interval (${IV[iv]?.label})`}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
                 {timeDropOpen && (
                   <div className={styles.currencyDropdown} style={{ right: 0, left: 'auto', width: '220px' }}>
+                    <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#9ca3af' }}>MODE TICK (TERKECIL)</div>
+                    {["1t","10t","1000t"].map(v => (
+                      <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
+                        <span>{IV[v].label}</span>
+                      </button>
+                    ))}
+                    <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
+                    <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#9ca3af' }}>INTERVAL WAKTU</div>
+                    {["1m","5m","15m","30m","1h","4h","12h","1d","3d"].map(v => (
+                      <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
+                        <span>Interval: {IV[v].label}</span>
+                      </button>
+                    ))}
+                    <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
                     <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#9ca3af' }}>RENTANG WAKTU (RANGE)</div>
                     {Object.keys(RANGES).map(r => (
                       <button key={r} className={`${styles.currencyOption} ${range === r ? styles.currencyActive : ""}`} onClick={() => { setRange(r); setIv(RANGES[r].iv); setTimeDropOpen(false); }}>
                         <span>{RANGES[r].label}</span>
-                      </button>
-                    ))}
-                    <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
-                    <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#9ca3af' }}>INTERVAL CANDLE</div>
-                    {["1m","5m","15m","30m","1h","4h","1d","3d"].map(v => (
-                      <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
-                        <span>Interval: {v}</span>
                       </button>
                     ))}
                   </div>
@@ -485,25 +518,11 @@ export default function PriceChart() {
 
             </div>
 
-            {/* BARIS 2: TIPE GRAFIK & KALIBRASI */}
+            {/* BARIS 2: TIPE GRAFIK */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>Candle</button>
                 <button className={`${styles.currencyBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>Area</button>
-              </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderLeft: '1px solid #e5e7eb', paddingLeft: '12px' }}>
-                <span style={{ fontSize: '12px', color: '#9ca3af' }}>Kalibrasi XAU:</span>
-                <input type="number" step="0.01" min="0" placeholder="mis. 4000.00" value={manualXau} onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  const rawData = dsRef.current.gold.raw;
-                  const rawPrice = rawData.length ? rawData[rawData.length - 1].close : livePrices.current.gold;
-                  setManualXau(e.target.value);
-                  setCalib((isFinite(v) && v > 0 && rawPrice) ? v / rawPrice : 1);
-                  if (mode === "gold") applyData();
-                  updateLegend();
-                }} disabled={mode !== "gold"} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #e5e7eb', fontSize: '12px', width: '110px' }} />
-                <button onClick={() => { setManualXau(""); setCalib(1); if(mode === "gold") applyData(); updateLegend(); }} disabled={mode !== "gold"} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '12px', cursor: mode === "gold" ? 'pointer' : 'not-allowed' }}>Reset</button>
               </div>
             </div>
             
@@ -517,7 +536,6 @@ export default function PriceChart() {
           <div style={{ position: 'relative', width: '100%', height: '480px' }}>
             <div ref={chartContainerRef} style={{ width: '100%', height: '100%', position: 'relative' }}></div>
             
-            {/* TAMPILAN GEMBOK & PESAN JIKA XAU TUTUP DAN DIPILIH */}
             {marketClosed && mode === "gold" && (
               <div style={{
                 position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.85)',
@@ -527,7 +545,7 @@ export default function PriceChart() {
                 <div style={{ fontSize: '48px' }}>🔒</div>
                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#111827' }}>PASAR XAUUSD SEDANG TUTUP</div>
                 <div style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', maxWidth: '320px' }}>
-                  Perdagangan emas fisik/berjangka libur pada akhir pekan. Silakan beralih ke mode **BTC ⭐** untuk melihat pergerakan live.
+                  Perdagangan emas fisik/berjangka libur pada akhir pekan. Grafik menampilkan harga penutupan terakhir. Anda juga dapat beralih ke **BTC ⭐**.
                 </div>
                 <button 
                   onClick={() => setMode("btc")}
