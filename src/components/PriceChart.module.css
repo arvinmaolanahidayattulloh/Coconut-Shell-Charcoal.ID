@@ -90,6 +90,10 @@
   color: #22c55e;
 }
 
+.currencySelector {
+  position: relative;
+}
+
 .currencyBtn {
   display: flex;
   align-items: center;
@@ -102,18 +106,70 @@
   font-weight: 700;
   color: #111827;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .currencyBtn:hover {
   border-color: #c45e20;
   box-shadow: 0 2px 8px rgba(196, 94, 32, 0.1);
+  transform: translateY(-1px);
+}
+
+.currencyDropdown {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+  min-width: 160px;
+  max-height: 280px;
+  overflow-y: auto;
+  animation: dropIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.currencyOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.currencyOption:hover {
+  background: #f9fafb;
+  color: #c45e20;
 }
 
 .currencyActive {
   background: #fef3ec !important;
   color: #c45e20 !important;
   border-color: #fef3ec;
+}
+
+.currencyCode {
+  font-weight: 700;
+}
+
+.currencySymbol {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .priceMain {
