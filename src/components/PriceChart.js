@@ -13,7 +13,6 @@ const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
 const WIB = 7 * 3600; 
 
-// Urutan Waktu dari Terkecil ke Terjauh (Termasuk Tick & Interval Standar)
 const IV = {
   "1t":  { type: "tick", count: 1,    label: "1 Tick" },
   "10t": { type: "tick", count: 10,   label: "10 Ticks" },
@@ -65,13 +64,15 @@ function ytdDays() {
   return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
+// Cek Market XAU (Buka Senin 22:00 UTC - Jumat 22:00 UTC)
 function isXauMarketOpen() {
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
-  if (day === 6) return false;
-  if (day === 5 && hour >= 22) return false;
-  if (day === 0 && hour < 22) return false;
+  if (day === 6) return false; // Sabtu Tutup
+  if (day === 0) return false; // Minggu Tutup
+  if (day === 5 && hour >= 22) return false; // Jumat malam tutup
+  if (day === 1 && hour < 22) return false;  // Senin pagi sebelum 22 UTC (opsional, umumnya buka Senin dini hari)
   return true;
 }
 
@@ -96,8 +97,9 @@ function uniqSorted(list) {
 }
 
 export default function PriceChart() {
-  const [mode, setMode] = useState("gold"); // 'gold' atau 'btc'
-  const [iv, setIv] = useState("1m");       // Default view 1 menit
+  const [marketClosed, setMarketClosed] = useState(false);
+  const [mode, setMode] = useState("btc"); // Default awal sementara sebelum dicek
+  const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
   
@@ -108,8 +110,7 @@ export default function PriceChart() {
   const [timeDropOpen, setTimeDropOpen] = useState(false);
   
   const [status, setStatus] = useState({ text: "Menghubungkan...", isLive: false, error: null });
-  const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, rawText: "", availText: "", isUp: true, high: 0, low: 0 });
-  const [marketClosed, setMarketClosed] = useState(false);
+  const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, availText: "", isUp: true, high: 0, low: 0 });
 
   const chartRef = useRef(null);
   const seriesRef = useRef({ candle: null, area: null });
@@ -127,14 +128,11 @@ export default function PriceChart() {
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
 
-  // Cek Status Pasar XAU
+  // Cek Status Pasar XAU saat pertama load dan set mode otomatis (Buka -> Gembok Terbuka, Tutup -> Bintang)
   useEffect(() => {
-    const checkMarket = () => {
-      setMarketClosed(!isXauMarketOpen());
-    };
-    checkMarket();
-    const interval = setInterval(checkMarket, 30000);
-    return () => clearInterval(interval);
+    const open = isXauMarketOpen();
+    setMarketClosed(!open);
+    setMode(open ? "gold" : "btc");
   }, []);
 
   useEffect(() => {
@@ -143,7 +141,7 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // Inisialisasi Lightweight Charts & Mencegah Geser Melewati Harga Terbaru
+  // Inisialisasi Lightweight Charts (fixRightEdge: true agar tidak bisa ditarik kosong ke kanan)
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -159,7 +157,7 @@ export default function PriceChart() {
         secondsVisible: false, 
         rightOffset: 2,
         fixLeftEdge: false,
-        fixRightEdge: true // Mengunci agar chart mentok tidak bisa ditarik kosong ke kanan melewati harga terbaru
+        fixRightEdge: true 
       },
       crosshair: { mode: 0 },
       localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
@@ -229,20 +227,12 @@ export default function PriceChart() {
     const highs = d.raw.map(x => x.high * m);
     const lows = d.raw.map(x => x.low * m);
 
-    let rawText = "";
-    if (mode === "gold") {
-      const xau = last;
-      rawText = `XAUUSD (PAXG) ${fmt(xau, 2)} · per gram ${fmt(xau / OZ, 4)}`;
-    } else {
-      rawText = `BTCUSD ⭐ ${fmt(last, 2)}`;
-    }
-
     const diff = l - f;
     const pct = f ? (diff / f) * 100 : 0;
 
     setLegend(prev => ({
       ...prev,
-      val: l, chg: diff, pct: pct, isUp: diff >= 0, rawText,
+      val: l, chg: diff, pct: pct, isUp: diff >= 0,
       high: Math.max(...highs), low: Math.min(...lows)
     }));
   }, [mode, rate]);
@@ -325,7 +315,7 @@ export default function PriceChart() {
     });
   }, [iv, range, mode, rates, applyData, fitView, updateLegend]); 
 
-  // WebSocket Live Updates dengan Animasi Halus
+  // WebSocket Live Updates
   useEffect(() => {
     if (!rates) return;
 
@@ -424,7 +414,7 @@ export default function PriceChart() {
               </span>
             </div>
 
-            {/* CURRENCY DROPDOWN TANPA KURUNG PADA TOMBOL UTAMA */}
+            {/* CURRENCY DROPDOWN */}
             <div className={styles.currencySelector}>
               <button className={styles.currencyBtn} onClick={() => setCurDropOpen(!curDropOpen)} type="button">
                 {cur}
@@ -459,33 +449,52 @@ export default function PriceChart() {
           {/* TOOLBAR CONTROLS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
             
-            {/* BARIS 1: TOMBOL ON/OFF 2-IN-1 SWITCH (XAUUSD & BTC) */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* TOMBOL SWITCH 2-IN-1 SHAPE LONJONG DI BAWAH CURRENCY */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
               
-              <button 
-                className={`${styles.currencyBtn} ${mode === "gold" ? styles.currencyActive : ""}`} 
-                onClick={() => setMode("gold")}
-                style={{ 
-                  borderColor: mode === "gold" ? "#c45e20" : "#e5e7eb",
-                  background: mode === "gold" ? "#fef3ec" : "#ffffff"
-                }}
-              >
-                {marketClosed && "🔒 "} XAUUSD {marketClosed && "(Tutup)"}
-              </button>
+              <div style={{ 
+                display: 'inline-flex', 
+                background: '#f3f4f6', 
+                borderRadius: '9999px', 
+                padding: '4px', 
+                border: '1px solid #e5e7eb',
+                gap: '4px'
+              }}>
+                {/* Tombol XAU (Gembok Terbuka jika Buka, Gembok Terkunci jika Tutup) */}
+                <button 
+                  onClick={() => setMode("gold")}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 16px', borderRadius: '9999px', border: 'none',
+                    background: mode === "gold" ? "#ffffff" : "transparent",
+                    color: marketClosed ? "#9ca3af" : (mode === "gold" ? "#c45e20" : "#4b5563"),
+                    fontWeight: '700', fontSize: '13px', cursor: 'pointer',
+                    boxShadow: mode === "gold" ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {marketClosed ? "🔒" : "🔓"} XAUUSD {marketClosed && "(Tutup)"}
+                </button>
 
-              <button 
-                className={`${styles.currencyBtn} ${mode === "btc" ? styles.currencyActive : ""}`} 
-                onClick={() => setMode("btc")}
-                style={{ 
-                  borderColor: mode === "btc" ? "#c45e20" : "#e5e7eb",
-                  background: mode === "btc" ? "#fef3ec" : "#ffffff"
-                }}
-              >
-                BTC ⭐
-              </button>
+                {/* Tombol BTC (Bintang) */}
+                <button 
+                  onClick={() => setMode("btc")}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 16px', borderRadius: '9999px', border: 'none',
+                    background: mode === "btc" ? "#ffffff" : "transparent",
+                    color: mode === "btc" ? "#c45e20" : "#4b5563",
+                    fontWeight: '700', fontSize: '13px', cursor: 'pointer',
+                    boxShadow: mode === "btc" ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  BTC ⭐
+                </button>
+              </div>
 
-              {/* WAKTU DROPDOWN (DARI TERKECIL HINGGA TERJAUH/TICK) */}
-              <div className={styles.currencySelector} style={{ marginLeft: 'auto' }}>
+              {/* WAKTU DROPDOWN */}
+              <div className={styles.currencySelector}>
                 <button className={styles.currencyBtn} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
                   🕒 Waktu: {range ? `Range (${range})` : `Interval (${IV[iv]?.label})`}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -518,47 +527,53 @@ export default function PriceChart() {
 
             </div>
 
-            {/* BARIS 2: TIPE GRAFIK */}
+            {/* TIPE GRAFIK */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>Candle</button>
                 <button className={`${styles.currencyBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>Area</button>
               </div>
             </div>
-            
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
-              {legend.rawText} {legend.availText && `| ${legend.availText}`}
-            </div>
 
           </div>
 
-          {/* AREA CHART & OVERLAY MARKET CLOSE */}
+          {/* AREA CHART & WATERMARK ICON GEMBOK TERKUNCI JIKA XAU TUTUP */}
           <div style={{ position: 'relative', width: '100%', height: '480px' }}>
-            <div ref={chartContainerRef} style={{ width: '100%', height: '100%', position: 'relative' }}></div>
             
             {marketClosed && mode === "gold" && (
               <div style={{
-                position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', zIndex: 20, gap: '12px'
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 5, pointerEvents: 'none', opacity: 0.12
               }}>
-                <div style={{ fontSize: '48px' }}>🔒</div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#111827' }}>PASAR XAUUSD SEDANG TUTUP</div>
-                <div style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', maxWidth: '320px' }}>
-                  Perdagangan emas fisik/berjangka libur pada akhir pekan. Grafik menampilkan harga penutupan terakhir. Anda juga dapat beralih ke **BTC ⭐**.
-                </div>
-                <button 
-                  onClick={() => setMode("btc")}
-                  style={{
-                    padding: '8px 16px', background: '#c45e20', color: '#fff', border: 'none',
-                    borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(196, 94, 32, 0.2)'
-                  }}
-                >
-                  Beralih ke BTC ⭐
-                </button>
+                <span style={{ fontSize: '140px' }}>🔒</span>
               </div>
             )}
+
+            <div ref={chartContainerRef} style={{ width: '100%', height: '100%', position: 'relative', zIndex: 2 }}></div>
           </div>
+
+          {/* PERINGATAN MERAH DI BAWAH MARKET (JIKA XAU TUTUP DAN DIPILIH) */}
+          {marketClosed && mode === "gold" && (
+            <div style={{
+              marginTop: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca',
+              borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              color: '#991b1b', fontSize: '13px', fontWeight: '500'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>⚠️</span>
+                <span><strong>Pasar XAUUSD Tutup.</strong> Perdagangan emas libur akhir pekan (Buka kembali Senin pukul 22:00 UTC). Menampilkan data penutupan terakhir.</span>
+              </div>
+              <button 
+                onClick={() => setMode("btc")}
+                style={{
+                  background: '#dc2626', color: '#fff', border: 'none', padding: '4px 10px',
+                  borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
+                }}
+              >
+                Beralih ke BTC ⭐
+              </button>
+            </div>
+          )}
           
         </div>
       </div>
