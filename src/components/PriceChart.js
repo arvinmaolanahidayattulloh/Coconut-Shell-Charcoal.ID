@@ -109,6 +109,7 @@ export default function PriceChart() {
   const chartRef = useRef(null);
   const seriesRef = useRef({ candle: null, area: null });
   const chartContainerRef = useRef(null);
+  const cardRef = useRef(null);
   
   const dsRef = useRef({
     gold: { raw: [], mult: () => GRAMS * MARKUP / OZ },
@@ -190,7 +191,38 @@ export default function PriceChart() {
     }
   }, [mode, range]);
 
-  // Mode layar penuh: kunci scroll, tombol Esc, dan sesuaikan ulang chart
+  // Tombol FULL: pakai Fullscreen API bila ada (desktop/Android), fallback CSS fixed (iPhone)
+  const toggleFull = useCallback(async () => {
+    const el = cardRef.current;
+    if (!isFull) {
+      setIsFull(true);
+      try {
+        if (el && el.requestFullscreen) await el.requestFullscreen();
+        else if (el && el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      } catch (e) {}
+    } else {
+      setIsFull(false);
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } catch (e) {}
+    }
+  }, [isFull]);
+
+  // Sinkron state saat keluar fullscreen lewat Esc / gesture browser
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) setIsFull(false);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFsChange);
+      document.removeEventListener("webkitfullscreenchange", onFsChange);
+    };
+  }, []);
+
+  // Mode layar penuh: kunci scroll, Esc (fallback), dan sesuaikan chart
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") setIsFull(false); };
     if (isFull) {
@@ -204,6 +236,22 @@ export default function PriceChart() {
       clearTimeout(t);
     };
   }, [isFull, fitView]);
+
+  // Ukuran ulang saat jendela diubah, F11, atau HP diputar
+  useEffect(() => {
+    let t;
+    const onResize = () => {
+      clearTimeout(t);
+      t = setTimeout(() => fitView(), 150);
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, [fitView]);
 
   const applyData = useCallback(() => {
     const d = dsRef.current[mode];
@@ -390,7 +438,7 @@ export default function PriceChart() {
 
   return (
     <section className={styles.priceSection} id="harga">
-      <div className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
+      <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
           <span className={styles.eyebrow}>COCONUT SHELL CHARCOAL</span>
           
@@ -515,7 +563,7 @@ export default function PriceChart() {
               <button
                 type="button"
                 className={styles.fullBtn}
-                onClick={() => setIsFull(f => !f)}
+                onClick={toggleFull}
                 aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}
               >
                 {isFull ? (
@@ -542,7 +590,7 @@ export default function PriceChart() {
               </div>
             )}
 
-            <div ref={chartContainerRef} style={{ width: '100%', height: '100%', position: 'relative', zIndex: 2 }}></div>
+            <div ref={chartContainerRef} style={{ position: 'absolute', inset: 0, zIndex: 2 }}></div>
           </div>
 
           {marketClosed && mode === "gold" && (
