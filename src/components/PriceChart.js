@@ -10,7 +10,7 @@ import styles from "./PriceChart.module.css";
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
-const BTC_FACTOR = 909; 
+const BTC_FACTOR = 0.909; 
 const WIB = 7 * 3600; 
 
 const IV = {
