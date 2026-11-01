@@ -1,341 +1,279 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createChart, CrosshairMode } from "lightweight-charts";
 import styles from "./PriceChart.module.css";
 
-// Konstanta Rumus
+// ==========================================
+// KONSTANTA & RUMUS
+// ==========================================
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.909;
 
+const INTERVALS = [
+  { id: "1m", bin: "1m", step: 60 },
+  { id: "5m", bin: "5m", step: 300 },
+  { id: "15m", bin: "15m", step: 900 },
+  { id: "30m", bin: "30m", step: 1800 },
+  { id: "1h", bin: "1h", step: 3600 },
+  { id: "4h", bin: "4h", step: 14400 },
+  { id: "1D", bin: "1d", step: 86400 },
+  { id: "3D", bin: "3d", step: 259200 },
+];
+
+const RANGES = [
+  { id: "1D", iv: "5m", count: 288 },
+  { id: "5D", iv: "15m", count: 480 },
+  { id: "1M", iv: "1h", count: 720 },
+  { id: "3M", iv: "4h", count: 540 },
+  { id: "6M", iv: "12h", count: 360 }, // 12h interval
+  { id: "YTD", iv: "1d", count: "YTD" },
+  { id: "1Y", iv: "1d", count: 365 },
+  { id: "5Y", iv: "3d", count: 609 },
+  { id: "10Y", iv: "1w", count: 520 }, // 1w untuk menghindari limit 1000 Binance
+];
+
 const CURRENCIES = [
   { code: "IDR", symbol: "Rp" },
   { code: "USD", symbol: "$" },
-  { code: "EUR", symbol: "\u20AC" },
-  { code: "GBP", symbol: "\u00A3" },
-  { code: "JPY", symbol: "\u00A5" },
-  { code: "SGD", symbol: "S$" },
-  { code: "MYR", symbol: "RM" },
-  { code: "AUD", symbol: "A$" },
-  { code: "CNY", symbol: "\u00A5" },
-  { code: "SAR", symbol: "SAR" },
-];
-
-const INTERVALS = [
-  { id: "1m", label: "1m" },
-  { id: "30m", label: "30m" },
-  { id: "1h", label: "1J" },
-  { id: "1d", label: "1H" } // 1 Hari (1D)
 ];
 
 function fmt(num, dec) {
   return new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(num);
 }
 
-// Fungsi Pembulatan Waktu ke Awal Interval (Untuk pembentukan candle live)
-function getBinTime(date, interval) {
-  const d = new Date(date);
-  if (interval === "1m") {
-    d.setSeconds(0, 0);
-  } else if (interval === "30m") {
-    d.setSeconds(0, 0);
-    d.setMinutes(Math.floor(d.getMinutes() / 30) * 30);
-  } else if (interval === "1h") {
-    d.setMinutes(0, 0, 0);
-  } else if (interval === "1d") {
-    // Candle harian Binance berpatokan pada 00:00 UTC
-    d.setUTCHours(0, 0, 0, 0);
-  }
-  return d.getTime();
-}
-
-// Cek Jam Buka Pasar XAUUSD (Forex/Metals)
+// Cek Jam Buka Pasar XAUUSD (Jumat 22:00 UTC - Minggu 22:00 UTC = Tutup)
 function isXauMarketOpen() {
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
-
   if (day === 6) return false;
   if (day === 5 && hour >= 22) return false;
   if (day === 0 && hour < 22) return false;
-
   return true;
 }
 
 export default function PriceChart() {
-  const [mode, setMode] = useState("gold");
-  const [intervalStr, setIntervalStr] = useState("1m"); // State Interval Waktu
-  const [isClient, setIsClient] = useState(false);
-  const [rates, setRates] = useState(null);
-  const [candles, setCandles] = useState([]);
-  const [cur, setCur] = useState("IDR");
-  const [dropOpen, setDropOpen] = useState(false);
-  const [tip, setTip] = useState(null);
-  const [live, setLive] = useState(false);
+  // --- STATES ---
+  const [mode, setMode] = useState("gold"); // gold | btc
+  const [chartType, setChartType] = useState("candle"); // candle | area
+  const [activeInterval, setActiveInterval] = useState("1h");
+  const [activeRange, setActiveRange] = useState("1M");
   
-  const canvasRef = useRef(null);
+  const [rates, setRates] = useState(null);
+  const [cur, setCur] = useState("IDR");
+  const [live, setLive] = useState(false);
+  const [priceData, setPriceData] = useState({ current: 0, high: 0, low: 0, change: 0, isUp: true });
+
+  // --- REFS ---
+  const chartContainerRef = useRef(null);
+  const chartRef = useRef(null);
+  const seriesRef = useRef({ candle: null, area: null });
+  const dataHistoryRef = useRef([]); // Simpan history mentah
   const wsRef = useRef(null);
   const livePrices = useRef({ gold: null, btc: null });
 
-  // 1. Cek Pasar & Inisialisasi
+  // 1. Initial Load & Cek Pasar
   useEffect(() => {
-    setIsClient(true);
-    if (!isXauMarketOpen()) {
-      setMode("btc");
-    }
+    if (!isXauMarketOpen()) setMode("btc");
+    
+    // Fetch Kurs
+    fetch("/api/prices").then(r => r.json()).then(d => {
+      if (d.rates) setRates(d.rates);
+    }).catch(() => {});
   }, []);
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const curObj = CURRENCIES.find((c) => c.code === cur) || CURRENCIES[0];
-  const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
+  const dec = cur === "IDR" ? 0 : 2;
   const multiplier = mode === "gold" ? (GRAMS * MARKUP) / OZ : BTC_FACTOR;
-  
   const marketOpen = mode === "gold" ? isXauMarketOpen() : true;
-  const displayLive = live && marketOpen;
-  let liveStatusText = "OFFLINE";
-  if (displayLive) liveStatusText = "LIVE";
-  else if (mode === "gold" && !marketOpen) liveStatusText = "PASAR TUTUP";
 
-  // 2. Fetch Kurs
+  // 2. Inisialisasi Lightweight Charts (Hanya dirender sekali)
   useEffect(() => {
-    fetch("/api/prices")
-      .then((res) => res.json())
-      .then((d) => {
-        if (d.rates) setRates(d.rates);
-      })
-      .catch(() => console.log("Gagal memuat kurs mata uang"));
-  }, []);
+    if (!chartContainerRef.current) return;
 
-  // 3. WebSocket Harga Live
-  useEffect(() => {
-    const connectWs = () => {
-      const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
-      ws.onopen = () => setLive(true);
-      ws.onmessage = (ev) => {
-        const data = JSON.parse(ev.data).data;
-        if (!data || !data.p) return;
-        const p = parseFloat(data.p);
-        if (data.s === "PAXGUSDT") livePrices.current.gold = p;
-        if (data.s === "BTCUSDT") livePrices.current.btc = p;
-      };
-      ws.onclose = () => {
-        setLive(false);
-        setTimeout(connectWs, 3000);
-      };
-      wsRef.current = ws;
-    };
-    connectWs();
+    const chart = createChart(chartContainerRef.current, {
+      height: 480,
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#9ca3af', fontFamily: 'system-ui, sans-serif' },
+      grid: { vertLines: { color: '#f3f4f6' }, horzLines: { color: '#f3f4f6' } },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderColor: '#e5e7eb', autoScale: true },
+      timeScale: { borderColor: '#e5e7eb', timeVisible: true, secondsVisible: false },
+      localization: { locale: 'id-ID' }
+    });
+
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: '#22c55e', downColor: '#ef4444', borderVisible: false, wickUpColor: '#22c55e', wickDownColor: '#ef4444'
+    });
+
+    const areaSeries = chart.addAreaSeries({
+      lineColor: '#c45e20', topColor: 'rgba(196, 94, 32, 0.2)', bottomColor: 'rgba(196, 94, 32, 0.0)'
+    });
+
+    chartRef.current = chart;
+    seriesRef.current = { candle: candleSeries, area: areaSeries };
+
+    // Responsive resize
+    const handleResize = () => { chart.applyOptions({ width: chartContainerRef.current.clientWidth }); };
+    window.addEventListener('resize', handleResize);
+
     return () => {
-      if (wsRef.current) wsRef.current.close();
+      window.removeEventListener('resize', handleResize);
+      chart.remove();
     };
   }, []);
 
-  // 4. Fetch Riwayat Sejarah (History)
+  // 3. Update Visibilitas Tipe Grafik (Candle vs Area)
   useEffect(() => {
-    if (!isClient) return;
-    setCandles([]); // Reset saat mode atau interval berubah
-    const symbol = mode === "gold" ? "PAXGUSDT" : "BTCUSDT";
+    if (!seriesRef.current.candle) return;
+    seriesRef.current.candle.applyOptions({ visible: chartType === "candle" });
+    seriesRef.current.area.applyOptions({ visible: chartType === "area" });
+  }, [chartType]);
+
+  // 4. Fetch Sejarah Data (Berjalan setiap Mode, Interval, atau Range berubah)
+  useEffect(() => {
+    if (!chartRef.current || !rates) return;
     
-    // Ambil 100 candle ke belakang agar riwayat chart terlihat penuh
-    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${intervalStr}&limit=100`)
-      .then((r) => r.json())
-      .then((data) => {
-        const formatted = data.map((d) => ({
-          time: new Date(d[0]),
-          open: parseFloat(d[1]),
-          high: parseFloat(d[2]),
-          low: parseFloat(d[3]),
-          close: parseFloat(d[4]),
-        }));
-        setCandles(formatted);
-      })
-      .catch(() => console.log("Gagal memuat riwayat harga"));
-  }, [mode, intervalStr, isClient]);
+    // Tentukan parameter Binance API
+    let binanceInterval = "1h";
+    let limit = 500;
 
-  // 5. Tick Updater Dinamis (berdasarkan interval)
-  useEffect(() => {
-    if (!isClient || !marketOpen) return;
-
-    const timer = setInterval(() => {
-      setCandles((prev) => {
-        if (!prev.length) return prev;
-        const last = prev[prev.length - 1];
+    if (activeRange) {
+      const rOpt = RANGES.find(r => r.id === activeRange);
+      binanceInterval = rOpt.iv;
+      if (rOpt.count === "YTD") {
         const now = new Date();
-        const currentPrice = livePrices.current[mode];
-        
-        if (!currentPrice) return prev;
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        limit = Math.max(2, Math.ceil((now - startOfYear) / 86400000));
+      } else {
+        limit = rOpt.count;
+      }
+      // Sinkronkan UI tombol Interval
+      const matchIv = INTERVALS.find(i => i.bin === binanceInterval);
+      if (matchIv) setActiveInterval(matchIv.id);
+    } else {
+      binanceInterval = INTERVALS.find(i => i.id === activeInterval).bin;
+    }
 
-        const currentBin = getBinTime(now, intervalStr);
-        const lastBin = getBinTime(last.time, intervalStr);
+    const symbol = mode === "gold" ? "PAXGUSDT" : "BTCUSDT";
 
-        // Jika waktu sekarang masuk ke "blok" interval baru, buat candle baru
-        if (currentBin > lastBin) {
-          const newCandle = { time: now, open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice };
-          const updated = [...prev, newCandle];
-          if (updated.length > 100) updated.shift(); // Jaga max 100 candle
-          return updated;
+    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInterval}&limit=${limit}`)
+      .then(res => res.json())
+      .then(data => {
+        // Format untuk Lightweight Charts (waktu dalam Unix Seconds)
+        const formatted = data.map(d => {
+          const finalMultiplier = multiplier * rate;
+          return {
+            time: Math.floor(d[0] / 1000), // convert to seconds
+            open: parseFloat(d[1]) * finalMultiplier,
+            high: parseFloat(d[2]) * finalMultiplier,
+            low: parseFloat(d[3]) * finalMultiplier,
+            close: parseFloat(d[4]) * finalMultiplier,
+            value: parseFloat(d[4]) * finalMultiplier // Untuk Area chart
+          };
+        });
+
+        // Hapus duplikat waktu jika ada
+        const uniqueData = formatted.filter((v, i, a) => a.findIndex(t => (t.time === v.time)) === i);
+        dataHistoryRef.current = uniqueData;
+
+        // Set data ke Chart
+        seriesRef.current.candle.setData(uniqueData);
+        seriesRef.current.area.setData(uniqueData);
+
+        // Fitur Range (Zoom Fit)
+        if (activeRange) {
+          chartRef.current.timeScale().fitContent();
         } else {
-          // Update candle yang sedang berjalan
-          const updated = [...prev];
-          const mut = { ...last };
-          mut.high = Math.max(mut.high, currentPrice);
-          mut.low = Math.min(mut.low, currentPrice);
-          mut.close = currentPrice;
-          updated[updated.length - 1] = mut;
-          return updated;
+          // Tampilkan 120 candle terakhir seperti TradingView
+          const total = uniqueData.length;
+          chartRef.current.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 120), to: total + 4 });
+        }
+
+        // Update Statistik UI
+        if (uniqueData.length > 0) {
+          const first = uniqueData[0].close;
+          const last = uniqueData[uniqueData.length - 1].close;
+          const high = Math.max(...uniqueData.map(d => d.high));
+          const low = Math.min(...uniqueData.map(d => d.low));
+          const chg = (((last - first) / first) * 100).toFixed(2);
+          setPriceData({ current: last, high, low, change: chg, isUp: parseFloat(chg) >= 0 });
         }
       });
+  }, [mode, activeInterval, activeRange, rates, multiplier, rate]);
+
+  // 5. WebSocket (Live Ticker)
+  useEffect(() => {
+    const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
+    ws.onopen = () => setLive(true);
+    ws.onmessage = (ev) => {
+      const data = JSON.parse(ev.data).data;
+      if (!data || !data.p) return;
+      if (data.s === "PAXGUSDT") livePrices.current.gold = parseFloat(data.p);
+      if (data.s === "BTCUSDT") livePrices.current.btc = parseFloat(data.p);
+    };
+    ws.onclose = () => setLive(false);
+    return () => ws.close();
+  }, []);
+
+  // 6. Tick Updater (Perbarui lilin terakhir tiap 1 detik)
+  useEffect(() => {
+    if (!marketOpen || !rates) return;
+
+    const timer = setInterval(() => {
+      const history = dataHistoryRef.current;
+      if (!history.length) return;
+
+      const currentRawPrice = livePrices.current[mode];
+      if (!currentRawPrice) return;
+
+      const finalPrice = currentRawPrice * multiplier * rate;
+      const lastCandle = history[history.length - 1];
+      const nowSec = Math.floor(Date.now() / 1000);
+      
+      const activeStep = INTERVALS.find(i => i.id === activeInterval)?.step || 3600;
+
+      // Logika pembentukan candle baru
+      let newTick;
+      if (nowSec >= lastCandle.time + activeStep) {
+        // Bikin Candle Baru
+        const nextTime = lastCandle.time + activeStep * Math.floor((nowSec - lastCandle.time) / activeStep);
+        newTick = { time: nextTime, open: finalPrice, high: finalPrice, low: finalPrice, close: finalPrice, value: finalPrice };
+        history.push(newTick);
+      } else {
+        // Update Candle Lama
+        newTick = { ...lastCandle };
+        newTick.high = Math.max(newTick.high, finalPrice);
+        newTick.low = Math.min(newTick.low, finalPrice);
+        newTick.close = finalPrice;
+        newTick.value = finalPrice;
+        history[history.length - 1] = newTick;
+      }
+
+      // Render pembaruan ke Chart
+      seriesRef.current.candle.update(newTick);
+      seriesRef.current.area.update(newTick);
+
+      // Update Angka Raksasa di UI
+      setPriceData(prev => ({
+        ...prev,
+        current: finalPrice,
+        high: Math.max(prev.high, finalPrice),
+        low: Math.min(prev.low, finalPrice)
+      }));
+
     }, 1000);
     return () => clearInterval(timer);
-  }, [mode, intervalStr, isClient, marketOpen]);
+  }, [mode, activeInterval, multiplier, rate, marketOpen]);
 
-  const cRated = candles.map((c) => ({
-    time: c.time,
-    open: c.open * multiplier * rate,
-    high: c.high * multiplier * rate,
-    low: c.low * multiplier * rate,
-    close: c.close * multiplier * rate,
-  }));
+  // Handler Klik Menu
+  const handleIntervalClick = (iv) => { setActiveInterval(iv); setActiveRange(null); };
+  const handleRangeClick = (rng) => { setActiveRange(rng); };
 
-  const highs = cRated.map((c) => c.high);
-  const lows = cRated.map((c) => c.low);
-  const hVal = highs.length ? Math.max(...highs) : 0;
-  const lVal = lows.length ? Math.min(...lows) : 0;
-  
-  const fc = cRated[0]?.close || 0;
-  const lc = cRated[cRated.length - 1]?.close || 0;
-  const chg = fc ? (((lc - fc) / fc) * 100).toFixed(2) : "0.00";
-  const isUp = parseFloat(chg) >= 0;
-  const price = lc;
-
-  // 6. Canvas Renderer
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || cRated.length < 2) return;
-    const ctx = canvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.parentElement.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = w + "px";
-    canvas.style.height = h + "px";
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, w, h);
-
-    const pad = { top: 20, right: 80, bottom: 40, left: 20 };
-    const cW = w - pad.left - pad.right;
-    const cH = h - pad.top - pad.bottom;
-    const rng = (hVal - lVal) || 1;
-    const mg = rng * 0.05;
-    const mn = lVal - mg;
-    const mx = hVal + mg;
-    const fr = mx - mn;
-    const gY = (v) => pad.top + cH - ((v - mn) / fr) * cH;
-
-    ctx.strokeStyle = "rgba(0,0,0,0.06)";
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 5; i++) {
-      const y = pad.top + (i / 5) * cH;
-      ctx.beginPath();
-      ctx.moveTo(pad.left, y);
-      ctx.lineTo(w - pad.right, y);
-      ctx.stroke();
-    }
-
-    ctx.font = "11px system-ui, sans-serif";
-    ctx.fillStyle = "#9ca3af";
-    ctx.textAlign = "left";
-    for (let i = 0; i <= 5; i++) {
-      const v = mx - (i / 5) * fr;
-      const y = pad.top + (i / 5) * cH;
-      ctx.fillText(rate > 1000 ? (v / 1e6).toFixed(2) + " jt" : fmt(v, 2), w - pad.right + 8, y + 4);
-    }
-
-    const n = cRated.length;
-    const gap = cW / n;
-    const bw = Math.max(4, Math.min(20, gap * 0.6));
-    
-    for (let i = 0; i < n; i++) {
-      const c = cRated[i];
-      const x = pad.left + gap * i + gap / 2;
-      const bull = c.close >= c.open;
-      const bt = gY(Math.max(c.open, c.close));
-      const bb = gY(Math.min(c.open, c.close));
-      const bh = Math.max(bb - bt, 1);
-
-      ctx.strokeStyle = bull ? "#16a34a" : "#dc2626";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x, gY(c.high));
-      ctx.lineTo(x, bt);
-      ctx.moveTo(x, bb);
-      ctx.lineTo(x, gY(c.low));
-      ctx.stroke();
-
-      ctx.fillStyle = bull ? "#22c55e" : "#ef4444";
-      ctx.fillRect(x - bw / 2, bt, bw, bh);
-      ctx.strokeStyle = bull ? "#16a34a" : "#dc2626";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x - bw / 2, bt, bw, bh);
-    }
-
-    // Label Waktu X-Axis
-    ctx.fillStyle = "#9ca3af";
-    ctx.textAlign = "center";
-    // Tampilkan label lebih sedikit (maksimal 6 titik)
-    const lbl = Math.min(6, n);
-    for (let i = 0; i < lbl; i++) {
-      const idx = Math.round((i / (lbl - 1)) * (n - 1));
-      if (cRated[idx]) {
-        const t = new Date(cRated[idx].time);
-        let timeString = "";
-        
-        // Format label: Jika interval 1 Hari, tampilkan "Tanggal/Bulan", jika selain itu "Jam:Menit"
-        if (intervalStr === "1d") {
-          timeString = `${t.getDate().toString().padStart(2, "0")}/${(t.getMonth() + 1).toString().padStart(2, "0")}`;
-        } else {
-          timeString = `${t.getHours().toString().padStart(2, "0")}:${t.getMinutes().toString().padStart(2, "0")}`;
-        }
-
-        ctx.fillText(timeString, pad.left + gap * idx + gap / 2, h - pad.bottom + 24);
-      }
-    }
-  }, [cRated, hVal, lVal, rate, intervalStr]);
-
-  const onHover = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas || cRated.length < 2) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const cW = rect.width - 20 - 80;
-    const n = cRated.length;
-    const idx = Math.floor((x - 20) / (cW / n));
-    if (idx < 0 || idx >= n) { setTip(null); return; }
-    
-    const c = cRated[idx];
-    const t = new Date(c.time);
-    const dateStr = intervalStr === "1d" 
-      ? t.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
-      : t.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + " " + t.getHours().toString().padStart(2, "0") + ":" + t.getMinutes().toString().padStart(2, "0");
-
-    setTip({ 
-      x: Math.min(Math.max(x, 100), rect.width - 180), 
-      date: dateStr, 
-      open: c.open, high: c.high, low: c.low, close: c.close 
-    });
-  };
-
-  if (!isClient || candles.length === 0) return (
-    <section className={styles.priceSection} id="harga">
-      <div className={styles.loading}>
-        <div className={styles.spinner}></div>
-        <span>Memuat data riwayat dari Binance...</span>
-      </div>
-    </section>
-  );
+  if (!rates) return <div className={styles.loading}><div className={styles.spinner}></div><span>Memuat Engine Chart...</span></div>;
 
   return (
     <section className={styles.priceSection} id="harga">
@@ -345,88 +283,75 @@ export default function PriceChart() {
           
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
-              <span className={`${styles.liveDot} ${displayLive ? styles.liveDotActive : ""}`}></span>
-              <span className={styles.liveText} style={{ color: displayLive ? "#22c55e" : "#9ca3af" }}>
-                {liveStatusText}
+              <span className={`${styles.liveDot} ${live && marketOpen ? styles.liveDotActive : ""}`}></span>
+              <span className={styles.liveText} style={{ color: live && marketOpen ? "#22c55e" : "#9ca3af" }}>
+                {live && marketOpen ? "LIVE" : "PASAR TUTUP"}
               </span>
             </div>
 
-            {/* Mode Selector (XAU/BTC) */}
-            <div style={{ display: 'flex', gap: '4px', marginRight: '8px' }}>
-              <button 
-                className={`${styles.currencyBtn} ${mode === "gold" ? styles.currencyActive : ""}`} 
-                onClick={() => setMode("gold")}
-                style={{ padding: '6px 12px' }}
-              >
-                XAU
-              </button>
-              <button 
-                className={`${styles.currencyBtn} ${mode === "btc" ? styles.currencyActive : ""}`} 
-                onClick={() => setMode("btc")}
-                style={{ padding: '6px 12px' }}
-              >
-                BTC
-              </button>
-            </div>
-
-            <div className={styles.currencySelector}>
-              <button className={styles.currencyBtn} onClick={() => setDropOpen(!dropOpen)} type="button">
-                {cur}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: dropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </button>
-              {dropOpen && (
-                <div className={styles.currencyDropdown}>
-                  {CURRENCIES.map((c) => (
-                    <button key={c.code} className={`${styles.currencyOption} ${cur === c.code ? styles.currencyActive : ""}`} onClick={() => { setCur(c.code); setDropOpen(false); }}>
-                      <span className={styles.currencyCode}>{c.code}</span>
-                      <span className={styles.currencySymbol}>{c.symbol}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Mata Uang Dropdown */}
+            <select 
+              value={cur} 
+              onChange={(e) => setCur(e.target.value)} 
+              className={styles.currencyBtn} 
+              style={{ padding: '6px 12px', outline: 'none' }}
+            >
+              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+            </select>
           </div>
         </div>
         
         <div className={styles.priceMain}>
-          <div className={styles.bigPrice}>{curObj.symbol}{fmt(price, dec)}<span className={styles.bigPriceUnit}> / ton</span></div>
+          <div className={styles.bigPrice}>{curObj.symbol}{fmt(priceData.current, dec)}<span className={styles.bigPriceUnit}> / ton</span></div>
           <div className={styles.priceStats}>
-            {/* Label Perubahan otomatis menyesuaikan interval (1m, 30m, 1J, 1H) */}
-            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${isUp ? styles.up : styles.down}`}>{isUp ? "\u25B2" : "\u25BC"} {parseFloat(chg) > 0 ? "+" : ""}{chg}%</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(hVal, dec)}</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(lVal, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${priceData.isUp ? styles.up : styles.down}`}>{priceData.isUp ? "\u25B2" : "\u25BC"} {priceData.change}%</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(priceData.high, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(priceData.low, dec)}</span></div>
           </div>
         </div>
         
         <div className={styles.chartContainer}>
-          {/* Interval Selector Buttons - Menggunakan styling button yang sama */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px' }}>
-            {INTERVALS.map((iv) => (
-              <button 
-                key={iv.id}
-                className={`${styles.currencyBtn} ${intervalStr === iv.id ? styles.currencyActive : ""}`} 
-                onClick={() => setIntervalStr(iv.id)}
-                style={{ padding: '4px 10px', fontSize: '12px', minWidth: '40px', justifyContent: 'center' }}
-              >
-                {iv.label}
-              </button>
-            ))}
+          
+          {/* TOOLBAR CONTROLS (SEPERTI GAMBAR) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
+            
+            {/* Baris 1: Assets */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button className={`${styles.currencyBtn} ${mode === "gold" ? styles.currencyActive : ""}`} onClick={() => setMode("gold")}>XAUUSD</button>
+              <button className={`${styles.currencyBtn} ${mode === "btc" ? styles.currencyActive : ""}`} onClick={() => setMode("btc")}>BTC</button>
+            </div>
+
+            {/* Baris 2: Intervals */}
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {INTERVALS.map((iv) => (
+                <button key={iv.id} className={`${styles.currencyBtn} ${activeInterval === iv.id && !activeRange ? styles.currencyActive : ""}`} 
+                  onClick={() => handleIntervalClick(iv.id)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: activeInterval === iv.id && !activeRange ? '#fef3ec' : 'transparent' }}>
+                  {iv.id}
+                </button>
+              ))}
+            </div>
+
+            {/* Baris 3: Ranges */}
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {RANGES.map((rng) => (
+                <button key={rng.id} className={`${styles.currencyBtn} ${activeRange === rng.id ? styles.currencyActive : ""}`} 
+                  onClick={() => handleRangeClick(rng.id)} style={{ padding: '4px 10px', fontSize: '12px', border: 'none', background: activeRange === rng.id ? '#fef3ec' : 'transparent' }}>
+                  {rng.id}
+                </button>
+              ))}
+            </div>
+
+            {/* Baris 4: Tipe Grafik */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className={`${styles.currencyBtn} ${chartType === "candle" ? styles.currencyActive : ""}`} onClick={() => setChartType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>Candle</button>
+              <button className={`${styles.currencyBtn} ${chartType === "area" ? styles.currencyActive : ""}`} onClick={() => setChartType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>Area</button>
+            </div>
+
           </div>
 
-          <div className={styles.chartArea} onMouseMove={onHover} onMouseLeave={() => setTip(null)}>
-            <canvas ref={canvasRef} className={styles.canvas} />
-            {tip && (
-              <div className={styles.tooltip} style={{ left: tip.x }}>
-                <div className={styles.tooltipDate}>{tip.date}</div>
-                <div className={styles.tooltipGrid}>
-                  <span className={styles.tooltipLabel}>Open</span><span className={styles.tooltipVal}>{curObj.symbol}{fmt(tip.open, dec)}</span>
-                  <span className={styles.tooltipLabel}>High</span><span className={styles.tooltipVal}>{curObj.symbol}{fmt(tip.high, dec)}</span>
-                  <span className={styles.tooltipLabel}>Low</span><span className={styles.tooltipVal}>{curObj.symbol}{fmt(tip.low, dec)}</span>
-                  <span className={styles.tooltipLabel}>Close</span><span className={styles.tooltipVal}>{curObj.symbol}{fmt(tip.close, dec)}</span>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* AREA CHART */}
+          <div ref={chartContainerRef} style={{ width: '100%', position: 'relative' }}></div>
+          
         </div>
       </div>
     </section>
