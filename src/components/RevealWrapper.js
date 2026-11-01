@@ -18,20 +18,20 @@ const PARTNERS = [
   {
     name: "PT. Bank Central Asia Tbk",
     logo: (
-      <svg width="150" height="32" viewBox="0 0 150 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="220" height="32" viewBox="0 0 220 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="28" height="28" y="2" rx="4" fill="#0060AF" />
         <text x="6" y="21" fontFamily="var(--font-display)" fontSize="13" fontWeight="700" fill="#FFFFFF">BCA</text>
-        <text x="36" y="21" fontFamily="var(--font-display)" fontSize="13" fontWeight="600" fill="var(--color-carbon)" letterSpacing="0.02em">Bank Central Asia</text>
+        <text x="36" y="21" fontFamily="var(--font-display)" fontSize="13" fontWeight="600" fill="var(--color-carbon)" letterSpacing="0.02em">PT. Bank Central Asia</text>
       </svg>
     ),
   },
   {
     name: "PT. Industri Agribisnis Indonesia",
     logo: (
-      <svg width="170" height="32" viewBox="0 0 170 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="260" height="32" viewBox="0 0 260 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M4 24L12 8l8 16H4z" fill="var(--color-ember)" />
         <path d="M14 24l5-10 5 10H14z" fill="var(--color-ember-light)" />
-        <text x="30" y="21" fontFamily="var(--font-display)" fontSize="12" fontWeight="600" fill="var(--color-carbon)" letterSpacing="0.01em">PT. Inagrin</text>
+        <text x="30" y="21" fontFamily="var(--font-display)" fontSize="12" fontWeight="600" fill="var(--color-carbon)" letterSpacing="0.01em">PT. Industri Agribisnis Indonesia</text>
       </svg>
     ),
   },
@@ -65,4 +65,4 @@ export default function Partners() {
       </RevealWrapper>
     </section>
   );
-}
+                }
