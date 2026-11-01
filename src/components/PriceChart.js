@@ -390,7 +390,7 @@ export default function PriceChart() {
 
   return (
     <section className={styles.priceSection} id="harga">
-      <div className={styles.priceCard}>
+      <div className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
           <span className={styles.eyebrow}>COCONUT SHELL CHARCOAL</span>
           
@@ -433,7 +433,7 @@ export default function PriceChart() {
           </div>
         </div>
         
-        <div className={`${styles.chartContainer} ${isFull ? styles.chartFull : ""}`}>
+        <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
             
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
