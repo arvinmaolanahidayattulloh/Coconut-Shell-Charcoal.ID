@@ -8,7 +8,7 @@ import Particles from "./Particles";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
-  const yearsCount = useCountUp(1, 2000); 
+  const yearsCount = useCountUp(0, 2000); 
   const clientsCount = useCountUp(1, 2000); 
   const countriesCount = useCountUp(0, 2000); 
 
