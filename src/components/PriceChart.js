@@ -482,66 +482,78 @@ export default function PriceChart() {
         </div>
         
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
-            
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-              
-              {/* TOMBOL SWITCH 2-IN-1 */}
-              <div style={{ 
-                display: 'inline-flex', 
-                background: '#f3f4f6', 
-                borderRadius: '9999px', 
-                padding: '4px', 
-                border: '1px solid #e5e7eb',
-                gap: '4px'
+
+          {/* CHART (bersih, tanpa tombol di atasnya) */}
+          <div style={isFull
+            ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
+            : { position: 'relative', width: '100%', height: '480px' }}>
+
+            {marketClosed && mode === "gold" && (
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 5, pointerEvents: 'none', opacity: 0.12
               }}>
-                <button 
+                <span style={{ fontSize: '140px' }}>🔐</span>
+              </div>
+            )}
+
+            <div ref={chartContainerRef} style={{ position: 'absolute', inset: 0, zIndex: 2 }}></div>
+          </div>
+
+          {marketClosed && mode === "gold" && (
+            <div style={{
+              marginTop: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca',
+              borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              color: '#991b1b', fontSize: '13px', fontWeight: '500', flexShrink: 0
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>⚠️</span>
+                <span><strong>PASAR TUTUP. PERDAGANGAN LIBUR.</strong> Buka kembali Senin Pukul 22:00 UTC.</span>
+              </div>
+            </div>
+          )}
+
+          {/* TOOLBAR DI BAWAH CHART */}
+          <div className={styles.toolbar}>
+            <div className={styles.toolbarGroup}>
+              <div className={styles.modeSwitch}>
+                <button
+                  type="button"
+                  className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
                   onClick={() => setMode("gold")}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '6px 16px', borderRadius: '9999px', border: 'none',
-                    background: mode === "gold" ? "#ffffff" : "transparent",
-                    color: mode === "gold" ? "#c45e20" : "#4b5563",
-                    fontWeight: '700', fontSize: '15px', cursor: 'pointer',
-                    boxShadow: mode === "gold" ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
-                    transition: 'all 0.2s ease'
-                  }}
                 >
                   {marketClosed ? "🔒" : "🔐"}
                 </button>
-
-                <button 
+                <button
+                  type="button"
+                  className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
                   onClick={() => setMode("btc")}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '6px 16px', borderRadius: '9999px', border: 'none',
-                    background: mode === "btc" ? "#ffffff" : "transparent",
-                    color: mode === "btc" ? "#c45e20" : "#4b5563",
-                    fontWeight: '700', fontSize: '15px', cursor: 'pointer',
-                    boxShadow: mode === "btc" ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
-                    transition: 'all 0.2s ease'
-                  }}
                 >
                   ⭐
                 </button>
               </div>
 
-              {/* DROPDOWN WAKTU */}
+              <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
+              <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
+            </div>
+
+            <div className={styles.toolbarGroup}>
+              {/* DROPDOWN WAKTU (membuka ke atas, hanya menampilkan nilai) */}
               <div className={styles.currencySelector}>
-                <button className={styles.currencyBtn} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
-                  INTERVAL : {range ? range : IV[iv]?.label}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <button className={`${styles.currencyBtn} ${styles.smallBtn}`} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
+                  {range ? range : IV[iv]?.label}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 15 12 9 18 15"></polyline></svg>
                 </button>
                 {timeDropOpen && (
-                  <div className={styles.currencyDropdown} style={{ right: 0, left: 'auto', width: '160px' }}>
-                    <div style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 'bold', color: '#9ca3af' }}>INTERVAL</div>
+                  <div className={`${styles.currencyDropdown} ${styles.dropUp}`}>
+                    <div className={styles.dropLabel}>INTERVAL</div>
                     {Object.keys(IV).map(v => (
                       <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
                         <span>{IV[v].label}</span>
                       </button>
                     ))}
                     <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
-                    <div style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 'bold', color: '#9ca3af' }}>RENTANG</div>
+                    <div className={styles.dropLabel}>RENTANG</div>
                     {Object.keys(RANGES).map(r => (
                       <button key={r} className={`${styles.currencyOption} ${range === r ? styles.currencyActive : ""}`} onClick={() => { setRange(r); setIv(RANGES[r].iv); setTimeDropOpen(false); }}>
                         <span>{RANGES[r].label}</span>
@@ -549,14 +561,6 @@ export default function PriceChart() {
                     ))}
                   </div>
                 )}
-              </div>
-
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button className={`${styles.currencyBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} style={{ padding: '4px 12px', fontSize: '12px' }}>CANDLE</button>
-                <button className={`${styles.currencyBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} style={{ padding: '4px 12px', fontSize: '12px' }}>AREA</button>
               </div>
 
               {/* TOMBOL FULL TAB */}
@@ -574,38 +578,8 @@ export default function PriceChart() {
                 {isFull ? "TUTUP" : "FULL"}
               </button>
             </div>
-
           </div>
 
-          <div style={isFull
-            ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
-            : { position: 'relative', width: '100%', height: '480px' }}>
-            
-            {marketClosed && mode === "gold" && (
-              <div style={{
-                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                zIndex: 5, pointerEvents: 'none', opacity: 0.12
-              }}>
-                <span style={{ fontSize: '140px' }}>🔐</span>
-              </div>
-            )}
-
-            <div ref={chartContainerRef} style={{ position: 'absolute', inset: 0, zIndex: 2 }}></div>
-          </div>
-
-          {marketClosed && mode === "gold" && (
-            <div style={{
-              marginTop: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca',
-              borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              color: '#991b1b', fontSize: '13px', fontWeight: '500'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>⚠️</span>
-                <span><strong>PASAR TUTUP. PERDAGANGAN LIBUR.</strong> Buka kembali Senin Pukul 22:00 UTC.</span>
-              </div>
-            </div>
-          )}
-          
         </div>
       </div>
     </section>
