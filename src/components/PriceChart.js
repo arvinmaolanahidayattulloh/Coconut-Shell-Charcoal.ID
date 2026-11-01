@@ -7,7 +7,7 @@ import styles from "./PriceChart.module.css";
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
-const BTC_FACTOR = 0.01;
+const BTC_FACTOR = 0.909; // <-- Diperbarui menjadi 0.909
 
 const CURRENCIES = [
   { code: "IDR", symbol: "Rp" },
