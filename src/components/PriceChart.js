@@ -440,7 +440,7 @@ export default function PriceChart() {
     <section className={styles.priceSection} id="harga">
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
-          <span className={styles.eyebrow}>COCONUT SHELL CHARCOAL</span>
+          <span className={styles.eyebrow}>Coconut Shell Charcoal</span>
           
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
@@ -481,9 +481,76 @@ export default function PriceChart() {
           </div>
         </div>
         
+        {/* TOOLBAR (di luar chart) */}
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarGroup}>
+            <div className={styles.modeSwitch}>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("gold")}
+              >
+                {marketClosed ? "🔒" : "🔐"}
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("btc")}
+              >
+                ⭐
+              </button>
+            </div>
+
+            <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
+            <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
+          </div>
+
+          <div className={styles.toolbarGroup}>
+            {/* DROPDOWN WAKTU (hanya menampilkan nilai, misalnya 1M) */}
+            <div className={styles.currencySelector}>
+              <button className={`${styles.currencyBtn} ${styles.smallBtn}`} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
+                {range ? range : IV[iv]?.label}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              {timeDropOpen && (
+                <div className={`${styles.currencyDropdown}`}>
+                  <div className={styles.dropLabel}>INTERVAL</div>
+                  {Object.keys(IV).map(v => (
+                    <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
+                      <span>{IV[v].label}</span>
+                    </button>
+                  ))}
+                  <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
+                  <div className={styles.dropLabel}>RENTANG</div>
+                  {Object.keys(RANGES).map(r => (
+                    <button key={r} className={`${styles.currencyOption} ${range === r ? styles.currencyActive : ""}`} onClick={() => { setRange(r); setIv(RANGES[r].iv); setTimeDropOpen(false); }}>
+                      <span>{RANGES[r].label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* TOMBOL FULL TAB */}
+            <button
+              type="button"
+              className={styles.fullBtn}
+              onClick={toggleFull}
+              aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}
+            >
+              {isFull ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              )}
+              {isFull ? "TUTUP" : "FULL"}
+            </button>
+          </div>
+        </div>
+
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
 
-          {/* CHART (bersih, tanpa tombol di atasnya) */}
+          {/* CHART */}
           <div style={isFull
             ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
             : { position: 'relative', width: '100%', height: '480px' }}>
@@ -512,73 +579,6 @@ export default function PriceChart() {
               </div>
             </div>
           )}
-
-          {/* TOOLBAR DI BAWAH CHART */}
-          <div className={styles.toolbar}>
-            <div className={styles.toolbarGroup}>
-              <div className={styles.modeSwitch}>
-                <button
-                  type="button"
-                  className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
-                  onClick={() => setMode("gold")}
-                >
-                  {marketClosed ? "🔒" : "🔐"}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
-                  onClick={() => setMode("btc")}
-                >
-                  ⭐
-                </button>
-              </div>
-
-              <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
-              <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
-            </div>
-
-            <div className={styles.toolbarGroup}>
-              {/* DROPDOWN WAKTU (membuka ke atas, hanya menampilkan nilai) */}
-              <div className={styles.currencySelector}>
-                <button className={`${styles.currencyBtn} ${styles.smallBtn}`} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
-                  {range ? range : IV[iv]?.label}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 15 12 9 18 15"></polyline></svg>
-                </button>
-                {timeDropOpen && (
-                  <div className={`${styles.currencyDropdown} ${styles.dropUp}`}>
-                    <div className={styles.dropLabel}>INTERVAL</div>
-                    {Object.keys(IV).map(v => (
-                      <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
-                        <span>{IV[v].label}</span>
-                      </button>
-                    ))}
-                    <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
-                    <div className={styles.dropLabel}>RENTANG</div>
-                    {Object.keys(RANGES).map(r => (
-                      <button key={r} className={`${styles.currencyOption} ${range === r ? styles.currencyActive : ""}`} onClick={() => { setRange(r); setIv(RANGES[r].iv); setTimeDropOpen(false); }}>
-                        <span>{RANGES[r].label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* TOMBOL FULL TAB */}
-              <button
-                type="button"
-                className={styles.fullBtn}
-                onClick={toggleFull}
-                aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}
-              >
-                {isFull ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-                )}
-                {isFull ? "TUTUP" : "FULL"}
-              </button>
-            </div>
-          </div>
 
         </div>
       </div>
