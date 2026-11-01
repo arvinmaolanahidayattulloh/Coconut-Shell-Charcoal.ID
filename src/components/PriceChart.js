@@ -7,7 +7,7 @@ import styles from "./PriceChart.module.css";
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
-const BTC_FACTOR = 0.909; // <-- Diperbarui menjadi 0.909
+const BTC_FACTOR = 0.909;
 
 const CURRENCIES = [
   { code: "IDR", symbol: "Rp" },
@@ -22,26 +22,50 @@ const CURRENCIES = [
   { code: "SAR", symbol: "SAR" },
 ];
 
+const INTERVALS = [
+  { id: "1m", label: "1m" },
+  { id: "30m", label: "30m" },
+  { id: "1h", label: "1J" },
+  { id: "1d", label: "1H" } // 1 Hari (1D)
+];
+
 function fmt(num, dec) {
   return new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(num);
 }
 
-// Fungsi Pengecekan Jam Buka Pasar XAUUSD (Forex/Metals)
-// Waktu UTC: Tutup Jumat 22:00 UTC s/d Minggu 22:00 UTC
+// Fungsi Pembulatan Waktu ke Awal Interval (Untuk pembentukan candle live)
+function getBinTime(date, interval) {
+  const d = new Date(date);
+  if (interval === "1m") {
+    d.setSeconds(0, 0);
+  } else if (interval === "30m") {
+    d.setSeconds(0, 0);
+    d.setMinutes(Math.floor(d.getMinutes() / 30) * 30);
+  } else if (interval === "1h") {
+    d.setMinutes(0, 0, 0);
+  } else if (interval === "1d") {
+    // Candle harian Binance berpatokan pada 00:00 UTC
+    d.setUTCHours(0, 0, 0, 0);
+  }
+  return d.getTime();
+}
+
+// Cek Jam Buka Pasar XAUUSD (Forex/Metals)
 function isXauMarketOpen() {
   const now = new Date();
-  const day = now.getUTCDay(); // 0 (Minggu) s/d 6 (Sabtu)
+  const day = now.getUTCDay();
   const hour = now.getUTCHours();
 
-  if (day === 6) return false; // Sabtu: Tutup 24 Jam
-  if (day === 5 && hour >= 22) return false; // Jumat: Tutup setelah jam 22:00 UTC
-  if (day === 0 && hour < 22) return false; // Minggu: Tutup sebelum jam 22:00 UTC
+  if (day === 6) return false;
+  if (day === 5 && hour >= 22) return false;
+  if (day === 0 && hour < 22) return false;
 
   return true;
 }
 
 export default function PriceChart() {
-  const [mode, setMode] = useState("gold"); // Default awal, akan dioverride oleh useEffect
+  const [mode, setMode] = useState("gold");
+  const [intervalStr, setIntervalStr] = useState("1m"); // State Interval Waktu
   const [isClient, setIsClient] = useState(false);
   const [rates, setRates] = useState(null);
   const [candles, setCandles] = useState([]);
@@ -54,11 +78,11 @@ export default function PriceChart() {
   const wsRef = useRef(null);
   const livePrices = useRef({ gold: null, btc: null });
 
-  // 1. Cek Jam Buka Pasar saat pertama kali dirender (mencegah hydration error di Next.js)
+  // 1. Cek Pasar & Inisialisasi
   useEffect(() => {
     setIsClient(true);
     if (!isXauMarketOpen()) {
-      setMode("btc"); // Alihkan otomatis ke BTC jika XAUUSD tutup
+      setMode("btc");
     }
   }, []);
 
@@ -67,14 +91,13 @@ export default function PriceChart() {
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
   const multiplier = mode === "gold" ? (GRAMS * MARKUP) / OZ : BTC_FACTOR;
   
-  // Status Pasar Saat Ini
   const marketOpen = mode === "gold" ? isXauMarketOpen() : true;
   const displayLive = live && marketOpen;
   let liveStatusText = "OFFLINE";
   if (displayLive) liveStatusText = "LIVE";
   else if (mode === "gold" && !marketOpen) liveStatusText = "PASAR TUTUP";
 
-  // 2. Fetch Kurs Mata Uang
+  // 2. Fetch Kurs
   useEffect(() => {
     fetch("/api/prices")
       .then((res) => res.json())
@@ -84,7 +107,7 @@ export default function PriceChart() {
       .catch(() => console.log("Gagal memuat kurs mata uang"));
   }, []);
 
-  // 3. Koneksi WebSocket Binance
+  // 3. WebSocket Harga Live
   useEffect(() => {
     const connectWs = () => {
       const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
@@ -108,13 +131,14 @@ export default function PriceChart() {
     };
   }, []);
 
-  // 4. Fetch History saat Mode Berubah
+  // 4. Fetch Riwayat Sejarah (History)
   useEffect(() => {
     if (!isClient) return;
-    setCandles([]);
+    setCandles([]); // Reset saat mode atau interval berubah
     const symbol = mode === "gold" ? "PAXGUSDT" : "BTCUSDT";
     
-    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=60`)
+    // Ambil 100 candle ke belakang agar riwayat chart terlihat penuh
+    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${intervalStr}&limit=100`)
       .then((r) => r.json())
       .then((data) => {
         const formatted = data.map((d) => ({
@@ -127,11 +151,11 @@ export default function PriceChart() {
         setCandles(formatted);
       })
       .catch(() => console.log("Gagal memuat riwayat harga"));
-  }, [mode, isClient]);
+  }, [mode, intervalStr, isClient]);
 
-  // 5. Tick Updater
+  // 5. Tick Updater Dinamis (berdasarkan interval)
   useEffect(() => {
-    if (!isClient || !marketOpen) return; // Hentikan update per detik jika pasar tutup
+    if (!isClient || !marketOpen) return;
 
     const timer = setInterval(() => {
       setCandles((prev) => {
@@ -142,12 +166,17 @@ export default function PriceChart() {
         
         if (!currentPrice) return prev;
 
-        if (now.getMinutes() !== last.time.getMinutes()) {
+        const currentBin = getBinTime(now, intervalStr);
+        const lastBin = getBinTime(last.time, intervalStr);
+
+        // Jika waktu sekarang masuk ke "blok" interval baru, buat candle baru
+        if (currentBin > lastBin) {
           const newCandle = { time: now, open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice };
           const updated = [...prev, newCandle];
-          if (updated.length > 60) updated.shift();
+          if (updated.length > 100) updated.shift(); // Jaga max 100 candle
           return updated;
         } else {
+          // Update candle yang sedang berjalan
           const updated = [...prev];
           const mut = { ...last };
           mut.high = Math.max(mut.high, currentPrice);
@@ -159,7 +188,7 @@ export default function PriceChart() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [mode, isClient, marketOpen]);
+  }, [mode, intervalStr, isClient, marketOpen]);
 
   const cRated = candles.map((c) => ({
     time: c.time,
@@ -253,17 +282,28 @@ export default function PriceChart() {
       ctx.strokeRect(x - bw / 2, bt, bw, bh);
     }
 
+    // Label Waktu X-Axis
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "center";
+    // Tampilkan label lebih sedikit (maksimal 6 titik)
     const lbl = Math.min(6, n);
     for (let i = 0; i < lbl; i++) {
       const idx = Math.round((i / (lbl - 1)) * (n - 1));
       if (cRated[idx]) {
         const t = new Date(cRated[idx].time);
-        ctx.fillText(t.getHours().toString().padStart(2, "0") + ":" + t.getMinutes().toString().padStart(2, "0"), pad.left + gap * idx + gap / 2, h - pad.bottom + 24);
+        let timeString = "";
+        
+        // Format label: Jika interval 1 Hari, tampilkan "Tanggal/Bulan", jika selain itu "Jam:Menit"
+        if (intervalStr === "1d") {
+          timeString = `${t.getDate().toString().padStart(2, "0")}/${(t.getMonth() + 1).toString().padStart(2, "0")}`;
+        } else {
+          timeString = `${t.getHours().toString().padStart(2, "0")}:${t.getMinutes().toString().padStart(2, "0")}`;
+        }
+
+        ctx.fillText(timeString, pad.left + gap * idx + gap / 2, h - pad.bottom + 24);
       }
     }
-  }, [cRated, hVal, lVal, rate]);
+  }, [cRated, hVal, lVal, rate, intervalStr]);
 
   const onHover = (e) => {
     const canvas = canvasRef.current;
@@ -274,11 +314,16 @@ export default function PriceChart() {
     const n = cRated.length;
     const idx = Math.floor((x - 20) / (cW / n));
     if (idx < 0 || idx >= n) { setTip(null); return; }
+    
     const c = cRated[idx];
     const t = new Date(c.time);
+    const dateStr = intervalStr === "1d" 
+      ? t.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+      : t.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + " " + t.getHours().toString().padStart(2, "0") + ":" + t.getMinutes().toString().padStart(2, "0");
+
     setTip({ 
       x: Math.min(Math.max(x, 100), rect.width - 180), 
-      date: t.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + " " + t.getHours().toString().padStart(2, "0") + ":" + t.getMinutes().toString().padStart(2, "0"), 
+      date: dateStr, 
       open: c.open, high: c.high, low: c.low, close: c.close 
     });
   };
@@ -346,13 +391,28 @@ export default function PriceChart() {
         <div className={styles.priceMain}>
           <div className={styles.bigPrice}>{curObj.symbol}{fmt(price, dec)}<span className={styles.bigPriceUnit}> / ton</span></div>
           <div className={styles.priceStats}>
-            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan (1J)</span><span className={`${styles.statVal} ${isUp ? styles.up : styles.down}`}>{isUp ? "\u25B2" : "\u25BC"} {parseFloat(chg) > 0 ? "+" : ""}{chg}%</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi (1J)</span><span className={styles.statVal}>{curObj.symbol}{fmt(hVal, dec)}</span></div>
-            <div className={styles.statBox}><span className={styles.statLabel}>Terendah (1J)</span><span className={styles.statVal}>{curObj.symbol}{fmt(lVal, dec)}</span></div>
+            {/* Label Perubahan otomatis menyesuaikan interval (1m, 30m, 1J, 1H) */}
+            <div className={styles.statBox}><span className={styles.statLabel}>Perubahan</span><span className={`${styles.statVal} ${isUp ? styles.up : styles.down}`}>{isUp ? "\u25B2" : "\u25BC"} {parseFloat(chg) > 0 ? "+" : ""}{chg}%</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Tertinggi</span><span className={styles.statVal}>{curObj.symbol}{fmt(hVal, dec)}</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>Terendah</span><span className={styles.statVal}>{curObj.symbol}{fmt(lVal, dec)}</span></div>
           </div>
         </div>
         
         <div className={styles.chartContainer}>
+          {/* Interval Selector Buttons - Menggunakan styling button yang sama */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px' }}>
+            {INTERVALS.map((iv) => (
+              <button 
+                key={iv.id}
+                className={`${styles.currencyBtn} ${intervalStr === iv.id ? styles.currencyActive : ""}`} 
+                onClick={() => setIntervalStr(iv.id)}
+                style={{ padding: '4px 10px', fontSize: '12px', minWidth: '40px', justifyContent: 'center' }}
+              >
+                {iv.label}
+              </button>
+            ))}
+          </div>
+
           <div className={styles.chartArea} onMouseMove={onHover} onMouseLeave={() => setTip(null)}>
             <canvas ref={canvasRef} className={styles.canvas} />
             {tip && (
