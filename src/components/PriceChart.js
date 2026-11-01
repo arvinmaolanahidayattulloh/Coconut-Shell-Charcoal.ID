@@ -466,7 +466,7 @@ export default function PriceChart() {
               {/* DROPDOWN WAKTU (LANGSUNG KE INTINYA TANPA KATA BERULANG) */}
               <div className={styles.currencySelector}>
                 <button className={styles.currencyBtn} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
-                  🕒 WAKTU: {range ? range : IV[iv]?.label}
+                  INTERVAL : {range ? range : IV[iv]?.label}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
                 {timeDropOpen && (
