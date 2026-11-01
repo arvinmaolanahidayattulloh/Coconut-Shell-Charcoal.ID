@@ -234,6 +234,44 @@
   overflow: hidden;
 }
 
+/* ===== FULL TAB CHART ===== */
+.fullBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fullBtn:hover {
+  border-color: #c45e20;
+  color: #c45e20;
+}
+
+.chartFull {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  border: none;
+  border-radius: 0;
+  padding: 16px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 @media (max-width: 768px) {
   .priceCard { padding: 32px 24px; }
   .bigPrice { font-size: 40px; }
@@ -254,4 +292,5 @@
   .priceCard { padding: 24px 16px; border-radius: 18px; }
   .bigPrice { font-size: 32px; }
   .priceStats { flex-wrap: wrap; gap: 12px; }
+  .chartFull { padding: 10px; }
 }
