@@ -115,9 +115,6 @@ function uniqSorted(list) {
 
 const binOf = (ivKey) => IV[ivKey].bin || "1m";
 
-// ─────────────────────────────────────────────────────────────
-// BUCKET WAKTU
-// ─────────────────────────────────────────────────────────────
 function bucketOf(t, cfg) {
   const u = t - WIB;
   if (cfg.type === "cal") {
@@ -206,9 +203,6 @@ function mergeCsc(f, g, b, calc) {
   return out;
 }
 
-// ─────────────────────────────────────────────────────────────
-// EA — PENCETAK HARGA DI BAWAH 1 MENIT
-// ─────────────────────────────────────────────────────────────
 const EA_BODY = 0.00003;
 const EA_MAXROWS = 7200;
 
@@ -321,7 +315,6 @@ function buildEaHistory(key, raw) {
   return rows.length > EA_MAXROWS ? rows.slice(-EA_MAXROWS) : rows;
 }
 
-// ─────────────────────────────────────────────────────────────
 function useSmooth(target, ms = 300) {
   const [v, setV] = useState(target);
   const curRef = useRef(target);
@@ -423,7 +416,6 @@ export default function PriceChart() {
   typeRef.current = type;
   decRef.current = dec;
 
-  // ───────── Password ─────────
   useEffect(() => {
     try { if (sessionStorage.getItem("csc_unlock") === "1") setUnlocked(true); } catch (e) {}
   }, []);
@@ -464,7 +456,6 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat chart ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -487,9 +478,9 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 3,
+        rightOffset: 0, // Pastikan tidak ada ruang kosong di kanan
         fixLeftEdge: false,
-        fixRightEdge: false,
+        fixRightEdge: true, 
         shiftVisibleRangeOnNewBar: true,
         minBarSpacing: 0.5
       },
@@ -533,7 +524,9 @@ export default function PriceChart() {
     if (!chart || !n) return;
     const left = Math.min(barsRef.current, Math.max(10, n));
     chart.priceScale("right").applyOptions({ autoScale: true });
-    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n - 1 + 3 });
+    // Memusatkan tepat sampai candle paling akhir tanpa gap
+    chart.timeScale().scrollToPosition(0, true);
+    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n - 1 });
   }, []);
 
   const compute = useCallback(() => {
@@ -688,7 +681,6 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
-  // ───────── Ambil riwayat dengan Paginasi Otomatis (Deep History) ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -697,11 +689,10 @@ export default function PriceChart() {
     setFade(true);
 
     const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec";
-    const baseLimit = sub ? 130 : 1000;
     
-    // Jika timeframe harian ke atas, loop terus untuk ambil semua histori (sampai ke akar)
+    // Perbesar Limit Deep History Hingga 50,000 Candle untuk Timeframe 1 Hari ke atas
     const isDeep = ["1d", "3d", "1w", "1M"].includes(bin);
-    const deepLimit = isDeep ? 15000 : baseLimit; 
+    const deepLimit = isDeep ? 50000 : (sub ? 130 : 10000); 
 
     const fetchBinance = async (symbol) => {
       let rows = [];
@@ -712,16 +703,18 @@ export default function PriceChart() {
         let url = `/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${batchLimit}`;
         if (end) url += `&endTime=${end}`;
         
-        const res = await getJson(url);
-        if (!res || res.length === 0) break;
-        
-        const mapped = res.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
-        rows = mapped.concat(rows); // gabungkan ke atas karena Binance mengembalikan data terbaru di belakang (ketika di-paginate mundur)
-        
-        if (res.length < batchLimit) break;
-        
-        const currentEarliest = res[0][0];
-        end = currentEarliest - 1;
+        try {
+          const res = await getJson(url);
+          if (!res || res.length === 0) break;
+          
+          const mapped = res.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
+          rows = mapped.concat(rows); 
+          
+          if (res.length < batchLimit) break;
+          end = res[0][0] - 1; // Tarik terus data lebih lama dari candle paling awal
+        } catch (e) {
+          break; 
+        }
       }
       return rows;
     };
@@ -735,16 +728,20 @@ export default function PriceChart() {
         let url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${batchLimit}`;
         if (end) url += `&end=${end}`;
         
-        const r = await fetch(url);
-        const j = await r.json();
-        const batch = j?.data?.ohlc || [];
-        if (!batch.length) break;
-        
-        const mapped = batch.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
-        rows = mapped.concat(rows);
-        
-        if (batch.length < batchLimit) break;
-        end = Number(batch[0].timestamp) - 1;
+        try {
+          const r = await fetch(url);
+          const j = await r.json();
+          const batch = j?.data?.ohlc || [];
+          if (!batch.length) break;
+          
+          const mapped = batch.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+          rows = mapped.concat(rows);
+          
+          if (batch.length < batchLimit) break;
+          end = Number(batch[0].timestamp) - 1;
+        } catch (e) {
+          break;
+        }
       }
       if (!rows.length) throw new Error("empty");
       return rows;
@@ -780,7 +777,6 @@ export default function PriceChart() {
     });
   }, [rates, baseBin, refresh, fitView]);
 
-  // ───────── Live: WebSocket + update tiap detik ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
@@ -865,7 +861,20 @@ export default function PriceChart() {
     <section className={styles.priceSection} id="harga">
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
-          <span className={styles.eyebrow}>Coconut Shell Charcoal .ID (CSC Index)</span>
+          
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span 
+              className={styles.eyebrow} 
+              onClick={() => setPendingMode("csc_unlock")}
+              style={{ cursor: "pointer", display: "inline-block" }}
+              title="Klik untuk membuka menu rahasia"
+            >
+              Index CSC Indonesia
+            </span>
+            <span style={{ fontSize: "11px", color: "#787b86", marginTop: "2px" }}>
+              Coconut Shell Charcoal Indonesia
+            </span>
+          </div>
 
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
@@ -911,20 +920,21 @@ export default function PriceChart() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
+              
               <button 
                 type="button" 
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} 
                 onClick={() => {
-                  if (!unlocked) setPendingMode("csc_unlock");
-                  else setMode("csc");
+                  setMode("csc");
+                  fitView(); // Memusatkan chart ke posisi default
                 }} 
-                style={{ fontWeight: "bold" }} 
-                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
+                style={{ fontWeight: "bold", fontSize: "16px", padding: "4px 14px" }} 
+                title="Pusatkan Harga & Posisi Chart"
               >
-                CSC {!unlocked && "🔒"}
+                +
               </button>
               
-              {/* TOMBOL LAIN HANYA MUNCUL JIKA UNLOCKED */}
+              {/* TOMBOL LAIN HANYA MUNCUL JIKA UNLOCKED DARI JUDUL */}
               {unlocked && (
                 <>
                   <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
