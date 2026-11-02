@@ -22,8 +22,6 @@ const IV = {
   "3d":  { step: 259200, bin: "3d",  label: "3D" }
 };
 
-// Batas muat awal dioptimalkan agar chart merender seketika (sangat cepat). 
-// Data lama akan menyusul dimuat otomatis saat digeser (scroll) ke kiri.
 const RANGES = {
   "1D":  { iv: "5m",  count: 300,  label: "1D" },
   "5D":  { iv: "15m", count: 500,  label: "5D" },
@@ -255,15 +253,17 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // INFINITE SCROLL LISTENER (Pemuatan Dinamis)
+  // INFINITE SCROLL LISTENER
   useEffect(() => {
     if (!chartRef.current) return;
     const ts = chartRef.current.timeScale();
     
     const onScroll = (logicalRange) => {
-      // Jika pengguna menggeser grafik sangat dekat dengan sisi kiri dan tidak sedang memuat
       if (logicalRange && logicalRange.from < 50 && !isFetchingHistory.current && !noMoreHistory.current) {
         isFetchingHistory.current = true;
+        
+        // Memunculkan status loading riwayat saat scroll
+        setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
 
         const binanceIv = IV[ivRef.current]?.bin || "1m";
         const dGold = dsRef.current.gold.raw;
@@ -298,7 +298,8 @@ export default function PriceChart() {
         Promise.all([pGold, pBtc]).then(([oldGold, oldBtc]) => {
           if (!oldGold.length && !oldBtc.length) {
             noMoreHistory.current = true;
-            setLegend(p => ({ ...p, availText: "SEMUA RIWAYAT TELAH DIMUAT KEPADA BATAS MAKSIMAL BURSA" }));
+            // Desain teks saat sudah mentok limit bursa
+            setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat hingga batas maksimal bursa" }));
           } else {
             dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
             dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
@@ -306,7 +307,6 @@ export default function PriceChart() {
             const curRange = ts.getVisibleLogicalRange();
             applyRef.current();
 
-            // Mempertahankan posisi grafik (mencegah loncat) setelah penambahan data lama di sebelah kiri
             const addedCount = modeRef.current === "gold" ? oldGold.length : oldBtc.length;
             if (curRange && addedCount > 0) {
               ts.setVisibleLogicalRange({
@@ -317,7 +317,8 @@ export default function PriceChart() {
 
             const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
             const oldestTime = new Date(dsRef.current[modeRef.current].raw[0].time * 1000);
-            setLegend(p => ({ ...p, availText: `RIWAYAT SEJAK ${dateFmt.format(oldestTime).toUpperCase()}` }));
+            // Desain teks tanggal riwayat normal
+            setLegend(p => ({ ...p, availText: `📅 Riwayat sejak ${dateFmt.format(oldestTime)}` }));
           }
           isFetchingHistory.current = false;
         }).catch(() => {
@@ -488,7 +489,6 @@ export default function PriceChart() {
     const currentToken = tokenRef.current;
     setFade(true);
     
-    // Setiap pergantian range/interval me-reset pendeteksi infinite scroll
     isFetchingHistory.current = false;
     noMoreHistory.current = false;
     
@@ -497,7 +497,9 @@ export default function PriceChart() {
     
     dsRef.current.gold.raw = [];
     dsRef.current.btc.raw = [];
-    setLegend(p => ({ ...p, availText: "MEMUAT RIWAYAT..." }));
+    
+    // Teks saat chart pertama kali dimuat
+    setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
 
     const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
       const n = Math.min(left, 1000);
@@ -541,7 +543,7 @@ export default function PriceChart() {
       dsRef.current.btc.raw = res[1];
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-      const sinceNote = (d) => (d.raw.length > 0) ? `RIWAYAT SEJAK ${dateFmt.format(new Date(d.raw[0].time * 1000)).toUpperCase()}` : "";
+      const sinceNote = (d) => (d.raw.length > 0) ? `📅 Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
       
       setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[modeRef.current]) }));
       applyRef.current();
@@ -777,14 +779,28 @@ export default function PriceChart() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>⚠️</span>
-                <span><strong>PASAR TUTUP. PERDAGANGAN LIBUR.</strong> Buka kembali Senin Pukul 22:00 UTC.</span>
+                <span><strong>Pasar sedang tutup.</strong> Perdagangan libur dan akan buka kembali pada hari Senin pukul 22:00 UTC.</span>
               </div>
             </div>
           )}
           
-          <div style={{ textAlign: 'left', marginTop: '8px', fontSize: '11px', color: '#9ca3af', display: 'flex', justifyContent: 'flex-start' }}>
-             {legend.availText}
-          </div>
+          {/* DESAIN BARU: Label Riwayat berupa status "Pill/Badge" yang warnanya dinamis */}
+          {legend.availText && (
+            <div style={{
+              marginTop: '10px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '5px 12px',
+              background: legend.availText.includes("⚠️") ? '#fffbeb' : '#f8fafc',
+              color: legend.availText.includes("⚠️") ? '#92400e' : '#64748b',
+              border: `1px solid ${legend.availText.includes("⚠️") ? '#fde68a' : '#e2e8f0'}`,
+              borderRadius: '20px',
+              fontSize: '11px',
+              fontWeight: '500'
+            }}>
+              {legend.availText}
+            </div>
+          )}
 
         </div>
       </div>
