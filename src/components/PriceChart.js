@@ -15,28 +15,23 @@ const SAR_BASE = 5000;
 
 const WIB = 7 * 3600; 
 
+// Interval Berbasis Tick & Detik (Sec)
 const IV = {
-  "1m":  { step: 60,     bin: "1m",  label: "1M" },
-  "5m":  { step: 300,    bin: "5m",  label: "5M" },
-  "15m": { step: 900,    bin: "15m", label: "15M" },
-  "30m": { step: 1800,   bin: "30m", label: "30M" },
-  "1h":  { step: 3600,   bin: "1h",  label: "1H" },
-  "4h":  { step: 14400,  bin: "4h",  label: "4H" },
-  "12h": { step: 43200,  bin: "12h", label: "12H" },
-  "1d":  { step: 86400,  bin: "1d",  label: "1D" },
-  "3d":  { step: 259200, bin: "3d",  label: "3D" }
+  "t1":   { type: "tick", count: 1,    label: "1 Tick" },
+  "t10":  { type: "tick", count: 10,   label: "10 Tick" },
+  "t100": { type: "tick", count: 100,  label: "100 Tick" },
+  "t1000":{ type: "tick", count: 1000, label: "1000 Tick" },
+  "1s":   { type: "sec",  step: 1,     label: "1 Sec" },
+  "5s":   { type: "sec",  step: 5,     label: "5 Sec" },
+  "10s":  { type: "sec",  step: 10,    label: "10 Sec" },
+  "15s":  { type: "sec",  step: 15,    label: "15 Sec" },
+  "30s":  { type: "sec",  step: 30,    label: "30 Sec" }
 };
 
 const RANGES = {
-  "1D":  { iv: "5m",  count: 150,  label: "1D" },
-  "5D":  { iv: "15m", count: 250,  label: "5D" },
-  "1M":  { iv: "1h",  count: 350,  label: "1M" },
-  "3M":  { iv: "4h",  count: 280,  label: "3M" },
-  "6M":  { iv: "12h", count: 200,  label: "6M" },
-  "YTD": { iv: "1d",  count: 0,    label: "YTD" },
-  "1Y":  { iv: "1d",  count: 200,  label: "1Y" },
-  "5Y":  { iv: "3d",  count: 180,  label: "5Y" },
-  "10Y": { iv: "3d",  count: 250,  label: "10Y" }
+  "1D":  { iv: "10s", count: 150, label: "1D" },
+  "5D":  { iv: "15s", count: 250, label: "5D" },
+  "1M":  { iv: "30s", count: 350, label: "1M" }
 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
@@ -144,7 +139,7 @@ export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("csc"); 
   const [containerMode, setContainerMode] = useState("T"); 
-  const [iv, setIv] = useState("1m");       
+  const [iv, setIv] = useState("5s");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
   const [isFull, setIsFull] = useState(false);
@@ -173,7 +168,7 @@ export default function PriceChart() {
   const modeRef = useRef("csc");
   const containerModeRef = useRef("T");
   const rateRef = useRef(1);
-  const ivRef = useRef("1m");
+  const ivRef = useRef("5s");
   
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
@@ -218,28 +213,29 @@ export default function PriceChart() {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    // Memastikan harga terbaru terpaku di tengah secara vertikal dengan padding dinamis
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
       if (!res || !res.priceRange || last == null) return res;
       const { minValue, maxValue } = res.priceRange;
-      const half = Math.max(maxValue - last, last - minValue) * 1.12 || Math.abs(last) * 0.0005;
-      return { ...res, priceRange: { minValue: last - half, maxValue: last + half } };
+      const span = Math.max(maxValue - last, last - minValue) * 1.5 || Math.abs(last) * 0.001;
+      return { ...res, priceRange: { minValue: last - span, maxValue: last + span } };
     };
 
     const chart = createChart(chartContainerRef.current, {
       autoSize: true,
       layout: { background: { type: "solid", color: "transparent" }, textColor: "#787b86", fontFamily: "system-ui, sans-serif", fontSize: 11 },
       grid: { vertLines: { color: "#f0f3fa" }, horzLines: { color: "#f0f3fa" } },
-      rightPriceScale: { borderColor: "#e0e3eb", scaleMargins: { top: 0.12, bottom: 0.12 } },
+      rightPriceScale: { borderColor: "#e0e3eb", scaleMargins: { top: 0.15, bottom: 0.15 } },
       leftPriceScale: { visible: false },
       timeScale: { 
         borderColor: "#e0e3eb", 
-        timeVisible: IV[ivRef.current]?.step < 86400, 
-        secondsVisible: false, 
-        rightOffset: 6,
+        timeVisible: true, 
+        secondsVisible: true, 
+        rightOffset: 2,
         fixLeftEdge: false,
-        fixRightEdge: false 
+        fixRightEdge: true // Mengunci agar harga terbaru mentok di kanan dan tidak bisa digeser kebablasan
       },
       crosshair: { mode: 0 },
       localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
@@ -268,12 +264,7 @@ export default function PriceChart() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!chartRef.current) return;
-    chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
-  }, [iv]);
-
-  // FUNGSI STABILISASI ZOOM & POSISI TAMPILAN TENGAH (Mencegah efek puyeng saat ganti state/rotasi)
+  // FUNGSI AUTO FOKUS & PEMUSATAN TAMPILAN
   const fitView = useCallback((smooth = true) => {
     const targetKey = mode === "csc" ? "usd" : mode;
     const d = dsRef.current[targetKey];
@@ -281,14 +272,9 @@ export default function PriceChart() {
     
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
+    let visibleBars = 60; 
     
-    // Zoom normal stabil (menampilkan ~70 bar terakhir agar pas di layar HP/Desktop)
-    let visibleBars = 70; 
-    if (range === "1D") visibleBars = 50;
-    else if (range === "5D") visibleBars = 80;
-    else if (range === "1M") visibleBars = 90;
-    
-    const target = { from: Math.max(0, n - visibleBars), to: n + 5 };
+    const target = { from: Math.max(0, n - visibleBars), to: n + 1 };
     
     if (smooth) {
       animateRange(ts, target, animRef);
@@ -296,7 +282,7 @@ export default function PriceChart() {
       cancelAnimationFrame(animRef.current);
       ts.setVisibleLogicalRange(target);
     }
-  }, [mode, range]);
+  }, [mode]);
 
   const handleCscClick = () => {
     if (!unlocked) {
@@ -311,91 +297,6 @@ export default function PriceChart() {
       setMode("csc");
     }
   };
-
-  useEffect(() => {
-    if (!chartRef.current) return;
-    const ts = chartRef.current.timeScale();
-    
-    const onScroll = (logicalRange) => {
-      if (logicalRange && logicalRange.from < 50 && !isFetchingHistory.current && !noMoreHistory.current) {
-        isFetchingHistory.current = true;
-        setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
-
-        const binanceIv = IV[ivRef.current]?.bin || "1m";
-        const dUsd = dsRef.current.usd.raw;
-        const dGold = dsRef.current.gold.raw;
-        const dBtc = dsRef.current.btc.raw;
-
-        if (!dUsd.length || !dGold.length || !dBtc.length) {
-          isFetchingHistory.current = false;
-          return;
-        }
-
-        const oldestTime = (dUsd[0].time - WIB) * 1000 - 1;
-
-        const fetchBinancePage = async (symbol, endMs) => {
-          const r = await getJson(`/api/v3/klines?symbol=${symbol}&interval=${binanceIv}&limit=1000&endTime=${endMs}`);
-          return r.map(x => ({ time: Math.floor(x[0]/1000) + WIB, open: +x[1], high: +x[2], low: +x[3], close: +x[4] }));
-        };
-
-        const fetchBitstampPage = async (endSec) => {
-          const step = IV[ivRef.current]?.step || 60;
-          const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=1000&end=${endSec}`);
-          if (!r.ok) throw new Error();
-          const j = await r.json();
-          return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
-        };
-
-        const pGold = fetchBinancePage("PAXGUSDT", oldestTime);
-        const pForex = fetchBinancePage("EURUSDT", oldestTime);
-        const oldestBtc = dBtc[0].time - WIB - 1;
-        const pBtc = livePrices.current.btcSrc === "Bitstamp" 
-          ? fetchBitstampPage(oldestBtc).catch(() => fetchBinancePage("BTCUSDT", oldestTime)) 
-          : fetchBinancePage("BTCUSDT", oldestTime);
-
-        Promise.all([pGold, pBtc, pForex]).then(([oldGold, oldBtc, oldForex]) => {
-          if (!oldGold.length) {
-            noMoreHistory.current = true;
-            setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat" }));
-          } else {
-            const oldUsd = oldForex.map(r => ({
-              time: r.time, open: r.open / 1.08, high: r.high / 1.08, low: r.low / 1.08, close: r.close / 1.08
-            }));
-            const oldYuan = oldUsd;
-            const oldJpy = oldUsd;
-            const oldSar = oldUsd;
-
-            dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
-            dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
-            dsRef.current.usd.raw = uniqSorted([...oldUsd, ...dUsd]);
-            dsRef.current.yuan.raw = uniqSorted([...oldYuan, ...dsRef.current.yuan.raw]);
-            dsRef.current.jpy.raw = uniqSorted([...oldJpy, ...dsRef.current.jpy.raw]);
-            dsRef.current.sar.raw = uniqSorted([...oldSar, ...dsRef.current.sar.raw]);
-
-            const curRange = ts.getVisibleLogicalRange();
-            applyRef.current();
-
-            if (curRange && oldGold.length > 0) {
-              ts.setVisibleLogicalRange({
-                from: curRange.from + oldGold.length,
-                to: curRange.to + oldGold.length
-              });
-            }
-
-            const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-            const oldestTimeDate = new Date(dsRef.current.usd.raw[0].time * 1000);
-            setLegend(p => ({ ...p, availText: `📅 Riwayat sejak ${dateFmt.format(oldestTimeDate)}` }));
-          }
-          isFetchingHistory.current = false;
-        }).catch(() => {
-          isFetchingHistory.current = false;
-        });
-      }
-    };
-
-    ts.subscribeVisibleLogicalRangeChange(onScroll);
-    return () => ts.unsubscribeVisibleLogicalRangeChange(onScroll);
-  }, [rates, cur]);
 
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
@@ -426,14 +327,12 @@ export default function PriceChart() {
     };
   }, []);
 
-  // Penanganan Event Resize & Rotasi Layar (Tilt View) agar kembali proporsional
   useEffect(() => {
     let t;
     const onResize = () => {
       clearTimeout(t);
       t = setTimeout(() => {
         if (chartRef.current) {
-          chartRef.current.timeScale().fitContent();
           fitView(true);
         }
       }, 100);
@@ -446,6 +345,42 @@ export default function PriceChart() {
       window.removeEventListener("orientationchange", onResize);
     };
   }, [fitView]);
+
+  // Pembangun Data Candle berdasarkan Interval Tick & Sec
+  const generateIntervalData = useCallback((rawList, intervalConfig) => {
+    if (!rawList || !rawList.length) return [];
+    if (intervalConfig.type === "sec") {
+      const step = intervalConfig.step;
+      const grouped = {};
+      rawList.forEach(item => {
+        const bucket = Math.floor(item.time / step) * step;
+        if (!grouped[bucket]) {
+          grouped[bucket] = { time: bucket, open: item.open, high: item.high, low: item.low, close: item.close };
+        } else {
+          grouped[bucket].high = Math.max(grouped[bucket].high, item.high);
+          grouped[bucket].low = Math.min(grouped[bucket].low, item.low);
+          grouped[bucket].close = item.close;
+        }
+      });
+      return Object.values(grouped).sort((a, b) => a.time - b.time);
+    } else {
+      // Berbasis Tick Count
+      const count = intervalConfig.count;
+      const out = [];
+      for (let i = 0; i < rawList.length; i += count) {
+        const chunk = rawList.slice(i, i + count);
+        if (!chunk.length) continue;
+        out.push({
+          time: chunk[0].time,
+          open: chunk[0].open,
+          high: Math.max(...chunk.map(x => x.high)),
+          low: Math.min(...chunk.map(x => x.low)),
+          close: chunk[chunk.length - 1].close
+        });
+      }
+      return out;
+    }
+  }, []);
 
   const buildCscData = useCallback((targetRate) => {
     const dUsdProxy = dsRef.current.usd.raw; 
@@ -473,7 +408,7 @@ export default function PriceChart() {
     const times = Object.keys(map).map(Number).sort((a,b) => a-b);
     let lastF = dUsdProxy[0], lastG = dGold[0], lastB = dBtc[0];
     
-    return times.map(t => {
+    const rawUnified = times.map(t => {
       if (map[t].f) lastF = map[t].f;
       if (map[t].g) lastG = map[t].g;
       if (map[t].b) lastB = map[t].b;
@@ -500,7 +435,9 @@ export default function PriceChart() {
         close: calcVal(lastF.close, lastG.close, lastB.close) * multiplier,
       };
     }).filter(Boolean);
-  }, [rates, containerMode]);
+
+    return generateIntervalData(rawUnified, IV[ivRef.current]);
+  }, [rates, containerMode, generateIntervalData]);
 
   const applyData = useCallback(() => {
     let cs = [];
@@ -513,9 +450,10 @@ export default function PriceChart() {
       const d = dsRef.current[mode];
       if (!d || !d.raw) return;
       const m = d.mult(rates, rate) * multiplier;
-      cs = d.raw.map(x => ({
+      const rawMode = d.raw.map(x => ({
         time: x.time, open: x.open * m, high: x.high * m, low: x.low * m, close: x.close * m
       }));
+      cs = generateIntervalData(rawMode, IV[ivRef.current]);
     }
     
     if (cs.length > 0) {
@@ -523,7 +461,7 @@ export default function PriceChart() {
       seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
       lastRef.current = cs[cs.length - 1].close;
     }
-  }, [mode, rate, rates, containerMode, buildCscData]);
+  }, [mode, rate, rates, containerMode, buildCscData, generateIntervalData]);
 
   const updateLegend = useCallback(() => {
     const isCsc = mode === "csc";
@@ -531,13 +469,10 @@ export default function PriceChart() {
     if (!d || !d.raw || !d.raw.length) return;
 
     const n = d.raw.length;
-    let lookback = 120; 
-    if (range) lookback = Math.min(n, RANGES[range]?.count || n);
-    
     const multiplier = containerMode === "40ft" ? 25 : 1;
     const m = isCsc ? 1 : (d.mult(rates, rate) * multiplier);
     
-    const f = d.raw[Math.max(0, n - lookback)].open * m;
+    const f = d.raw[0].open * m;
     const last = d.raw[n - 1].close;
     const l = last * m;
     
@@ -552,7 +487,7 @@ export default function PriceChart() {
       val: l, chg: diff, pct: pct, isUp: diff >= 0,
       high: Math.max(...highs), low: Math.min(...lows)
     }));
-  }, [mode, rate, range, rates, containerMode]);
+  }, [mode, rate, rates, containerMode]);
 
   fitRef.current = fitView;
   applyRef.current = applyData;
@@ -590,11 +525,8 @@ export default function PriceChart() {
     const currentToken = tokenRef.current;
     setFade(true);
     
-    isFetchingHistory.current = false;
-    noMoreHistory.current = false;
-    
-    const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : 750); 
-    const binanceIv = IV[iv]?.bin || "1m";
+    const count = 500; 
+    const binanceIv = "1m";
     
     dsRef.current.gold.raw = [];
     dsRef.current.btc.raw = [];
@@ -603,48 +535,25 @@ export default function PriceChart() {
     dsRef.current.jpy.raw = [];
     dsRef.current.sar.raw = [];
     dsRef.current.csc.raw = [];
-    
-    setLegend(p => ({ ...p, availText: "⏳ Memuat instrumen pasar..." }));
 
-    const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
-      const n = Math.min(left, 1000);
-      const path = `/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${n}${endMs ? "&endTime=" + endMs : ""}`;
+    const fetchBinancePage = async (symbol, interval, left) => {
+      const path = `/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${left}`;
       const rows = await getJson(path);
-      const cs = rows.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
-      all = cs.concat(all);
-      left -= rows.length;
-      if (left > 0 && rows.length === n) return fetchBinancePage(symbol, interval, left, rows[0][0] - 1, all);
-      return uniqSorted(all);
+      return rows.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
     };
 
-    const fetchBitstampPage = async (interval, left, endSec = Math.floor(Date.now() / 1000), all = []) => {
-      const step = IV[iv]?.step || 60;
-      const n = Math.min(left, 1000);
-      const url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${n}&start=${endSec - step * n}&end=${endSec}`;
-      const r = await fetch(url);
-      if (!r.ok) throw new Error("HTTP " + r.status);
+    const fetchBitstampPage = async () => {
+      const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=60&limit=500`);
       const j = await r.json();
-      const rows = j?.data?.ohlc || [];
-      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
-      all = cs.concat(all);
-      left -= n;
-      if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
-      return uniqSorted(all);
+      return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
     };
 
-    const pGold = fetchBinancePage("PAXGUSDT", binanceIv, count);
-    const pForex = fetchBinancePage("EURUSDT", binanceIv, count); 
-
-    let btcSrc = "Bitstamp";
-    const pBtc = fetchBitstampPage(binanceIv, count).then(cs => {
-      if (!cs.length) throw new Error("data kosong"); return cs;
-    }).catch(() => {
-      btcSrc = "Binance"; return fetchBinancePage("BTCUSDT", binanceIv, count);
-    });
-
-    Promise.all([pGold, pBtc, pForex]).then(res => {
+    Promise.all([
+      fetchBinancePage("PAXGUSDT", binanceIv, count),
+      fetchBitstampPage().catch(() => fetchBinancePage("BTCUSDT", binanceIv, count)),
+      fetchBinancePage("EURUSDT", binanceIv, count)
+    ]).then(res => {
       if (currentToken !== tokenRef.current) return;
-      livePrices.current.btcSrc = btcSrc;
       
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
@@ -658,27 +567,20 @@ export default function PriceChart() {
       dsRef.current.jpy.raw = proxyData;
       dsRef.current.sar.raw = proxyData;
 
-      const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-      const sinceNote = (d) => (d.raw.length > 0) ? `📅 Hibrida sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
-      
-      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current.usd) }));
       applyRef.current();
       legendRef.current();
       fitRef.current(true);
       setFade(false);
-      setTimeout(() => { if (currentToken === tokenRef.current) fitRef.current(true); }, 200);
-    }).catch(e => {
-      if (currentToken !== tokenRef.current) return;
+    }).catch(() => {
       setFade(false);
-      setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false, error: e.message });
-      setLegend(p => ({ ...p, availText: "" }));
+      setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false });
     });
-  }, [iv, range, rates]);
+  }, [rates]);
 
+  // Real-time live update ticker setiap detik
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
-    let tb, tt;
 
     const connectBinance = () => {
       if (disposed) return;
@@ -692,125 +594,44 @@ export default function PriceChart() {
           if (d.s === "PAXGUSDT") livePrices.current.gold = parseFloat(d.p);
           if (d.s === "EURUSDT") livePrices.current.eurusdt = parseFloat(d.p);
         };
-        ws.onclose = () => { if (!disposed) tb = setTimeout(connectBinance, 3000); };
+        ws.onclose = () => { if (!disposed) setTimeout(connectBinance, 3000); };
         wsRef.current.binance = ws;
       } catch(e) {}
     };
 
-    const connectBitstamp = () => {
-      if (disposed) return;
-      try {
-        const w = new WebSocket("wss://ws.bitstamp.net");
-        w.onopen = () => w.send(JSON.stringify({ event: "bts:subscribe", data: { channel: "live_trades_btcusd" } }));
-        w.onmessage = (ev) => {
-          try {
-            const m = JSON.parse(ev.data);
-            if (m.event === "trade" && m.data) livePrices.current.btcBs = parseFloat(m.data.price_str || m.data.price);
-          } catch(e) {}
-        };
-        w.onclose = () => { if (!disposed) tt = setTimeout(connectBitstamp, 3000); };
-        wsRef.current.bitstamp = w;
-      } catch(e) {}
-    };
-
     connectBinance();
-    connectBitstamp();
 
     const timer = setInterval(() => {
-      const curMode = modeRef.current;
-      const curContainer = containerModeRef.current;
-      const curRate = rateRef.current;
-      const step = IV[ivRef.current].step;
-      const multiplier = curContainer === "40ft" ? 25 : 1;
-      
-      ["gold", "btc", "usd"].forEach(key => {
-        const d = dsRef.current[key];
-        let pRaw = 1;
-        if (key === "gold") pRaw = livePrices.current.gold;
-        else if (key === "btc") pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
-        else if (key === "usd") pRaw = (livePrices.current.eurusdt || 1.08) / 1.08; 
-        
-        if (pRaw == null || !d.raw.length) return;
-        
-        const last = d.raw[d.raw.length - 1];
+      const pGold = livePrices.current.gold;
+      const pBtc = livePrices.current.btcBn;
+      const pUsd = (livePrices.current.eurusdt || 1.08) / 1.08;
+
+      if (pGold && pBtc && dsRef.current.usd.raw.length > 0) {
         const nowT = Math.floor(Date.now() / 1000) + WIB;
-
-        if (nowT >= last.time + step) {
-          const t = last.time + step * Math.floor((nowT - last.time) / step);
-          d.raw.push({ time: t, open: pRaw, high: pRaw, low: pRaw, close: pRaw });
-        } else {
-          last.high = Math.max(last.high, pRaw);
-          last.low = Math.min(last.low, pRaw);
-          last.close = pRaw;
-        }
-      });
-
-      ["yuan", "jpy", "sar"].forEach(k => {
-        dsRef.current[k].raw = dsRef.current.usd.raw;
-      });
-
-      if (dsRef.current.usd.raw.length > 0 && dsRef.current.gold.raw.length > 0 && dsRef.current.btc.raw.length > 0) {
-        
-        if (curMode === "csc") {
-          const lF = dsRef.current.usd.raw[dsRef.current.usd.raw.length - 1];
-          const lG = dsRef.current.gold.raw[dsRef.current.gold.raw.length - 1];
-          const lB = dsRef.current.btc.raw[dsRef.current.btc.raw.length - 1];
-          
-          const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
-          const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
-          const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
-
-          const mUsd = USD_BASE * curRate;
-          const mYuan = YUAN_BASE * cnyToUsd * curRate;
-          const mJpy = JPY_BASE * jpyToUsd * curRate;
-          const mSar = SAR_BASE * sarToUsd * curRate;
-          const mG = dsRef.current.gold.mult(rates, curRate);
-          const mB = dsRef.current.btc.mult(rates, curRate);
-
-          const calcLive = (f, g, b) => {
-             return ((f*mUsd + f*mYuan + f*mJpy + f*mSar + g*mG + b*mB) / 6) * multiplier;
-          };
-
-          const sv = {
-            time: lF.time,
-            open: calcLive(lF.open, lG.open, lB.open),
-            high: calcLive(lF.high, lG.high, lB.high),
-            low: calcLive(lF.low, lG.low, lB.low),
-            close: calcLive(lF.close, lG.close, lB.close),
-          };
-          
-          if (dsRef.current.csc.raw.length > 0) {
-             const lastCsc = dsRef.current.csc.raw[dsRef.current.csc.raw.length - 1];
-             if (lastCsc.time === sv.time) dsRef.current.csc.raw[dsRef.current.csc.raw.length - 1] = sv;
-             else dsRef.current.csc.raw.push(sv);
+        ["gold", "btc", "usd"].forEach(k => {
+          const arr = dsRef.current[k].raw;
+          const val = k === "gold" ? pGold : (k === "btc" ? pBtc : pUsd);
+          if (arr.length > 0) {
+            const last = arr[arr.length - 1];
+            if (nowT === last.time) {
+              last.high = Math.max(last.high, val);
+              last.low = Math.min(last.low, val);
+              last.close = val;
+            } else {
+              arr.push({ time: nowT, open: val, high: val, low: val, close: val });
+            }
           }
-
-          lastRef.current = sv.close;
-          seriesRef.current.candle.update(sv);
-          seriesRef.current.area.update({ time: sv.time, value: sv.close });
-
-        } else {
-          const d = dsRef.current[curMode];
-          const last = d.raw[d.raw.length - 1];
-          const m = d.mult(rates, curRate) * multiplier;
-          const sv = { time: last.time, open: last.open * m, high: last.high * m, low: last.low * m, close: last.close * m };
-          
-          lastRef.current = sv.close;
-          seriesRef.current.candle.update(sv);
-          seriesRef.current.area.update({ time: sv.time, value: sv.close });
-        }
+        });
+        ["yuan", "jpy", "sar"].forEach(k => { dsRef.current[k].raw = dsRef.current.usd.raw; });
+        applyRef.current();
+        legendRef.current();
       }
-      
-      legendRef.current();
     }, 1000);
 
     return () => {
       disposed = true;
       clearInterval(timer);
-      clearTimeout(tb);
-      clearTimeout(tt);
       if (wsRef.current.binance) wsRef.current.binance.close();
-      if (wsRef.current.bitstamp) wsRef.current.bitstamp.close();
     };
   }, [rates]);
 
@@ -869,7 +690,7 @@ export default function PriceChart() {
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
                 onClick={handleCscClick}
                 style={{ fontWeight: "bold" }}
-                title="CSC Index (Klik masukkan kunci untuk membuka chart lain)"
+                title="CSC Index"
               >
                 CSC
               </button>
@@ -898,22 +719,15 @@ export default function PriceChart() {
           <div className={styles.toolbarGroup}>
             <div className={styles.currencySelector}>
               <button className={`${styles.currencyBtn} ${styles.smallBtn}`} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
-                {range ? range : IV[iv]?.label}
+                {IV[iv]?.label}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               {timeDropOpen && (
                 <div className={`${styles.currencyDropdown}`}>
-                  <div className={styles.dropLabel}>INTERVAL</div>
+                  <div className={styles.dropLabel}>INTERVAL (TICK & SEC)</div>
                   {Object.keys(IV).map(v => (
-                    <button key={v} className={`${styles.currencyOption} ${iv === v && !range ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
+                    <button key={v} className={`${styles.currencyOption} ${iv === v ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
                       <span>{IV[v].label}</span>
-                    </button>
-                  ))}
-                  <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
-                  <div className={styles.dropLabel}>RENTANG</div>
-                  {Object.keys(RANGES).map(r => (
-                    <button key={r} className={`${styles.currencyOption} ${range === r ? styles.currencyActive : ""}`} onClick={() => { setRange(r); setIv(RANGES[r].iv); setTimeDropOpen(false); }}>
-                      <span>{RANGES[r].label}</span>
                     </button>
                   ))}
                 </div>
@@ -926,11 +740,6 @@ export default function PriceChart() {
               onClick={toggleFull}
               aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}
             >
-              {isFull ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-              )}
               {isFull ? "TUTUP" : "FULL"}
             </button>
           </div>
@@ -943,24 +752,6 @@ export default function PriceChart() {
 
             <div ref={chartContainerRef} style={{ position: 'absolute', inset: 0, zIndex: 2 }}></div>
           </div>
-          
-          {legend.availText && (
-            <div style={{
-              marginTop: '10px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '5px 12px',
-              background: '#f8fafc',
-              color: '#64748b',
-              border: '1px solid #e2e8f0',
-              borderRadius: '20px',
-              fontSize: '11px',
-              fontWeight: '500'
-            }}>
-              {legend.availText}
-            </div>
-          )}
-
         </div>
       </div>
     </section>
