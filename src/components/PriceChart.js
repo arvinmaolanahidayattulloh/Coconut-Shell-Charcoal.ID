@@ -366,6 +366,7 @@ export default function PriceChart() {
   const [unlocked, setUnlocked] = useState(false);
   const [pw, setPw] = useState("");
   const [pwErr, setPwErr] = useState(false);
+  const [pendingMode, setPendingMode] = useState(null);
 
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("csc");
@@ -444,12 +445,23 @@ export default function PriceChart() {
         try { sessionStorage.setItem("csc_unlock", "1"); } catch (err) {}
         setPwErr(false);
         setUnlocked(true);
+        if (pendingMode) setMode(pendingMode);
+        setPendingMode(null);
+        setPw("");
       } else {
         setPwErr(true);
       }
     } catch (err) {
       setPwErr(true);
     }
+  };
+
+  // CSC selalu terbuka; chart lain butuh password
+  const pickMode = (m) => {
+    if (m === "csc" || unlocked) { setMode(m); return; }
+    setPwErr(false);
+    setPw("");
+    setPendingMode(m);
   };
 
   useEffect(() => { setMarketClosed(!isXauMarketOpen()); }, []);
@@ -462,7 +474,7 @@ export default function PriceChart() {
 
   // ───────── Buat chart (setelah password benar) ─────────
   useEffect(() => {
-    if (!unlocked || !chartContainerRef.current) return;
+    if (!chartContainerRef.current) return;
 
     // Harga terakhir selalu di tengah vertikal
     const centerProvider = (orig) => {
@@ -484,10 +496,10 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 0,
+        rightOffset: 3,
         fixLeftEdge: false,
         fixRightEdge: false,
-        shiftVisibleRangeOnNewBar: false, // posisi view diatur manual
+        shiftVisibleRangeOnNewBar: true, // ikut harga terbaru hanya bila posisi di ujung kanan
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -515,7 +527,7 @@ export default function PriceChart() {
       chart.remove();
       chartRef.current = null;
     };
-  }, [unlocked]);
+  }, []);
 
   const applyVis = useCallback(() => {
     const s = seriesRef.current;
@@ -531,7 +543,7 @@ export default function PriceChart() {
     if (!chart || !n) return;
     const left = Math.min(barsRef.current, Math.max(10, n));
     chart.priceScale("right").applyOptions({ autoScale: true });
-    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n + 2 });
+    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n - 1 + 3 });
   }, []);
 
   // Hitung data tampilan (mode + mata uang + kontainer + interval)
@@ -606,14 +618,6 @@ export default function PriceChart() {
     lenRef.current = n;
     lastBarRef.current = { first: cs[0].time, len: n, time: last.time };
 
-    // Candle baru muncul → geser view 1 bar supaya harga tetap pada posisi yang sama
-    if (incremental && prev && n === prev.len + 1) {
-      const r = chart.timeScale().getVisibleLogicalRange();
-      if (r && prev.len - 1 >= r.from && prev.len - 1 <= r.to) {
-        chart.timeScale().setVisibleLogicalRange({ from: r.from + 1, to: r.to + 1 });
-      }
-    }
-
     // Legend: statistik 120 candle terakhir
     const win = cs.slice(-120);
     let hi = -Infinity, lo = Infinity;
@@ -682,17 +686,6 @@ export default function PriceChart() {
     }, 250);
     return () => clearTimeout(t);
   }, [isFull]);
-
-  // Setelah password benar: tampilkan data yang sudah termuat
-  useEffect(() => {
-    if (!unlocked) return;
-    const t = setTimeout(() => {
-      applyVis();
-      refreshRef.current(true);
-      fitRef.current();
-    }, 60);
-    return () => clearTimeout(t);
-  }, [unlocked, applyVis]);
 
   // ───────── Ganti tipe chart ─────────
   useEffect(() => {
@@ -851,31 +844,6 @@ export default function PriceChart() {
     };
   }, [rates, refresh]);
 
-  // ───────── Layar password ─────────
-  if (!unlocked) {
-    return (
-      <section className={styles.priceSection} id="harga">
-        <div className={styles.priceCard}>
-          <div className={styles.priceHeader}>
-            <span className={styles.eyebrow}>Coconut Shell Charcoal .ID (CSC Index)</span>
-          </div>
-          <form onSubmit={submitPw} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "24px 0" }}>
-            <input
-              type="password"
-              value={pw}
-              onChange={(e) => { setPw(e.target.value); setPwErr(false); }}
-              placeholder="Password"
-              autoComplete="off"
-              style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "transparent", color: "inherit" }}
-            />
-            <button className={styles.currencyBtn} type="submit">BUKA CHART</button>
-            {pwErr && <span style={{ width: "100%", color: "#f23645", fontSize: 13 }}>Password salah.</span>}
-          </form>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className={styles.priceSection} id="harga">
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
@@ -927,12 +895,12 @@ export default function PriceChart() {
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
               <button type="button" className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} onClick={() => setMode("csc")} style={{ fontWeight: "bold" }} title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)">CSC</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => setMode("usd")} title="USD Mode">💵</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => setMode("yuan")} title="Yuan Mode">中</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => setMode("jpy")} title="Yen Mode">💴</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => setMode("sar")} title="Riyal Mode">﷼</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => setMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => setMode("btc")} title="Bitcoin Mode">⭐</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("yuan")} title="Yuan Mode">中</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("jpy")} title="Yen Mode">💴</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("sar")} title="Riyal Mode">﷼</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("btc")} title="Bitcoin Mode">⭐</button>
             </div>
 
             <div className={styles.modeSwitch} style={{ marginLeft: "8px" }}>
@@ -985,6 +953,25 @@ export default function PriceChart() {
             }}
           >
             <div ref={chartContainerRef} style={{ position: "absolute", inset: 0, zIndex: 2 }}></div>
+
+            {pendingMode && (
+              <div style={{ position: "absolute", inset: 0, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.88)" }}>
+                <form onSubmit={submitPw} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center", maxWidth: 360, padding: 16 }}>
+                  <input
+                    type="password"
+                    autoFocus
+                    value={pw}
+                    onChange={(e) => { setPw(e.target.value); setPwErr(false); }}
+                    placeholder="Password"
+                    autoComplete="off"
+                    style={{ flex: "1 1 200px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "#fff", color: "#111" }}
+                  />
+                  <button className={styles.currencyBtn} type="submit">BUKA</button>
+                  <button className={styles.currencyBtn} type="button" onClick={() => setPendingMode(null)}>BATAL</button>
+                  {pwErr && <span style={{ width: "100%", textAlign: "center", color: "#f23645", fontSize: 13 }}>Password salah.</span>}
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>
