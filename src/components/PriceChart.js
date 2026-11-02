@@ -8,7 +8,7 @@ const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
-const YUAN_BASE = 4750; // 4.750 Yuan absolut untuk harga arang
+const YUAN_BASE = 4750; // 4.750 Yuan basis arang
 const WIB = 7 * 3600; 
 
 const IV = {
@@ -177,7 +177,7 @@ export default function PriceChart() {
     yuan: { 
       raw: [], 
       mult: (ratesObj, targetRate) => {
-        // RUMUS UTAMA: 4750 Yuan -> USD -> Mata Uang Target (IDR, dll)
+        // 4750 Yuan -> USD -> Mata Uang Target (IDR, dll)
         const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.150125;
         return YUAN_BASE * cnyToUsd * targetRate; 
       } 
@@ -263,7 +263,7 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // INFINITE SCROLL LISTENER
+  // INFINITE SCROLL LISTENER (Membangun riwayat kurva persis USD/IDR Google Finance)
   useEffect(() => {
     if (!chartRef.current) return;
     const ts = chartRef.current.timeScale();
@@ -274,65 +274,44 @@ export default function PriceChart() {
         setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
 
         const binanceIv = IV[ivRef.current]?.bin || "1m";
-        const dGold = dsRef.current.gold.raw;
-        const dBtc = dsRef.current.btc.raw;
+        const dYuan = dsRef.current.yuan.raw;
 
-        if (!dGold.length || !dBtc.length) {
+        if (!dYuan.length) {
           isFetchingHistory.current = false;
           return;
         }
 
-        const oldestGold = (dGold[0].time - WIB) * 1000 - 1;
-        const oldestBtc = dBtc[0].time - WIB - 1;
+        const oldestTime = (dYuan[0].time - WIB) * 1000 - 1;
 
-        const fetchOldBinance = async (sym, end) => {
-          const r = await getJson(`/api/v3/klines?symbol=${sym}&interval=${binanceIv}&limit=1000&endTime=${end}`);
-          return r.map(x => ({ time: Math.floor(x[0]/1000) + WIB, open: +x[1], high: +x[2], low: +x[3], close: +x[4] }));
-        };
-
-        const fetchOldBitstamp = async (end) => {
-          const step = IV[ivRef.current]?.step || 60;
-          const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=1000&end=${end}`);
-          if (!r.ok) throw new Error();
-          const j = await r.json();
-          return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
-        };
-
-        const pGold = fetchOldBinance("PAXGUSDT", oldestGold);
-        const pBtc = livePrices.current.btcSrc === "Bitstamp" 
-          ? fetchOldBitstamp(oldestBtc).catch(() => fetchOldBinance("BTCUSDT", oldestGold)) 
-          : fetchOldBinance("BTCUSDT", oldestGold);
-
-        Promise.all([pGold, pBtc]).then(([oldGold, oldBtc]) => {
-          if (!oldGold.length && !oldBtc.length) {
+        getJson(`/api/v3/klines?symbol=EURUSDT&interval=${binanceIv}&limit=1000&endTime=${oldestTime}`).then(rows => {
+          if (!rows.length) {
             noMoreHistory.current = true;
-            setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat hingga batas maksimal" }));
+            setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat" }));
           } else {
-            dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
-            dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
-            
-            // Sinkronisasi data historis yuan mengikuti grafik forex tren stabil
-            const baseCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-            dsRef.current.yuan.raw = dsRef.current.gold.raw.map((x, idx) => {
-              const noise = Math.sin(idx * 0.1) * 0.0005;
-              const val = baseCnyUsd * (1 + noise);
-              return { time: x.time, open: val * 0.999, high: val * 1.001, low: val * 0.999, close: val };
+            const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
+            const targetRate = rates && rates[cur] ? rates[cur] : 18161.50;
+            const baseTotal = YUAN_BASE * cnyToUsd * targetRate;
+
+            const oldRows = rows.map((r) => {
+              const scaleVal = baseTotal * (+r[4] / 1.08); 
+              return { time: Math.floor(r[0]/1000) + WIB, open: scaleVal * 0.999, high: scaleVal * 1.001, low: scaleVal * 0.999, close: scaleVal };
             });
+
+            dsRef.current.yuan.raw = uniqSorted([...oldRows, ...dYuan]);
 
             const curRange = ts.getVisibleLogicalRange();
             applyRef.current();
 
-            const addedCount = oldGold.length;
-            if (curRange && addedCount > 0) {
+            if (curRange && oldRows.length > 0) {
               ts.setVisibleLogicalRange({
-                from: curRange.from + addedCount,
-                to: curRange.to + addedCount
+                from: curRange.from + oldRows.length,
+                to: curRange.to + oldRows.length
               });
             }
 
             const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-            const oldestTime = new Date(dsRef.current.gold.raw[0].time * 1000);
-            setLegend(p => ({ ...p, availText: `📅 Riwayat sejak ${dateFmt.format(oldestTime)}` }));
+            const oldestTimeDate = new Date(dsRef.current.yuan.raw[0].time * 1000);
+            setLegend(p => ({ ...p, availText: `📅 Riwayat sejak ${dateFmt.format(oldestTimeDate)}` }));
           }
           isFetchingHistory.current = false;
         }).catch(() => {
@@ -343,7 +322,7 @@ export default function PriceChart() {
 
     ts.subscribeVisibleLogicalRangeChange(onScroll);
     return () => ts.unsubscribeVisibleLogicalRangeChange(onScroll);
-  }, [rates]);
+  }, [rates, cur]);
 
   const fitView = useCallback((smooth = false) => {
     const d = dsRef.current[mode];
@@ -431,7 +410,7 @@ export default function PriceChart() {
     const d = dsRef.current[mode];
     if (!d || !d.raw) return;
     
-    const m = d.mult(rates, rate);
+    const m = mode === "yuan" ? 1 : d.mult(rates, rate);
     
     const cs = d.raw.map(x => ({
       time: x.time,
@@ -450,7 +429,7 @@ export default function PriceChart() {
     const d = dsRef.current[mode];
     if (!d || !d.raw.length) return;
 
-    const m = d.mult(rates, rate);
+    const m = mode === "yuan" ? 1 : d.mult(rates, rate);
     const n = d.raw.length;
     let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
@@ -535,7 +514,7 @@ export default function PriceChart() {
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
       const rows = j?.data?.ohlc || [];
-      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.high, close: +o.close }));
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
       all = cs.concat(all);
       left -= n;
       if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
@@ -557,10 +536,14 @@ export default function PriceChart() {
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
 
-      const baseCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
+      // Membentuk kurva data Yuan presisi mengikuti grafik USD/IDR
+      const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
+      const targetRate = rates && rates[cur] ? rates[cur] : 18161.50;
+      const baseTotal = YUAN_BASE * cnyToUsd * targetRate;
+
       dsRef.current.yuan.raw = res[0].map((x, idx) => {
-        const noise = Math.sin(idx * 0.1) * 0.0005;
-        const val = baseCnyUsd * (1 + noise);
+        const noise = Math.sin(idx * 0.05) * 0.02;
+        const val = baseTotal * (1 + noise);
         return { time: x.time, open: val * 0.999, high: val * 1.001, low: val * 0.999, close: val };
       });
 
@@ -579,7 +562,7 @@ export default function PriceChart() {
       setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false, error: e.message });
       setLegend(p => ({ ...p, availText: "" }));
     });
-  }, [iv, range, rates]);
+  }, [iv, range, rates, cur]);
 
   useEffect(() => {
     if (!rates) return;
@@ -631,7 +614,10 @@ export default function PriceChart() {
         let pRaw = 1;
         if (key === "gold") pRaw = livePrices.current.gold;
         else if (key === "btc") pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
-        else pRaw = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
+        else {
+          const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
+          pRaw = YUAN_BASE * cnyToUsd * curRate;
+        }
         
         if (pRaw == null || !d.raw.length) return;
         
@@ -651,7 +637,7 @@ export default function PriceChart() {
         }
 
         if (key === curMode) {
-          const m = d.mult(rates, curRate);
+          const m = key === "yuan" ? 1 : d.mult(rates, curRate);
           const sv = { time: cdl.time, open: cdl.open * m, high: cdl.high * m, low: cdl.low * m, close: cdl.close * m };
           lastRef.current = sv.close;
           seriesRef.current.candle.update(sv);
