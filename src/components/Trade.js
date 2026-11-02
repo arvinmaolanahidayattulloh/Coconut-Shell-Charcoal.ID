@@ -20,47 +20,51 @@ export default function Trade() {
   };
 
   return (
-    <div className={styles.tradeContainer}>
-      <h3 className={styles.tradeTitle}>Platform Trading Komoditas CSCID</h3>
-      <p className={styles.tradeSubtitle}>Eksekusi order beli atau jual arang tempurung kelapa secara instan.</p>
-
-      {successMsg && <div className={styles.successAlert}>{successMsg}</div>}
-
-      <form onSubmit={handleTradeSubmit} className={styles.tradeForm}>
-        <div className={styles.tabGroup}>
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${tradeType === 'buy' ? styles.buyActive : ''}`}
-            onClick={() => setTradeType('buy')}
-          >
-            Beli (Long)
-          </button>
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${tradeType === 'sell' ? styles.sellActive : ''}`}
-            onClick={() => setTradeType('sell')}
-          >
-            Jual (Short)
-          </button>
+    <section className={styles.tradeSection}>
+      <div className={styles.tradeCard}>
+        <div className={styles.tradeHeader}>
+          <h3 className={styles.eyebrow}>Platform Trading CSCID</h3>
+          <p className={styles.subtitle}>Eksekusi order beli atau jual secara instan</p>
         </div>
 
-        <div className={styles.inputGroup}>
-          <label htmlFor="tradeAmount">Jumlah (Ton)</label>
-          <input
-            id="tradeAmount"
-            type="number"
-            min="1"
-            placeholder="Contoh: 10"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className={styles.tradeInput}
-          />
-        </div>
+        {successMsg && <div className={styles.successAlert}>{successMsg}</div>}
 
-        <button type="submit" className={`${styles.submitBtn} ${tradeType === 'buy' ? styles.buyBtnBg : styles.sellBtnBg}`}>
-          Eksekusi {tradeType.toUpperCase()} 
-        </button>
-      </form>
-    </div>
+        <form onSubmit={handleTradeSubmit} className={styles.tradeForm}>
+          <div className={styles.tabGroup}>
+            <button
+              type="button"
+              className={`${styles.tabBtn} ${tradeType === 'buy' ? styles.buyActive : ''}`}
+              onClick={() => setTradeType('buy')}
+            >
+              Beli (Long)
+            </button>
+            <button
+              type="button"
+              className={`${styles.tabBtn} ${tradeType === 'sell' ? styles.sellActive : ''}`}
+              onClick={() => setTradeType('sell')}
+            >
+              Jual (Short)
+            </button>
+          </div>
+
+          <div className={styles.inputGroup}>
+            <label htmlFor="tradeAmount">Jumlah (Ton)</label>
+            <input
+              id="tradeAmount"
+              type="number"
+              min="1"
+              placeholder="Contoh: 10"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={styles.tradeInput}
+            />
+          </div>
+
+          <button type="submit" className={`${styles.submitBtn} ${tradeType === 'buy' ? styles.buyBtnBg : styles.sellBtnBg}`}>
+            Eksekusi {tradeType.toUpperCase()}
+          </button>
+        </form>
+      </div>
+    </section>
   );
 }
