@@ -162,7 +162,6 @@ function aggregate(rows, cfg) {
   return out;
 }
 
-// Di bawah 1 menit (Tick & Detik) harga dicetak oleh EA (d.sec); selain itu candle dasar exchange
 function srcOf(d, cfg) {
   if (cfg.type === "tick" || cfg.type === "sec") return d.sec;
   return d.raw;
@@ -184,7 +183,6 @@ function modeMult(mode, r, rate) {
   }
 }
 
-// Gabung 3 deret waktu (forward-fill) lalu hitung indeks CSC
 function mergeCsc(f, g, b, calc) {
   const out = [];
   let i = 0, j = 0, k = 0;
@@ -210,10 +208,8 @@ function mergeCsc(f, g, b, calc) {
 
 // ─────────────────────────────────────────────────────────────
 // EA — PENCETAK HARGA DI BAWAH 1 MENIT
-// EA membaca riwayat candle 1M, lalu membuat harganya sendiri tiap detik
-// (random test mengikuti chart). Harga yang dicetak EA adalah harga candle itu.
 // ─────────────────────────────────────────────────────────────
-const EA_BODY = 0.00003;   // body minimum relatif terhadap harga (candle tidak jadi garis tipis)
+const EA_BODY = 0.00003;
 const EA_MAXROWS = 7200;
 
 function hashStr(s) {
@@ -236,7 +232,6 @@ function gauss(r) {
   return (r() + r() + r() + r() - 2) * 1.7320508;
 }
 
-// Volatilitas per detik dari riwayat 1M
 function eaSigma(raw) {
   const n = Math.min(15, raw.length);
   if (!n) return 0;
@@ -246,7 +241,6 @@ function eaSigma(raw) {
   return Math.max((sum / n) * 0.05, Math.abs(last) * 0.00001);
 }
 
-// Riwayat: 1 candle 1M → n candle detik (jalur harga buatan EA yang menyentuh open, high, low, close candle itu)
 function eaFromBar(bar, n, seed) {
   if (n < 1) return [];
   const r = rng(seed);
@@ -280,7 +274,6 @@ function eaFromBar(bar, n, seed) {
   path[0] = bar.open;
   path[steps] = bar.close;
 
-  // selang-seling kecil di batas detik agar body candle tidak nol
   const mb = Math.abs(mid) * EA_BODY;
   for (let i = 1; i < n; i++) path[4 * i] += (i % 2 ? 1 : -1) * mb * 0.5;
 
@@ -297,7 +290,6 @@ function eaFromBar(bar, n, seed) {
   return out;
 }
 
-// Live: EA mencetak harga detik berikutnya (random walk yang ditarik ke harga pasar)
 function eaNext(open, target, sigma, r) {
   let p = open, h = open, l = open;
   for (let j = 0; j < 4; j++) {
@@ -390,11 +382,11 @@ export default function PriceChart() {
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
 
-  const lastRef = useRef(null);       // harga terakhir (pusat vertikal)
-  const lenRef = useRef(0);           // jumlah candle
-  const barsRef = useRef(60);         // jumlah bar yang terlihat di kiri
-  const lastBarRef = useRef(null);    // {first, len, time} untuk update inkremental
-  const loadedBinRef = useRef(null);  // bin data dasar yang sedang termuat
+  const lastRef = useRef(null);       
+  const lenRef = useRef(0);           
+  const barsRef = useRef(60);         
+  const lastBarRef = useRef(null);    
+  const loadedBinRef = useRef(null);  
 
   const modeRef = useRef("csc");
   const containerModeRef = useRef("T");
@@ -407,7 +399,6 @@ export default function PriceChart() {
   const refreshRef = useRef(() => {});
   const fitRef = useRef(() => {});
 
-  // raw = candle dasar dari exchange, sec = candle detik hasil EA
   const dsRef = useRef({
     gold: { raw: [], sec: [] },
     btc:  { raw: [], sec: [] },
@@ -445,7 +436,9 @@ export default function PriceChart() {
         try { sessionStorage.setItem("csc_unlock", "1"); } catch (err) {}
         setPwErr(false);
         setUnlocked(true);
-        if (pendingMode) setMode(pendingMode);
+        if (pendingMode && pendingMode !== "csc_unlock") {
+          setMode(pendingMode);
+        }
         setPendingMode(null);
         setPw("");
       } else {
@@ -456,7 +449,6 @@ export default function PriceChart() {
     }
   };
 
-  // CSC selalu terbuka; chart lain butuh password
   const pickMode = (m) => {
     if (m === "csc" || unlocked) { setMode(m); return; }
     setPwErr(false);
@@ -472,11 +464,10 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat chart (setelah password benar) ─────────
+  // ───────── Buat chart ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Harga terakhir selalu di tengah vertikal
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -499,7 +490,7 @@ export default function PriceChart() {
         rightOffset: 3,
         fixLeftEdge: false,
         fixRightEdge: false,
-        shiftVisibleRangeOnNewBar: true, // ikut harga terbaru hanya bila posisi di ujung kanan
+        shiftVisibleRangeOnNewBar: true,
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -536,7 +527,6 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Pusatkan tampilan: harga terakhir di tengah vertikal, mentok di kanan seperti backtest EA
   const fitView = useCallback(() => {
     const chart = chartRef.current;
     const n = lenRef.current;
@@ -546,7 +536,6 @@ export default function PriceChart() {
     chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n - 1 + 3 });
   }, []);
 
-  // Hitung data tampilan (mode + mata uang + kontainer + interval)
   const compute = useCallback(() => {
     const cfg = IV[ivRef.current];
     const r = ratesRef.current;
@@ -577,7 +566,6 @@ export default function PriceChart() {
     return aggregate(rows, cfg);
   }, []);
 
-  // Render ke chart. full=true → setData penuh; full=false → update inkremental (halus)
   const refresh = useCallback((full) => {
     const s = seriesRef.current;
     const chart = chartRef.current;
@@ -618,7 +606,6 @@ export default function PriceChart() {
     lenRef.current = n;
     lastBarRef.current = { first: cs[0].time, len: n, time: last.time };
 
-    // Legend: statistik 120 candle terakhir
     const win = cs.slice(-120);
     let hi = -Infinity, lo = Infinity;
     win.forEach(c => { if (c.high > hi) hi = c.high; if (c.low < lo) lo = c.low; });
@@ -630,7 +617,6 @@ export default function PriceChart() {
   refreshRef.current = refresh;
   fitRef.current = fitView;
 
-  // ───────── Fullscreen ─────────
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
     if (!isFull) {
@@ -660,7 +646,6 @@ export default function PriceChart() {
     };
   }, []);
 
-  // Resize / rotate → pusatkan ulang
   useEffect(() => {
     let t;
     const onResize = () => {
@@ -687,13 +672,10 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [isFull]);
 
-  // ───────── Ganti tipe chart ─────────
   useEffect(() => {
     applyVis();
   }, [type, applyVis]);
 
-  // ───────── Ganti mode / mata uang / kontainer / interval ─────────
-  // Tanpa animasi range: fade singkat → setData → langsung pusatkan → fade in.
   useEffect(() => {
     applyVis();
     if (!chartRef.current || loadedBinRef.current !== baseBin) return;
@@ -706,7 +688,7 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
-  // ───────── Ambil riwayat sesuai interval dasar ─────────
+  // ───────── Ambil riwayat dengan Paginasi Otomatis (Deep History) ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -715,17 +697,55 @@ export default function PriceChart() {
     setFade(true);
 
     const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec";
-    const limit = sub ? 130 : 1000;
+    const baseLimit = sub ? 130 : 1000;
+    
+    // Jika timeframe harian ke atas, loop terus untuk ambil semua histori (sampai ke akar)
+    const isDeep = ["1d", "3d", "1w", "1M"].includes(bin);
+    const deepLimit = isDeep ? 15000 : baseLimit; 
 
     const fetchBinance = async (symbol) => {
-      const rows = await getJson(`/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${limit}`);
-      return rows.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
+      let rows = [];
+      let end = undefined;
+      
+      while (rows.length < deepLimit) {
+        const batchLimit = Math.min(1000, deepLimit - rows.length);
+        let url = `/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${batchLimit}`;
+        if (end) url += `&endTime=${end}`;
+        
+        const res = await getJson(url);
+        if (!res || res.length === 0) break;
+        
+        const mapped = res.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
+        rows = mapped.concat(rows); // gabungkan ke atas karena Binance mengembalikan data terbaru di belakang (ketika di-paginate mundur)
+        
+        if (res.length < batchLimit) break;
+        
+        const currentEarliest = res[0][0];
+        end = currentEarliest - 1;
+      }
+      return rows;
     };
 
     const fetchBitstamp = async (step) => {
-      const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${limit}`);
-      const j = await r.json();
-      const rows = (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      let rows = [];
+      let end = undefined;
+      
+      while (rows.length < deepLimit) {
+        const batchLimit = Math.min(1000, deepLimit - rows.length);
+        let url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${batchLimit}`;
+        if (end) url += `&end=${end}`;
+        
+        const r = await fetch(url);
+        const j = await r.json();
+        const batch = j?.data?.ohlc || [];
+        if (!batch.length) break;
+        
+        const mapped = batch.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+        rows = mapped.concat(rows);
+        
+        if (batch.length < batchLimit) break;
+        end = Number(batch[0].timestamp) - 1;
+      }
       if (!rows.length) throw new Error("empty");
       return rows;
     };
@@ -744,7 +764,6 @@ export default function PriceChart() {
         time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08
       }));
 
-      // EA membaca riwayat 1M lalu mencetak harga detik-nya sendiri
       if (bin === "1m") {
         ["gold", "btc", "usd"].forEach(k => { ds[k].sec = buildEaHistory(k, ds[k].raw); });
       }
@@ -809,7 +828,6 @@ export default function PriceChart() {
         const hi = ac ? Math.max(ac.hi, val) : val;
         const lo = ac ? Math.min(ac.lo, val) : val;
 
-        // candle dasar (harga pasar sebenarnya)
         const last = d.raw[d.raw.length - 1];
         if (last && bucketOf(last.time, bcfg) === nb) {
           if (hi > last.high) last.high = hi;
@@ -819,7 +837,6 @@ export default function PriceChart() {
           d.raw.push({ time: nb, open: val, high: hi, low: lo, close: val });
         }
 
-        // EA mencetak candle detik berikutnya
         if (bin === "1m" && d.sec.length) {
           const sigma = eaSigma(d.raw);
           let t = Math.max(d.sec[d.sec.length - 1].time + 1, nowT - 119);
@@ -894,13 +911,30 @@ export default function PriceChart() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
-              <button type="button" className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} onClick={() => setMode("csc")} style={{ fontWeight: "bold" }} title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)">CSC</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("yuan")} title="Yuan Mode">中</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("jpy")} title="Yen Mode">💴</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("sar")} title="Riyal Mode">﷼</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
-              <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("btc")} title="Bitcoin Mode">⭐</button>
+              <button 
+                type="button" 
+                className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} 
+                onClick={() => {
+                  if (!unlocked) setPendingMode("csc_unlock");
+                  else setMode("csc");
+                }} 
+                style={{ fontWeight: "bold" }} 
+                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
+              >
+                CSC {!unlocked && "🔒"}
+              </button>
+              
+              {/* TOMBOL LAIN HANYA MUNCUL JIKA UNLOCKED */}
+              {unlocked && (
+                <>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("yuan")} title="Yuan Mode">中</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("jpy")} title="Yen Mode">💴</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("sar")} title="Riyal Mode">﷼</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("btc")} title="Bitcoin Mode">⭐</button>
+                </>
+              )}
             </div>
 
             <div className={styles.modeSwitch} style={{ marginLeft: "8px" }}>
