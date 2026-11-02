@@ -22,17 +22,18 @@ const IV = {
   "3d":  { step: 259200, bin: "3d",  label: "3D" }
 };
 
-// Menambahkan jumlah muat default (count) menjadi sangat besar agar riwayat jauh ke belakang
+// Batas muat awal dioptimalkan agar chart merender seketika (sangat cepat). 
+// Data lama akan menyusul dimuat otomatis saat digeser (scroll) ke kiri.
 const RANGES = {
-  "1D":  { iv: "5m",  count: 2000, label: "1D" }, // Sebelumnya 288
-  "5D":  { iv: "15m", count: 3000, label: "5D" },
-  "1M":  { iv: "1h",  count: 4000, label: "1M" },
-  "3M":  { iv: "4h",  count: 5000, label: "3M" },
-  "6M":  { iv: "12h", count: 5000, label: "6M" },
+  "1D":  { iv: "5m",  count: 300,  label: "1D" },
+  "5D":  { iv: "15m", count: 500,  label: "5D" },
+  "1M":  { iv: "1h",  count: 750,  label: "1M" },
+  "3M":  { iv: "4h",  count: 550,  label: "3M" },
+  "6M":  { iv: "12h", count: 370,  label: "6M" },
   "YTD": { iv: "1d",  count: 0,    label: "YTD" },
-  "1Y":  { iv: "1d",  count: 2000, label: "1Y" },
-  "5Y":  { iv: "3d",  count: 3000, label: "5Y" },
-  "10Y": { iv: "3d",  count: 5000, label: "10Y" }
+  "1Y":  { iv: "1d",  count: 370,  label: "1Y" },
+  "5Y":  { iv: "3d",  count: 610,  label: "5Y" },
+  "10Y": { iv: "3d",  count: 1220, label: "10Y" }
 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
@@ -63,7 +64,6 @@ function isXauMarketOpen() {
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
-  
   if (day === 6) return false; 
   if (day === 0) return false; 
   if (day === 5 && hour >= 22) return false; 
@@ -170,6 +170,9 @@ export default function PriceChart() {
   const rateRef = useRef(1);
   const ivRef = useRef("1m");
   
+  const isFetchingHistory = useRef(false);
+  const noMoreHistory = useRef(false);
+
   const dsRef = useRef({
     gold: { raw: [], mult: () => GRAMS * MARKUP / OZ },
     btc:  { raw: [], mult: () => BTC_FACTOR }
@@ -252,17 +255,89 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
+  // INFINITE SCROLL LISTENER (Pemuatan Dinamis)
+  useEffect(() => {
+    if (!chartRef.current) return;
+    const ts = chartRef.current.timeScale();
+    
+    const onScroll = (logicalRange) => {
+      // Jika pengguna menggeser grafik sangat dekat dengan sisi kiri dan tidak sedang memuat
+      if (logicalRange && logicalRange.from < 50 && !isFetchingHistory.current && !noMoreHistory.current) {
+        isFetchingHistory.current = true;
+
+        const binanceIv = IV[ivRef.current]?.bin || "1m";
+        const dGold = dsRef.current.gold.raw;
+        const dBtc = dsRef.current.btc.raw;
+
+        if (!dGold.length || !dBtc.length) {
+          isFetchingHistory.current = false;
+          return;
+        }
+
+        const oldestGold = (dGold[0].time - WIB) * 1000 - 1;
+        const oldestBtc = dBtc[0].time - WIB - 1;
+
+        const fetchOldBinance = async (sym, end) => {
+          const r = await getJson(`/api/v3/klines?symbol=${sym}&interval=${binanceIv}&limit=1000&endTime=${end}`);
+          return r.map(x => ({ time: Math.floor(x[0]/1000) + WIB, open: +x[1], high: +x[2], low: +x[3], close: +x[4] }));
+        };
+
+        const fetchOldBitstamp = async (end) => {
+          const step = IV[ivRef.current]?.step || 60;
+          const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=1000&end=${end}`);
+          if (!r.ok) throw new Error();
+          const j = await r.json();
+          return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+        };
+
+        const pGold = fetchOldBinance("PAXGUSDT", oldestGold);
+        const pBtc = livePrices.current.btcSrc === "Bitstamp" 
+          ? fetchOldBitstamp(oldestBtc).catch(() => fetchOldBinance("BTCUSDT", oldestGold)) 
+          : fetchOldBinance("BTCUSDT", oldestGold);
+
+        Promise.all([pGold, pBtc]).then(([oldGold, oldBtc]) => {
+          if (!oldGold.length && !oldBtc.length) {
+            noMoreHistory.current = true;
+            setLegend(p => ({ ...p, availText: "SEMUA RIWAYAT TELAH DIMUAT KEPADA BATAS MAKSIMAL BURSA" }));
+          } else {
+            dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
+            dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
+
+            const curRange = ts.getVisibleLogicalRange();
+            applyRef.current();
+
+            // Mempertahankan posisi grafik (mencegah loncat) setelah penambahan data lama di sebelah kiri
+            const addedCount = modeRef.current === "gold" ? oldGold.length : oldBtc.length;
+            if (curRange && addedCount > 0) {
+              ts.setVisibleLogicalRange({
+                from: curRange.from + addedCount,
+                to: curRange.to + addedCount
+              });
+            }
+
+            const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
+            const oldestTime = new Date(dsRef.current[modeRef.current].raw[0].time * 1000);
+            setLegend(p => ({ ...p, availText: `RIWAYAT SEJAK ${dateFmt.format(oldestTime).toUpperCase()}` }));
+          }
+          isFetchingHistory.current = false;
+        }).catch(() => {
+          isFetchingHistory.current = false;
+        });
+      }
+    };
+
+    ts.subscribeVisibleLogicalRangeChange(onScroll);
+    return () => ts.unsubscribeVisibleLogicalRangeChange(onScroll);
+  }, []);
+
   const fitView = useCallback((smooth = false) => {
     const d = dsRef.current[mode];
     if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
     
-    // Default rentang yang terlihat awal saat load (fokus ke ujung kanan harga terbaru)
-    // Jika tidak memilih range khusus, tampilkan 100 candle terbaru, sisanya tersembunyi bisa di-scroll ke kiri
-    let visibleBars = 100; 
+    let visibleBars = 120; 
     if (range) {
-       // Menyesuaikan berapa candle yang dilihat berdasarkan tombol range yang diklik
        if (range === "1D") visibleBars = 288;
        else if (range === "5D") visibleBars = 480;
        else if (range === "1M") visibleBars = 720;
@@ -360,10 +435,8 @@ export default function PriceChart() {
     if (!d || !d.raw.length) return;
 
     const m = d.mult() * rate;
-    
-    // Perhitungan perubahan berdasarkan jarak pandang yang logis
     const n = d.raw.length;
-    let lookback = 100; 
+    let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
     
     const f = d.raw[Math.max(0, n - lookback)].open * m;
@@ -409,20 +482,22 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, rate, type]);
 
-  // Load Data dengan default fetch yang sangat besar untuk riwayat berlimpah
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
     const currentToken = tokenRef.current;
     setFade(true);
     
-    // Menarik jumlah candle default yang besar (minimal 2500) meskipun tidak ada tombol range ditekan
-    const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : 2500); 
+    // Setiap pergantian range/interval me-reset pendeteksi infinite scroll
+    isFetchingHistory.current = false;
+    noMoreHistory.current = false;
+    
+    const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : 750); 
     const binanceIv = IV[iv]?.bin || "1m";
     
     dsRef.current.gold.raw = [];
     dsRef.current.btc.raw = [];
-    setLegend(p => ({ ...p, availText: "MEMUAT RIWAYAT TANPA BATAS..." }));
+    setLegend(p => ({ ...p, availText: "MEMUAT RIWAYAT..." }));
 
     const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
       const n = Math.min(left, 1000);
@@ -707,7 +782,6 @@ export default function PriceChart() {
             </div>
           )}
           
-          {/* Label untuk menunjukkan data tersedia sampai seberapa jauh di belakang */}
           <div style={{ textAlign: 'left', marginTop: '8px', fontSize: '11px', color: '#9ca3af', display: 'flex', justifyContent: 'flex-start' }}>
              {legend.availText}
           </div>
