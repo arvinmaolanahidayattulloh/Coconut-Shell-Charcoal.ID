@@ -7,7 +7,7 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged 
-} from '../firebase'; 
+} from '@/firebase'; // Gunakan @/firebase sesuai revisi sebelumnya
 import styles from './Invest.module.css';
 
 const Invest = () => {
@@ -51,10 +51,10 @@ const Invest = () => {
   return (
     <section className={styles.investSection}>
       <div className={styles.investCard}>
-        <h2 className={styles.eyebrow}>Peluang Investasi</h2>
-        <p className={styles.subtitle}>
+        <span className={styles.eyebrow}>Peluang Investasi</span>
+        <span className={styles.subtitle}>
           Amankan alokasi kuota komoditas ekspor Anda sekarang.
-        </p>
+        </span>
 
         <div className={styles.actionWrapper}>
           {!user ? (
@@ -69,7 +69,7 @@ const Invest = () => {
                 <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.18C.43 8.12 0 9.81 0 12s.43 3.88 1.18 5.38l4.09-3.14z"/>
                 <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.15 2.68 1.18 6.62l4.09 3.14c.95-2.85 3.6-4.96 6.73-4.96z"/>
               </svg>
-              {loading ? 'Memproses...' : 'Login dengan Google'}
+              {loading ? 'MEMPROSES...' : 'LOGIN DENGAN GOOGLE'}
             </button>
           ) : (
             <div className={styles.userDashboard}>
@@ -87,7 +87,7 @@ const Invest = () => {
                 onClick={handleInvest} 
                 className={`${styles.investBtn} ${invested ? styles.successBtn : ''}`}
               >
-                {invested ? '✓ Investasi 75 Ton Berhasil' : 'Invest 75 Ton'}
+                {invested ? '✓ INVESTASI BERHASIL' : 'INVESTASI 75 TON'}
               </button>
             </div>
           )}
