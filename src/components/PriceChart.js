@@ -178,14 +178,15 @@ export default function PriceChart() {
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
 
-  // Rumus Utama: Yuan (4750 CNY -> USD -> IDR), Gold, BTC
+  // Formula: Yuan (4750 CNY -> USD -> IDR), Gold, BTC
   const dsRef = useRef({
     yuan: { 
       raw: [], 
       mult: (ratesObj) => {
-        // 4750 CNY diubah ke USD, lalu nanti dikalikan 'rate' tujuan di fungsi applyData
-        const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : (1 / 7.15);
-        return YUAN_BASE * cnyToUsd; 
+        // 4750 CNY dikonversi ke USD (1 CNY = ~0.150125 USD, atau pakai ratesObj.CNY)
+        const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.150125;
+        const valueInUsd = YUAN_BASE * cnyToUsd; // Menghasilkan ~$713 USD
+        return valueInUsd; 
       } 
     },
     gold: { 
@@ -328,10 +329,10 @@ export default function PriceChart() {
             dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
             dsRef.current.yuan.raw = dsRef.current.gold.raw.map(x => ({
               time: x.time,
-              open: 1.0,
-              high: 1.002,
-              low: 0.998,
-              close: 1.0
+              open: x.open * 0.24,
+              high: x.high * 0.24,
+              low: x.low * 0.24,
+              close: x.close * 0.24
             }));
 
             const curRange = ts.getVisibleLogicalRange();
@@ -457,7 +458,7 @@ export default function PriceChart() {
       mixGold.applyOptions({ visible: true });
       mixBtc.applyOptions({ visible: true });
 
-      const dYuan = dsRef.current.yuan.raw.map(x => ({ time: x.time, value: (x.close || 1) * yuanMult }));
+      const dYuan = dsRef.current.yuan.raw.map(x => ({ time: x.time, value: x.close * yuanMult }));
       const dGold = dsRef.current.gold.raw.map(x => ({ time: x.time, value: x.close * goldMult }));
       const dBtc = dsRef.current.btc.raw.map(x => ({ time: x.time, value: x.close * btcMult }));
 
@@ -482,10 +483,10 @@ export default function PriceChart() {
 
       const cs = d.raw.map(x => ({
         time: x.time,
-        open: (mode === "yuan" ? 1 : x.open) * multiplier,
-        high: (mode === "yuan" ? 1.002 : x.high) * multiplier,
-        low: (mode === "yuan" ? 0.998 : x.low) * multiplier,
-        close: (mode === "yuan" ? 1 : x.close) * multiplier
+        open: x.open * multiplier,
+        high: x.high * multiplier,
+        low: x.low * multiplier,
+        close: x.close * multiplier
       }));
 
       candle.setData(cs);
@@ -508,14 +509,11 @@ export default function PriceChart() {
     let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
     
-    const baseOpen = activeKey === "yuan" ? 1 : d.raw[Math.max(0, n - lookback)].open;
-    const baseClose = activeKey === "yuan" ? 1 : d.raw[n - 1].close;
-
-    const f = baseOpen * multiplier;
-    const l = baseClose * multiplier;
+    const f = d.raw[Math.max(0, n - lookback)].open * multiplier;
+    const l = d.raw[n - 1].close * multiplier;
     
-    const highs = d.raw.map(x => (activeKey === "yuan" ? 1.002 : x.high) * multiplier);
-    const lows = d.raw.map(x => (activeKey === "yuan" ? 0.998 : x.low) * multiplier);
+    const highs = d.raw.map(x => x.high * multiplier);
+    const lows = d.raw.map(x => x.low * multiplier);
 
     const diff = l - f;
     const pct = f ? (diff / f) * 100 : 0;
@@ -608,10 +606,10 @@ export default function PriceChart() {
       
       dsRef.current.yuan.raw = res[0].map(x => ({
         time: x.time,
-        open: 1.0,
-        high: 1.002,
-        low: 0.998,
-        close: 1.0
+        open: x.open * 0.24,
+        high: x.high * 0.24,
+        low: x.low * 0.24,
+        close: x.close * 0.24
       }));
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
@@ -680,7 +678,7 @@ export default function PriceChart() {
         if (!d.raw.length) return;
         
         let pRaw = 1;
-        if (key === "yuan") pRaw = 1.0;
+        if (key === "yuan") pRaw = (livePrices.current.gold || 2700) * 0.24;
         else if (key === "gold") pRaw = livePrices.current.gold;
         else pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
 
