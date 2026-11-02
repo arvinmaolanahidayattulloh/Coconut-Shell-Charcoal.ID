@@ -1,53 +1,65 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { createChart } from "lightweight-charts";
-import styles from "./PriceChart.module.css"; 
+import styles from "./PriceChart.module.css";
 
 const OZ = 31.1034768;
 const GRAMS = 5;
-const BTC_FACTOR = 0.01; 
+const BTC_FACTOR = 0.01;
 
 const YUAN_BASE = 5000;
 const USD_BASE = 500;
 const JPY_BASE = 50000;
 const SAR_BASE = 5000;
 
-const WIB = 7 * 3600; 
+const WIB = 7 * 3600;
+const DAY = 86400;
 
-// URUTAN INTERVAL: Disusun dari yang paling kecil (Tick & Detik / Sub-1M) hingga terbesar
+// ─────────────────────────────────────────────────────────────
+// INTERVAL: urut dari terkecil (Tick) → Detik → Menit → Jam → Hari → Minggu → Bulan → Tahun
+// pmax = batas jumlah candle prediksi (agar interval besar tidak meramal terlalu jauh)
+// ─────────────────────────────────────────────────────────────
 const IV = {
-  "t1":   { type: "tick", count: 1,    label: "1 Tick" },
-  "t10":  { type: "tick", count: 10,   label: "10 Tick" },
-  "t100": { type: "tick", count: 100,  label: "100 Tick" },
-  "t1000":{ type: "tick", count: 1000, label: "1000 Tick" },
-  "1s":   { type: "sec",  step: 1,     label: "1 Sec" },
-  "5s":   { type: "sec",  step: 5,     label: "5 Sec" },
-  "10s":  { type: "sec",  step: 10,    label: "10 Sec" },
-  "15s":  { type: "sec",  step: 15,    label: "15 Sec" },
-  "30s":  { type: "sec",  step: 30,    label: "30 Sec" },
-  "1m":   { type: "min",  step: 60,    bin: "1m",  label: "1M" },
-  "5m":   { type: "min",  step: 300,   bin: "5m",  label: "5M" },
-  "15m":  { type: "min",  step: 900,   bin: "15m", label: "15M" },
-  "30m":  { type: "min",  step: 1800,  bin: "30m", label: "30M" },
-  "1h":   { type: "min",  step: 3600,  bin: "1h",  label: "1H" },
-  "4h":   { type: "min",  step: 14400, bin: "4h",  label: "4H" },
-  "12h":  { type: "min",  step: 43200, bin: "12h", label: "12H" },
-  "1d":   { type: "min",  step: 86400, bin: "1d",  label: "1D" },
-  "3d":   { type: "min",  step: 259200,bin: "3d",  label: "3D" }
+  "t1":    { grp: "TICK",   type: "tick", count: 1,    label: "1 Tick" },
+  "t10":   { grp: "TICK",   type: "tick", count: 10,   label: "10 Tick" },
+  "t100":  { grp: "TICK",   type: "tick", count: 100,  label: "100 Tick" },
+  "t1000": { grp: "TICK",   type: "tick", count: 1000, label: "1000 Tick" },
+  "1s":    { grp: "DETIK",  type: "sec",  step: 1,     label: "1 Sec" },
+  "5s":    { grp: "DETIK",  type: "sec",  step: 5,     label: "5 Sec" },
+  "10s":   { grp: "DETIK",  type: "sec",  step: 10,    label: "10 Sec" },
+  "15s":   { grp: "DETIK",  type: "sec",  step: 15,    label: "15 Sec" },
+  "30s":   { grp: "DETIK",  type: "sec",  step: 30,    label: "30 Sec" },
+  "1m":    { grp: "MENIT",  type: "min",  step: 60,    bin: "1m",  label: "1M" },
+  "5m":    { grp: "MENIT",  type: "min",  step: 300,   bin: "5m",  label: "5M" },
+  "15m":   { grp: "MENIT",  type: "min",  step: 900,   bin: "15m", label: "15M" },
+  "30m":   { grp: "MENIT",  type: "min",  step: 1800,  bin: "30m", label: "30M" },
+  "1h":    { grp: "JAM",    type: "min",  step: 3600,  bin: "1h",  label: "1H" },
+  "4h":    { grp: "JAM",    type: "min",  step: 14400, bin: "4h",  label: "4H" },
+  "12h":   { grp: "JAM",    type: "min",  step: 43200, bin: "12h", label: "12H" },
+  "1d":    { grp: "HARI",   type: "min",  step: DAY,   bin: "1d",  label: "1D" },
+  "3d":    { grp: "HARI",   type: "min",  step: 3 * DAY, bin: "3d", label: "3D", pmax: 40 },
+  "1w":    { grp: "MINGGU", type: "min",  step: 7 * DAY, off: 4 * DAY, bin: "1w", label: "1W", pmax: 26 },
+  "1mo":   { grp: "BULAN",  type: "cal",  unit: "month", bin: "1M", label: "1MO", pmax: 12 },
+  "1y":    { grp: "TAHUN",  type: "cal",  unit: "year",  bin: "1M", label: "1Y",  pmax: 5 }
 };
 
-const RANGES = {
-  "1D":  { iv: "5s",  count: 300,  label: "1D" },
-  "5D":  { iv: "15s", count: 500,  label: "5D" },
-  "1M":  { iv: "30s", count: 750,  label: "1M" },
-  "3M":  { iv: "4h",  count: 550,  label: "3M" },
-  "6M":  { iv: "12h", count: 370,  label: "6M" },
-  "YTD": { iv: "1d",  count: 0,    label: "YTD" },
-  "1Y":  { iv: "1d",  count: 370,  label: "1Y" },
-  "5Y":  { iv: "3d",  count: 610,  label: "5Y" },
-  "10Y": { iv: "3d",  count: 1220, label: "10Y" }
+// Konfigurasi bucket untuk data dasar (yang diambil dari exchange)
+const BASE = {
+  "1m":  { type: "min", step: 60 },
+  "5m":  { type: "min", step: 300 },
+  "15m": { type: "min", step: 900 },
+  "30m": { type: "min", step: 1800 },
+  "1h":  { type: "min", step: 3600 },
+  "4h":  { type: "min", step: 14400 },
+  "12h": { type: "min", step: 43200 },
+  "1d":  { type: "min", step: DAY },
+  "3d":  { type: "min", step: 3 * DAY },
+  "1w":  { type: "min", step: 7 * DAY, off: 4 * DAY },
+  "1M":  { type: "cal", unit: "month" }
 };
+
+const BS_STEP = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "12h": 43200, "1d": DAY, "3d": 3 * DAY };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
 
@@ -66,11 +78,6 @@ const CURRENCIES = [
 
 function fmt(num, dec) {
   return new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(num);
-}
-
-function ytdDays() {
-  const n = new Date();
-  return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
 function isXauMarketOpen() {
@@ -101,23 +108,201 @@ function uniqSorted(list) {
   return out.sort((a, b) => a.time - b.time);
 }
 
-function animateRange(ts, to, animRef, ms = 300) {
-  cancelAnimationFrame(animRef.current);
-  const from = ts.getVisibleLogicalRange();
-  if (!from) { ts.setVisibleLogicalRange(to); return; }
-  const t0 = performance.now();
-  const step = (now) => {
-    const k = Math.min(1, (now - t0) / ms);
-    const e = 1 - Math.pow(1 - k, 3);
-    ts.setVisibleLogicalRange({
-      from: from.from + (to.from - from.from) * e,
-      to: from.to + (to.to - from.to) * e
-    });
-    if (k < 1) animRef.current = requestAnimationFrame(step);
-  };
-  animRef.current = requestAnimationFrame(step);
+const binOf = (ivKey) => IV[ivKey].bin || "1m";
+
+// ─────────────────────────────────────────────────────────────
+// BUCKET WAKTU (tanpa animasi range → tidak ada efek "pusing")
+// ─────────────────────────────────────────────────────────────
+function bucketOf(t, cfg) {
+  const u = t - WIB;
+  if (cfg.type === "cal") {
+    const d = new Date(u * 1000);
+    if (cfg.unit === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / 1000 + WIB;
+    return Date.UTC(d.getUTCFullYear(), 0, 1) / 1000 + WIB;
+  }
+  const off = cfg.off || 0;
+  return Math.floor((u - off) / cfg.step) * cfg.step + off + WIB;
 }
 
+function nextTime(t, cfg, tickStep) {
+  if (cfg.type === "cal") {
+    const d = new Date((t - WIB) * 1000);
+    if (cfg.unit === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) / 1000 + WIB;
+    return Date.UTC(d.getUTCFullYear() + 1, 0, 1) / 1000 + WIB;
+  }
+  if (cfg.type === "tick") return t + tickStep;
+  return t + cfg.step;
+}
+
+function medianStep(cs) {
+  const diffs = [];
+  for (let i = Math.max(1, cs.length - 20); i < cs.length; i++) diffs.push(cs[i].time - cs[i - 1].time);
+  if (!diffs.length) return 1;
+  diffs.sort((a, b) => a - b);
+  return Math.max(1, diffs[Math.floor(diffs.length / 2)]);
+}
+
+function aggregate(rows, cfg) {
+  if (!rows.length) return [];
+  if (cfg.type === "tick") {
+    const out = [];
+    const n = cfg.count;
+    for (let i = 0; i < rows.length; i += n) {
+      const end = Math.min(i + n, rows.length);
+      let hi = -Infinity, lo = Infinity;
+      for (let j = i; j < end; j++) {
+        if (rows[j].high > hi) hi = rows[j].high;
+        if (rows[j].low < lo) lo = rows[j].low;
+      }
+      out.push({ time: rows[i].time, open: rows[i].open, high: hi, low: lo, close: rows[end - 1].close });
+    }
+    return out;
+  }
+  const out = [];
+  let cur = null;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const b = bucketOf(r.time, cfg);
+    if (cur && cur.time === b) {
+      if (r.high > cur.high) cur.high = r.high;
+      if (r.low < cur.low) cur.low = r.low;
+      cur.close = r.close;
+    } else {
+      cur = { time: b, open: r.open, high: r.high, low: r.low, close: r.close };
+      out.push(cur);
+    }
+  }
+  return out;
+}
+
+// Sumber data: untuk Tick/Detik gunakan sampel live per-detik, selain itu candle dasar
+function srcOf(d, cfg) {
+  if ((cfg.type === "tick" || cfg.type === "sec") && d.sec.length) {
+    const t0 = d.sec[0].time;
+    return d.raw.filter(r => r.time < t0).concat(d.sec);
+  }
+  return d.raw;
+}
+
+function toUsd(r, code, fb) {
+  return r && r[code] ? 1 / r[code] : fb;
+}
+
+function modeMult(mode, r, rate) {
+  switch (mode) {
+    case "usd":  return USD_BASE * rate;
+    case "yuan": return YUAN_BASE * toUsd(r, "CNY", 0.1501) * rate;
+    case "jpy":  return JPY_BASE * toUsd(r, "JPY", 0.0067) * rate;
+    case "sar":  return SAR_BASE * toUsd(r, "SAR", 0.2666) * rate;
+    case "gold": return GRAMS / OZ * rate;
+    case "btc":  return BTC_FACTOR * rate;
+    default:     return 1;
+  }
+}
+
+// Gabung 3 deret waktu (forward-fill) lalu hitung indeks CSC
+function mergeCsc(f, g, b, calc) {
+  const out = [];
+  let i = 0, j = 0, k = 0;
+  let lf = f[0], lg = g[0], lb = b[0];
+  while (i < f.length || j < g.length || k < b.length) {
+    const tf = i < f.length ? f[i].time : Infinity;
+    const tg = j < g.length ? g[j].time : Infinity;
+    const tb = k < b.length ? b[k].time : Infinity;
+    const t = Math.min(tf, tg, tb);
+    if (tf === t) lf = f[i++];
+    if (tg === t) lg = g[j++];
+    if (tb === t) lb = b[k++];
+    out.push({
+      time: t,
+      open: calc(lf.open, lg.open, lb.open),
+      high: calc(lf.high, lg.high, lb.high),
+      low: calc(lf.low, lg.low, lb.low),
+      close: calc(lf.close, lg.close, lb.close)
+    });
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────
+// EA BACKTEST FORECAST
+// Setiap candle prediksi DIJAMIN bullish atau bearish (tidak pernah doji / body nol).
+// Deterministik per candle tertutup (seeded) → tidak berkedip tiap detik.
+// ─────────────────────────────────────────────────────────────
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function emaOf(v, p) {
+  const k = 2 / (p + 1);
+  let e = v[0];
+  for (let i = 1; i < v.length; i++) e = v[i] * k + e * (1 - k);
+  return e;
+}
+
+function buildForecast(cs, cfg, count, seedKey) {
+  if (cs.length < 3 || count < 1) return [];
+  const lastBar = cs[cs.length - 1];
+  const closed = cs.length > 25 ? cs.slice(0, -1) : cs;
+  const win = closed.slice(-120);
+  const closes = win.map(c => c.close);
+  const m = Math.min(14, win.length);
+
+  let sum = 0;
+  for (let i = win.length - m; i < win.length; i++) sum += win[i].high - win[i].low;
+  const atr = Math.max(sum / m, Math.abs(lastBar.close) * 0.00003);
+
+  const fast = emaOf(closes, 8);
+  const slow = emaOf(closes, 21);
+  const lb = Math.min(5, closes.length - 1);
+  const mom = (closes[closes.length - 1] - closes[closes.length - 1 - lb]) / (atr * Math.max(1, lb));
+  const trend = (fast - slow) / atr;
+  const bias = 0.12 * Math.tanh(trend) + 0.08 * Math.tanh(mom * 3);
+
+  const seed = (hashStr(seedKey) ^ (closed[closed.length - 1].time | 0)) >>> 0;
+  const rnd = rng(seed);
+  const tickStep = medianStep(cs);
+
+  const out = [];
+  let price = lastBar.close;
+  let t = lastBar.time;
+  let streak = 0, lastDir = 0;
+
+  for (let i = 0; i < count; i++) {
+    const dev = Math.max(-3, Math.min(3, (price - slow) / atr));
+    let p = 0.5 + bias * Math.exp(-i / 18) - 0.03 * dev; // tren meluruh, tarik balik ke EMA
+    p = Math.max(0.28, Math.min(0.72, p));
+    let dir = rnd() < p ? 1 : -1;
+    if (dir === lastDir && streak >= 4 && rnd() < 0.45) dir = -dir; // hindari deret terlalu panjang
+    streak = dir === lastDir ? streak + 1 : 1;
+    lastDir = dir;
+
+    const body = Math.max(atr * (0.25 + 0.75 * rnd()), atr * 0.2, Math.abs(price) * 1e-7);
+    const open = price;
+    const close = open + dir * body;
+    const high = Math.max(open, close) + atr * 0.35 * rnd();
+    const low = Math.min(open, close) - atr * 0.35 * rnd();
+
+    t = nextTime(t, cfg, tickStep);
+    out.push({ time: t, open, high, low, close });
+    price = close;
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────
 function useSmooth(target, ms = 300) {
   const [v, setV] = useState(target);
   const curRef = useRef(target);
@@ -152,71 +337,73 @@ function Smooth({ value, render, ms }) {
 
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
-  const [mode, setMode] = useState("csc"); 
-  const [containerMode, setContainerMode] = useState("T"); 
-  const [iv, setIv] = useState("5s");       
-  const [range, setRange] = useState(null);
+  const [mode, setMode] = useState("csc");
+  const [containerMode, setContainerMode] = useState("T");
+  const [iv, setIv] = useState("5s");
   const [type, setType] = useState("candle");
+  const [forecastOn, setForecastOn] = useState(true);
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
-  
+
   const [cur, setCur] = useState("IDR");
   const [rates, setRates] = useState(null);
-  
+
   const [curDropOpen, setCurDropOpen] = useState(false);
   const [timeDropOpen, setTimeDropOpen] = useState(false);
-  
+
   const [status, setStatus] = useState({ text: "MENGHUBUNGKAN...", isLive: false, error: null });
   const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, availText: "", isUp: true, high: 0, low: 0 });
 
   const chartRef = useRef(null);
-  const seriesRef = useRef({ candle: null, area: null });
+  const seriesRef = useRef({ candle: null, area: null, pred: null, predLine: null });
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
-  const lastRef = useRef(null);   
-  const animRef = useRef(0);
-  const fitRef = useRef(() => {});
-  const applyRef = useRef(() => {});
-  const legendRef = useRef(() => {});
-  
+  const nowLineRef = useRef(null);
+
+  const lastRef = useRef(null);       // harga terakhir (pusat vertikal)
+  const lenRef = useRef(0);           // jumlah candle nyata
+  const halfRef = useRef(40);         // setengah lebar view (bar)
+  const lastBarRef = useRef(null);    // {first, len, time} untuk update inkremental
+  const loadedBinRef = useRef(null);  // bin data dasar yang sedang termuat
+
   const modeRef = useRef("csc");
   const containerModeRef = useRef("T");
   const rateRef = useRef(1);
+  const ratesRef = useRef(null);
   const ivRef = useRef("5s");
-  
-  const isFetchingHistory = useRef(false);
-  const noMoreHistory = useRef(false);
+  const typeRef = useRef("candle");
+  const forecastRef = useRef(true);
+  const decRef = useRef(0);
+
+  const refreshRef = useRef(() => {});
+  const fitRef = useRef(() => {});
 
   const dsRef = useRef({
-    usd: { raw: [], mult: (ratesObj, targetRate) => USD_BASE * targetRate },
-    yuan: { raw: [], mult: (ratesObj, targetRate) => {
-      const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.1501;
-      return YUAN_BASE * cnyToUsd * targetRate;
-    }},
-    jpy: { raw: [], mult: (ratesObj, targetRate) => {
-      const jpyToUsd = ratesObj && ratesObj.JPY ? (1 / ratesObj.JPY) : 0.0067;
-      return JPY_BASE * jpyToUsd * targetRate;
-    }},
-    sar: { raw: [], mult: (ratesObj, targetRate) => {
-      const sarToUsd = ratesObj && ratesObj.SAR ? (1 / ratesObj.SAR) : 0.2666;
-      return SAR_BASE * sarToUsd * targetRate;
-    }},
-    gold: { raw: [], mult: (ratesObj, targetRate) => GRAMS / OZ * targetRate },
-    btc:  { raw: [], mult: (ratesObj, targetRate) => BTC_FACTOR * targetRate },
-    csc:  { raw: [] } 
+    gold: { raw: [], sec: [] },
+    btc:  { raw: [], sec: [] },
+    usd:  { raw: [], sec: [] }
   });
 
   const tokenRef = useRef(0);
-  const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, eurusdt: 1.08, btcSrc: "Bitstamp" });
-  const wsRef = useRef({ binance: null, bitstamp: null });
+  const livePrices = useRef({ gold: null, btcBn: null, eurusdt: 1.08 });
+  const wsRef = useRef({ binance: null });
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
+  const baseBin = binOf(iv);
 
-  useEffect(() => {
-    setMarketClosed(!isXauMarketOpen());
-  }, []);
+  // sinkronkan ref dengan state (dibaca oleh timer & callback)
+  modeRef.current = mode;
+  containerModeRef.current = containerMode;
+  rateRef.current = rate;
+  ratesRef.current = rates;
+  ivRef.current = iv;
+  typeRef.current = type;
+  forecastRef.current = forecastOn;
+  decRef.current = dec;
+
+  useEffect(() => { setMarketClosed(!isXauMarketOpen()); }, []);
 
   useEffect(() => {
     fetch("/api/prices").then(r => r.json()).then(d => {
@@ -224,10 +411,23 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
+  // Garis "SEKARANG" + label prediksi mengikuti posisi candle terakhir
+  const placeNow = useCallback(() => {
+    const el = nowLineRef.current;
+    const chart = chartRef.current;
+    if (!el || !chart) return;
+    const n = lenRef.current;
+    const x = n ? chart.timeScale().logicalToCoordinate(n - 1) : null;
+    if (x == null || !forecastRef.current) { el.style.display = "none"; return; }
+    el.style.display = "block";
+    el.style.left = x + "px";
+  }, []);
+
+  // ───────── Buat chart (sekali) ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Autoscale Provider untuk memusatkan harga secara vertikal di tengah layar
+    // Harga terakhir selalu di tengah vertikal
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -243,16 +443,18 @@ export default function PriceChart() {
       grid: { vertLines: { color: "#f0f3fa" }, horzLines: { color: "#f0f3fa" } },
       rightPriceScale: { borderColor: "#e0e3eb", scaleMargins: { top: 0.15, bottom: 0.15 } },
       leftPriceScale: { visible: false },
-      timeScale: { 
-        borderColor: "#e0e3eb", 
-        timeVisible: true, 
-        secondsVisible: true, 
-        rightOffset: 2,
+      timeScale: {
+        borderColor: "#e0e3eb",
+        timeVisible: true,
+        secondsVisible: true,
+        rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true // Mengunci agar harga terbaru mentok di kanan ala backtest EA
+        fixRightEdge: false,
+        shiftVisibleRangeOnNewBar: false, // posisi view diatur manual agar harga tetap di tengah
+        minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
-      localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
+      localization: { priceFormatter: p => fmt(p, decRef.current) }
     });
 
     const candle = chart.addCandlestickSeries({
@@ -268,35 +470,160 @@ export default function PriceChart() {
       autoscaleInfoProvider: centerProvider
     });
 
+    // Candle prediksi EA: transparan + border → jelas beda dari data asli
+    const pred = chart.addCandlestickSeries({
+      upColor: "rgba(8, 153, 129, 0.28)", downColor: "rgba(242, 54, 69, 0.28)",
+      borderVisible: true, borderUpColor: "#089981", borderDownColor: "#f23645",
+      wickUpColor: "rgba(8, 153, 129, 0.75)", wickDownColor: "rgba(242, 54, 69, 0.75)",
+      priceLineVisible: false, lastValueVisible: false,
+      autoscaleInfoProvider: centerProvider
+    });
+
+    const predLine = chart.addLineSeries({
+      color: "rgba(41, 98, 255, 0.8)", lineWidth: 2, lineStyle: 2,
+      priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      visible: false,
+      autoscaleInfoProvider: centerProvider
+    });
+
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => placeNow());
+
     chartRef.current = chart;
-    seriesRef.current = { candle, area };
+    seriesRef.current = { candle, area, pred, predLine };
 
     return () => {
-      cancelAnimationFrame(animRef.current);
       chart.remove();
       chartRef.current = null;
     };
+  }, [placeNow]);
+
+  const applyVis = useCallback(() => {
+    const s = seriesRef.current;
+    if (!s.candle) return;
+    const isCandle = typeRef.current === "candle";
+    const fc = forecastRef.current;
+    s.candle.applyOptions({ visible: isCandle });
+    s.area.applyOptions({ visible: !isCandle });
+    s.pred.applyOptions({ visible: isCandle && fc });
+    s.predLine.applyOptions({ visible: !isCandle && fc });
   }, []);
 
-  const fitView = useCallback((smooth = true) => {
-    const targetKey = mode === "csc" ? "usd" : mode;
-    const d = dsRef.current[targetKey];
-    if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
-    
-    const n = d.raw.length;
-    const ts = chartRef.current.timeScale();
-    let visibleBars = 60; 
-    
-    const target = { from: Math.max(0, n - visibleBars), to: n + 1 };
-    
-    if (smooth) {
-      animateRange(ts, target, animRef);
-    } else {
-      cancelAnimationFrame(animRef.current);
-      ts.setVisibleLogicalRange(target);
-    }
-  }, [mode]);
+  // Pusatkan: candle terakhir tepat di tengah, setengah kanan = prediksi
+  const fitView = useCallback(() => {
+    const chart = chartRef.current;
+    const n = lenRef.current;
+    if (!chart || !n) return;
+    const half = halfRef.current;
+    const left = Math.min(half, Math.max(10, n));
+    chart.priceScale("right").applyOptions({ autoScale: true });
+    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n - 1 + half });
+    placeNow();
+  }, [placeNow]);
 
+  // Hitung data tampilan (mode + mata uang + kontainer + interval)
+  const compute = useCallback(() => {
+    const cfg = IV[ivRef.current];
+    const r = ratesRef.current;
+    const rt = rateRef.current;
+    const m40 = containerModeRef.current === "40ft" ? 25 : 1;
+    const ds = dsRef.current;
+    const md = modeRef.current;
+    let rows;
+
+    if (md === "csc") {
+      const f = srcOf(ds.usd, cfg), g = srcOf(ds.gold, cfg), b = srcOf(ds.btc, cfg);
+      if (!f.length || !g.length || !b.length) return [];
+      const mUsd = USD_BASE * rt;
+      const mYuan = YUAN_BASE * toUsd(r, "CNY", 0.1501) * rt;
+      const mJpy = JPY_BASE * toUsd(r, "JPY", 0.0067) * rt;
+      const mSar = SAR_BASE * toUsd(r, "SAR", 0.2666) * rt;
+      const mGold = GRAMS / OZ * rt;
+      const mBtc = BTC_FACTOR * rt;
+      const calc = (fx, au, bt) => ((fx * mUsd + fx * mYuan + fx * mJpy + fx * mSar + au * mGold + bt * mBtc) / 6) * m40;
+      rows = mergeCsc(f, g, b, calc);
+    } else {
+      const key = md === "gold" || md === "btc" ? md : "usd";
+      const src = srcOf(ds[key], cfg);
+      if (!src.length) return [];
+      const m = modeMult(md, r, rt) * m40;
+      rows = src.map(x => ({ time: x.time, open: x.open * m, high: x.high * m, low: x.low * m, close: x.close * m }));
+    }
+    return aggregate(rows, cfg);
+  }, []);
+
+  // Render ke chart. full=true → setData penuh; full=false → update inkremental (halus, tanpa reset view)
+  const refresh = useCallback((full) => {
+    const s = seriesRef.current;
+    const chart = chartRef.current;
+    if (!chart || !s.candle) return;
+    if (loadedBinRef.current !== binOf(ivRef.current)) return;
+
+    const cs = compute();
+    if (!cs.length) return;
+
+    const cfg = IV[ivRef.current];
+    const w = chartContainerRef.current ? chartContainerRef.current.clientWidth : 600;
+    halfRef.current = Math.max(18, Math.min(80, Math.round(w / 18)));
+
+    const n = cs.length;
+    const last = cs[n - 1];
+    const prev = lastBarRef.current;
+    const incremental = !full && prev && cs[0].time === prev.first &&
+      ((n === prev.len && last.time === prev.time) || (n === prev.len + 1 && cs[n - 2].time === prev.time));
+
+    if (full) {
+      const sub = cfg.type === "tick" || cfg.type === "sec" || (cfg.type === "min" && cfg.step < DAY);
+      chart.applyOptions({ timeScale: { timeVisible: sub, secondsVisible: cfg.type === "tick" || cfg.type === "sec" } });
+    }
+
+    if (incremental) {
+      if (n === prev.len + 1) {
+        s.candle.update(cs[n - 2]);
+        s.area.update({ time: cs[n - 2].time, value: cs[n - 2].close });
+      }
+      s.candle.update(last);
+      s.area.update({ time: last.time, value: last.close });
+    } else {
+      s.candle.setData(cs);
+      s.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
+    }
+
+    lastRef.current = last.close;
+    lenRef.current = n;
+    lastBarRef.current = { first: cs[0].time, len: n, time: last.time };
+
+    // Prediksi EA
+    let fc = [];
+    if (forecastRef.current) {
+      const cnt = cfg.pmax ? Math.min(halfRef.current, cfg.pmax) : halfRef.current;
+      fc = buildForecast(cs, cfg, cnt, modeRef.current + "|" + ivRef.current + "|" + containerModeRef.current);
+    }
+    s.pred.setData(fc);
+    s.predLine.setData(fc.length ? [{ time: last.time, value: last.close }].concat(fc.map(x => ({ time: x.time, value: x.close }))) : []);
+
+    // Candle baru muncul → geser view 1 bar supaya harga tetap di tengah (jika user tidak menggeser jauh)
+    if (incremental && prev && n === prev.len + 1) {
+      const r = chart.timeScale().getVisibleLogicalRange();
+      if (r && prev.len - 1 >= r.from && prev.len - 1 <= r.to) {
+        chart.timeScale().setVisibleLogicalRange({ from: r.from + 1, to: r.to + 1 });
+      }
+    }
+
+    // Legend: statistik 120 candle terakhir
+    const win = cs.slice(-120);
+    let hi = -Infinity, lo = Infinity;
+    win.forEach(c => { if (c.high > hi) hi = c.high; if (c.low < lo) lo = c.low; });
+    const f0 = win[0].open;
+    const diff = last.close - f0;
+    setLegend(p => ({ ...p, val: last.close, chg: diff, pct: f0 ? (diff / f0) * 100 : 0, isUp: diff >= 0, high: hi, low: lo }));
+
+    placeNow();
+  }, [compute, placeNow]);
+
+  refreshRef.current = refresh;
+  fitRef.current = fitView;
+
+  // ───────── Fullscreen ─────────
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
     if (!isFull) {
@@ -326,13 +653,15 @@ export default function PriceChart() {
     };
   }, []);
 
+  // Resize / rotate / fullscreen → hitung ulang lebar view & pusatkan
   useEffect(() => {
     let t;
     const onResize = () => {
       clearTimeout(t);
       t = setTimeout(() => {
-        if (chartRef.current) fitView(true);
-      }, 100);
+        refreshRef.current(true);
+        fitRef.current();
+      }, 150);
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
@@ -341,253 +670,91 @@ export default function PriceChart() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
     };
-  }, [fitView]);
-
-  // Generator Data Berdasarkan Interval (Tick, Detik, Menit/Jam)
-  const generateIntervalData = useCallback((rawList, intervalConfig) => {
-    if (!rawList || !rawList.length) return [];
-    if (intervalConfig.type === "sec") {
-      const step = intervalConfig.step;
-      const grouped = {};
-      rawList.forEach(item => {
-        const bucket = Math.floor(item.time / step) * step;
-        if (!grouped[bucket]) {
-          grouped[bucket] = { time: bucket, open: item.open, high: item.high, low: item.low, close: item.close };
-        } else {
-          grouped[bucket].high = Math.max(grouped[bucket].high, item.high);
-          grouped[bucket].low = Math.min(grouped[bucket].low, item.low);
-          grouped[bucket].close = item.close;
-        }
-      });
-      return Object.values(grouped).sort((a, b) => a.time - b.time);
-    } else if (intervalConfig.type === "min") {
-      const step = intervalConfig.step;
-      const grouped = {};
-      rawList.forEach(item => {
-        const bucket = Math.floor(item.time / step) * step;
-        if (!grouped[bucket]) {
-          grouped[bucket] = { time: bucket, open: item.open, high: item.high, low: item.low, close: item.close };
-        } else {
-          grouped[bucket].high = Math.max(grouped[bucket].high, item.high);
-          grouped[bucket].low = Math.min(grouped[bucket].low, item.low);
-          grouped[bucket].close = item.close;
-        }
-      });
-      return Object.values(grouped).sort((a, b) => a.time - b.time);
-    } else {
-      const count = intervalConfig.count;
-      const out = [];
-      for (let i = 0; i < rawList.length; i += count) {
-        const chunk = rawList.slice(i, i + count);
-        if (!chunk.length) continue;
-        out.push({
-          time: chunk[0].time,
-          open: chunk[0].open,
-          high: Math.max(...chunk.map(x => x.high)),
-          low: Math.min(...chunk.map(x => x.low)),
-          close: chunk[chunk.length - 1].close
-        });
-      }
-      return out;
-    }
   }, []);
 
-  const buildCscData = useCallback((targetRate) => {
-    const dUsdProxy = dsRef.current.usd.raw; 
-    const dGold = dsRef.current.gold.raw;
-    const dBtc  = dsRef.current.btc.raw;
-
-    if (!dUsdProxy.length || !dGold.length || !dBtc.length) return [];
-
-    const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
-    const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
-    const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
-
-    const mUsd = USD_BASE * targetRate;
-    const mYuan = YUAN_BASE * cnyToUsd * targetRate;
-    const mJpy = JPY_BASE * jpyToUsd * targetRate;
-    const mSar = SAR_BASE * sarToUsd * targetRate;
-    const mGold = dsRef.current.gold.mult(rates, targetRate);
-    const mBtc = dsRef.current.btc.mult(rates, targetRate);
-
-    const map = {};
-    dUsdProxy.forEach(x => map[x.time] = { f: x, g: null, b: null });
-    dGold.forEach(x => { if(!map[x.time]) map[x.time] = {f: null, b: null}; map[x.time].g = x; });
-    dBtc.forEach(x => { if(!map[x.time]) map[x.time] = {f: null, b: null}; map[x.time].b = x; });
-
-    const times = Object.keys(map).map(Number).sort((a,b) => a-b);
-    let lastF = dUsdProxy[0], lastG = dGold[0], lastB = dBtc[0];
-    
-    const rawUnified = times.map(t => {
-      if (map[t].f) lastF = map[t].f;
-      if (map[t].g) lastG = map[t].g;
-      if (map[t].b) lastB = map[t].b;
-      
-      if (!lastF || !lastG || !lastB) return null;
-
-      const calcVal = (fVal, gVal, bVal) => {
-        const usdPart = fVal * mUsd;
-        const yuanPart = fVal * mYuan;
-        const jpyPart = fVal * mJpy;
-        const sarPart = fVal * mSar;
-        const goldPart = gVal * mGold;
-        const btcPart = bVal * mBtc;
-        return (usdPart + yuanPart + jpyPart + sarPart + goldPart + btcPart) / 6;
-      };
-
-      const multiplier = containerModeRef.current === "40ft" ? 25 : 1;
-
-      return {
-        time: t,
-        open: calcVal(lastF.open, lastG.open, lastB.open) * multiplier,
-        high: calcVal(lastF.high, lastG.high, lastB.high) * multiplier,
-        low: calcVal(lastF.low, lastG.low, lastB.low) * multiplier,
-        close: calcVal(lastF.close, lastG.close, lastB.close) * multiplier,
-      };
-    }).filter(Boolean);
-
-    return generateIntervalData(rawUnified, IV[ivRef.current]);
-  }, [rates, containerMode, generateIntervalData]);
-
-  const applyData = useCallback(() => {
-    let cs = [];
-    const multiplier = containerMode === "40ft" ? 25 : 1;
-
-    if (mode === "csc") {
-      cs = buildCscData(rate);
-      dsRef.current.csc.raw = cs; 
-    } else {
-      const d = dsRef.current[mode];
-      if (!d || !d.raw) return;
-      const m = d.mult(rates, rate) * multiplier;
-      const rawMode = d.raw.map(x => ({
-        time: x.time, open: x.open * m, high: x.high * m, low: x.low * m, close: x.close * m
-      }));
-      cs = generateIntervalData(rawMode, IV[ivRef.current]);
-    }
-    
-    if (cs.length > 0) {
-      seriesRef.current.candle.setData(cs);
-      seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
-      lastRef.current = cs[cs.length - 1].close;
-    }
-  }, [mode, rate, rates, containerMode, buildCscData, generateIntervalData]);
-
-  const updateLegend = useCallback(() => {
-    const isCsc = mode === "csc";
-    const d = isCsc ? dsRef.current.csc : dsRef.current[mode];
-    if (!d || !d.raw || !d.raw.length) return;
-
-    const n = d.raw.length;
-    const multiplier = containerMode === "40ft" ? 25 : 1;
-    const m = isCsc ? 1 : (d.mult(rates, rate) * multiplier);
-    
-    const f = d.raw[0].open * m;
-    const last = d.raw[n - 1].close;
-    const l = last * m;
-    
-    const highs = d.raw.map(x => x.high * m);
-    const lows = d.raw.map(x => x.low * m);
-
-    const diff = l - f;
-    const pct = f ? (diff / f) * 100 : 0;
-
-    setLegend(prev => ({
-      ...prev,
-      val: l, chg: diff, pct: pct, isUp: diff >= 0,
-      high: Math.max(...highs), low: Math.min(...lows)
-    }));
-  }, [mode, rate, rates, containerMode]);
-
-  fitRef.current = fitView;
-  applyRef.current = applyData;
-  legendRef.current = updateLegend;
-  modeRef.current = mode;
-  containerModeRef.current = containerMode;
-  rateRef.current = rate;
-  ivRef.current = iv;
-
   useEffect(() => {
-    const applyVis = () => {
-      if (!seriesRef.current.candle) return;
-      seriesRef.current.candle.applyOptions({ visible: type === "candle" });
-      seriesRef.current.area.applyOptions({ visible: type === "area" });
-    };
-    
-    const targetKey = mode === "csc" ? "usd" : mode;
-    const d = dsRef.current[targetKey];
-    
-    if (!chartRef.current || !d || !d.raw.length) { applyVis(); return; }
+    const t = setTimeout(() => {
+      refreshRef.current(true);
+      fitRef.current();
+    }, 250);
+    return () => clearTimeout(t);
+  }, [isFull]);
+
+  // ───────── Ganti tipe chart (tanpa fade) ─────────
+  useEffect(() => {
+    applyVis();
+  }, [type, forecastOn, applyVis]);
+
+  // ───────── Ganti toggle prediksi ─────────
+  useEffect(() => {
+    refreshRef.current(true);
+    placeNow();
+  }, [forecastOn, placeNow]);
+
+  // ───────── Ganti mode / mata uang / kontainer / interval ─────────
+  // Tanpa animasi range: fade singkat → setData → langsung pusatkan → fade in.
+  useEffect(() => {
+    applyVis();
+    if (!chartRef.current || loadedBinRef.current !== baseBin) return;
     setFade(true);
     const t = setTimeout(() => {
-      applyVis();
-      applyData();
-      updateLegend();
-      fitView(true);
+      refresh(true);
+      fitView();
       setFade(false);
-    }, 100);
+    }, 140);
     return () => clearTimeout(t);
-  }, [mode, containerMode, rate, type, rates, iv, range, cur, fitView, applyData, updateLegend]);
+  }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
+  // ───────── Ambil riwayat sesuai interval dasar ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
-    const currentToken = tokenRef.current;
+    const tok = tokenRef.current;
+    const bin = baseBin;
     setFade(true);
-    
-    const count = 300; 
-    const binanceIv = "1m";
-    
-    dsRef.current.gold.raw = [];
-    dsRef.current.btc.raw = [];
-    dsRef.current.usd.raw = [];
-    dsRef.current.yuan.raw = [];
-    dsRef.current.jpy.raw = [];
-    dsRef.current.sar.raw = [];
-    dsRef.current.csc.raw = [];
 
-    const fetchBinancePage = async (symbol, interval, left) => {
-      const path = `/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${left}`;
-      const rows = await getJson(path);
+    const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec";
+    const limit = sub ? 200 : 1000;
+
+    const fetchBinance = async (symbol) => {
+      const rows = await getJson(`/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${limit}`);
       return rows.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
     };
 
-    const fetchBitstampPage = async () => {
-      const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=60&limit=300`);
+    const fetchBitstamp = async (step) => {
+      const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${limit}`);
       const j = await r.json();
-      return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      const rows = (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      if (!rows.length) throw new Error("empty");
+      return rows;
     };
 
-    Promise.all([
-      fetchBinancePage("PAXGUSDT", binanceIv, count),
-      fetchBitstampPage().catch(() => fetchBinancePage("BTCUSDT", binanceIv, count)),
-      fetchBinancePage("EURUSDT", binanceIv, count)
-    ]).then(res => {
-      if (currentToken !== tokenRef.current) return;
-      
-      dsRef.current.gold.raw = res[0];
-      dsRef.current.btc.raw = res[1];
+    const bsStep = BS_STEP[bin];
+    const btcP = bsStep
+      ? fetchBitstamp(bsStep).catch(() => fetchBinance("BTCUSDT"))
+      : fetchBinance("BTCUSDT");
 
-      const proxyData = res[2].map(x => ({
-        time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 
+    Promise.all([fetchBinance("PAXGUSDT"), btcP, fetchBinance("EURUSDT")]).then(res => {
+      if (tok !== tokenRef.current) return;
+      const ds = dsRef.current;
+      ds.gold.raw = uniqSorted(res[0]);
+      ds.btc.raw = uniqSorted(res[1]);
+      ds.usd.raw = uniqSorted(res[2]).map(x => ({
+        time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08
       }));
-
-      dsRef.current.usd.raw = proxyData;
-      dsRef.current.yuan.raw = proxyData;
-      dsRef.current.jpy.raw = proxyData;
-      dsRef.current.sar.raw = proxyData;
-
-      applyRef.current();
-      legendRef.current();
-      fitRef.current(true);
+      loadedBinRef.current = bin;
+      lastBarRef.current = null;
+      refresh(true);
+      fitView();
       setFade(false);
     }).catch(() => {
+      if (tok !== tokenRef.current) return;
       setFade(false);
-      setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false });
+      setStatus(s => ({ ...s, error: "Gagal memuat riwayat harga. Coba ganti interval atau muat ulang." }));
     });
-  }, [rates]);
+  }, [rates, baseBin, refresh, fitView]);
 
-  // Real-time live update ticker setiap detik
+  // ───────── Live: WebSocket + update tiap detik ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
@@ -606,7 +773,7 @@ export default function PriceChart() {
         };
         ws.onclose = () => { if (!disposed) setTimeout(connectBinance, 3000); };
         wsRef.current.binance = ws;
-      } catch(e) {}
+      } catch (e) {}
     };
 
     connectBinance();
@@ -615,42 +782,57 @@ export default function PriceChart() {
       const pGold = livePrices.current.gold;
       const pBtc = livePrices.current.btcBn;
       const pUsd = (livePrices.current.eurusdt || 1.08) / 1.08;
+      const bin = loadedBinRef.current;
+      if (!pGold || !pBtc || !bin) return;
 
-      if (pGold && pBtc && dsRef.current.usd.raw.length > 0) {
-        const nowT = Math.floor(Date.now() / 1000) + WIB;
-        ["gold", "btc", "usd"].forEach(k => {
-          const arr = dsRef.current[k].raw;
-          const val = k === "gold" ? pGold : (k === "btc" ? pBtc : pUsd);
-          if (arr.length > 0) {
-            const last = arr[arr.length - 1];
-            if (nowT === last.time) {
-              last.high = Math.max(last.high, val);
-              last.low = Math.min(last.low, val);
-              last.close = val;
-            } else {
-              arr.push({ time: nowT, open: val, high: val, low: val, close: val });
-            }
-          }
-        });
-        ["yuan", "jpy", "sar"].forEach(k => { dsRef.current[k].raw = dsRef.current.usd.raw; });
-        applyRef.current();
-        legendRef.current();
-      }
+      const bcfg = BASE[bin];
+      const nowT = Math.floor(Date.now() / 1000) + WIB;
+      const nb = bucketOf(nowT, bcfg);
+
+      [["gold", pGold], ["btc", pBtc], ["usd", pUsd]].forEach(([k, val]) => {
+        const d = dsRef.current[k];
+
+        // sampel per-detik (untuk Tick & Detik)
+        const sl = d.sec[d.sec.length - 1];
+        if (sl && sl.time === nowT) {
+          if (val > sl.high) sl.high = val;
+          if (val < sl.low) sl.low = val;
+          sl.close = val;
+        } else {
+          d.sec.push({ time: nowT, open: val, high: val, low: val, close: val });
+          if (d.sec.length > 7200) d.sec.splice(0, 1200);
+        }
+
+        // gabung ke candle dasar (jumlah baris tidak membengkak)
+        const last = d.raw[d.raw.length - 1];
+        if (last && bucketOf(last.time, bcfg) === nb) {
+          if (val > last.high) last.high = val;
+          if (val < last.low) last.low = val;
+          last.close = val;
+        } else {
+          d.raw.push({ time: nb, open: val, high: val, low: val, close: val });
+        }
+      });
+
+      refresh(false);
     }, 1000);
 
     return () => {
       disposed = true;
       clearInterval(timer);
-      if (wsRef.current.binance) wsRef.current.binance.close();
+      const ws = wsRef.current.binance;
+      if (ws) { ws.onclose = null; ws.close(); }
     };
-  }, [rates]);
+  }, [rates, refresh]);
+
+  const ivKeys = Object.keys(IV);
 
   return (
     <section className={styles.priceSection} id="harga">
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
           <span className={styles.eyebrow}>Coconut Shell Charcoal .ID (CSC Index)</span>
-          
+
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
               <span className={`${styles.liveDot} ${status.isLive ? styles.liveDotActive : ""}`}></span>
@@ -678,8 +860,8 @@ export default function PriceChart() {
           </div>
         </div>
 
-        {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
-        
+        {status.error && <div style={{ marginBottom: 10, padding: "10px 12px", border: "1px solid #f23645", borderRadius: 4, color: "#f23645", fontSize: 13 }}>{status.error}</div>}
+
         <div className={`notranslate ${styles.priceMain}`} translate="no">
           <div className={styles.bigPrice}>
             <Smooth value={legend.val} render={v => curObj.symbol + fmt(v, dec)} />
@@ -691,90 +873,34 @@ export default function PriceChart() {
             <div className={styles.statBox}><span className={styles.statLabel}>TERENDAH</span><span className={styles.statVal}><Smooth value={legend.low} render={v => curObj.symbol + fmt(v, dec)} /></span></div>
           </div>
         </div>
-        
+
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("csc")}
-                style={{ fontWeight: "bold" }}
-                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
-              >
-                CSC
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("usd")}
-                title="USD Mode"
-              >
-                💵
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("yuan")}
-                title="Yuan Mode"
-              >
-                中
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("jpy")}
-                title="Yen Mode"
-              >
-                💴
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("sar")}
-                title="Riyal Mode"
-              >
-                ﷼
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("gold")}
-                title="Gold Mode"
-              >
-                {marketClosed ? "🔒" : "🔐"}
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("btc")}
-                title="Bitcoin Mode"
-              >
-                ⭐
-              </button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} onClick={() => setMode("csc")} style={{ fontWeight: "bold" }} title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)">CSC</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => setMode("usd")} title="USD Mode">💵</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => setMode("yuan")} title="Yuan Mode">中</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => setMode("jpy")} title="Yen Mode">💴</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => setMode("sar")} title="Riyal Mode">﷼</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => setMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
+              <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => setMode("btc")} title="Bitcoin Mode">⭐</button>
             </div>
 
             <div className={styles.modeSwitch} style={{ marginLeft: "8px" }}>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${containerMode === "T" ? styles.modeBtnActive : ""}`}
-                onClick={() => setContainerMode("T")}
-                title="Harga Per Ton (1 Ton)"
-              >
-                T
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${containerMode === "40ft" ? styles.modeBtnActive : ""}`}
-                onClick={() => setContainerMode("40ft")}
-                title="Harga Total Kontainer 40ft (x25 Ton)"
-              >
-                40ft
-              </button>
+              <button type="button" className={`${styles.modeBtn} ${containerMode === "T" ? styles.modeBtnActive : ""}`} onClick={() => setContainerMode("T")} title="Harga Per Ton (1 Ton)">T</button>
+              <button type="button" className={`${styles.modeBtn} ${containerMode === "40ft" ? styles.modeBtnActive : ""}`} onClick={() => setContainerMode("40ft")} title="Harga Total Kontainer 40ft (x25 Ton)">40ft</button>
             </div>
 
             <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
             <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
+            <button
+              className={`${styles.currencyBtn} ${styles.smallBtn} ${forecastOn ? styles.currencyActive : ""}`}
+              onClick={() => setForecastOn(v => !v)}
+              type="button"
+              title="EA Backtest: prediksi candle ke depan (selalu naik atau turun)"
+            >
+              EA
+            </button>
           </div>
 
           <div className={styles.toolbarGroup}>
@@ -784,36 +910,61 @@ export default function PriceChart() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               {timeDropOpen && (
-                <div className={`${styles.currencyDropdown}`}>
-                  <div className={styles.dropLabel}>INTERVAL (TICK, SEC & MIN)</div>
-                  {Object.keys(IV).map(v => (
-                    <button key={v} className={`${styles.currencyOption} ${iv === v ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
-                      <span>{IV[v].label}</span>
-                    </button>
-                  ))}
+                <div className={styles.currencyDropdown} style={{ maxHeight: 340, overflowY: "auto" }}>
+                  {ivKeys.map((v, i) => {
+                    const showHead = i === 0 || IV[ivKeys[i - 1]].grp !== IV[v].grp;
+                    return (
+                      <Fragment key={v}>
+                        {showHead && <div className={styles.dropLabel}>{IV[v].grp}</div>}
+                        <button className={`${styles.currencyOption} ${iv === v ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setTimeDropOpen(false); }}>
+                          <span>{IV[v].label}</span>
+                        </button>
+                      </Fragment>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <button
-              type="button"
-              className={styles.fullBtn}
-              onClick={toggleFull}
-              aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}
-            >
+            <button className={`${styles.currencyBtn} ${styles.smallBtn}`} onClick={() => fitView()} type="button" title="Pusatkan harga (atau klik dua kali pada chart)">
+              PUSAT
+            </button>
+
+            <button type="button" className={styles.fullBtn} onClick={toggleFull} aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}>
               {isFull ? "TUTUP" : "FULL"}
             </button>
           </div>
         </div>
 
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
-          <div className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`} style={isFull
-            ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
-            : { position: 'relative', width: '100%', height: '480px' }}>
+          <div
+            className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
+            onDoubleClick={() => fitView()}
+            style={{
+              position: "relative", width: "100%",
+              ...(isFull ? { flex: 1, minHeight: 0 } : { height: "480px" }),
+              opacity: fade ? 0 : 1,
+              transition: "opacity 0.14s ease"
+            }}
+          >
+            <div ref={chartContainerRef} style={{ position: "absolute", inset: 0, zIndex: 2 }}></div>
 
-            <div ref={chartContainerRef} style={{ position: 'absolute', inset: 0, zIndex: 2 }}></div>
+            <div
+              ref={nowLineRef}
+              style={{ position: "absolute", top: 0, bottom: 26, width: 0, borderLeft: "1px dashed #b0b4c0", zIndex: 3, pointerEvents: "none", display: "none" }}
+            >
+              <span style={{ position: "absolute", top: 6, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#2962ff", background: "rgba(41,98,255,0.08)", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap" }}>
+                EA PREDIKSI ▸
+              </span>
+            </div>
           </div>
         </div>
+
+        {forecastOn && (
+          <div style={{ marginTop: 8, fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>
+            Candle transparan di kanan adalah simulasi statistik (EMA, momentum, ATR), bukan jaminan atau nasihat investasi.
+          </div>
+        )}
       </div>
     </section>
   );
