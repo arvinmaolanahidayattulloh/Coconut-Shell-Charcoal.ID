@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
 import styles from "./PriceChart.module.css";
-// ... impor bawaan lainnya ...
 import Trade from "./Trade";
 import Invest from "./Invest";
-
 
 const OZ = 31.1034768;
 const GRAMS = 5;
@@ -339,16 +337,13 @@ function Smooth({ value, render, ms }) {
   return <>{render(v)}</>;
 }
 
-// [PATCH:CENTER-PRICE] autoscale: harga terakhir selalu di tengah, zoom vertikal tetap
 const makeCenterProvider = (followRef, spanRatioRef, lastRef) => (orig) => {
   const res = orig();
   const last = lastRef.current;
   if (!followRef.current || !spanRatioRef.current || !last) return res;
-  // x0.7 karena scaleMargins top/bottom 0.15 menyisakan 70% tinggi
   const half = (Math.abs(last) * spanRatioRef.current * 0.7) / 2;
   return { priceRange: { minValue: last - half, maxValue: last + half }, margins: res ? res.margins : undefined };
 };
-// [/PATCH:CENTER-PRICE]
 
 export default function PriceChart() {
   const [unlocked, setUnlocked] = useState(false);
@@ -394,10 +389,8 @@ export default function PriceChart() {
   const refreshRef = useRef(() => {});
   const fitRef = useRef(() => {});
 
-  // [PATCH:CENTER-PRICE] state mode "ikuti harga di tengah"
-  const followRef = useRef(false);      // aktif setelah tombol + ditekan
-  const spanRatioRef = useRef(null);    // lebar zoom vertikal, relatif terhadap harga terakhir
-  // [/PATCH:CENTER-PRICE]
+  const followRef = useRef(false);      
+  const spanRatioRef = useRef(null);    
 
   const dsRef = useRef({
     gold: { raw: [], sec: [], inf: [] },
@@ -423,7 +416,6 @@ export default function PriceChart() {
   typeRef.current = type;
   decRef.current = dec;
 
-  // ───────── Password ─────────
   useEffect(() => {
     try { if (sessionStorage.getItem("csc_unlock") === "1") setUnlocked(true); } catch (e) {}
   }, []);
@@ -464,7 +456,6 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat Chart (Zoom Vertikal Murni Bebas) ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -480,7 +471,7 @@ export default function PriceChart() {
         secondsVisible: true,
         rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true,       // Mentok kanan tanpa ruang kosong masa depan
+        fixRightEdge: true,       
         shiftVisibleRangeOnNewBar: true,
         minBarSpacing: 0.5
       },
@@ -488,7 +479,6 @@ export default function PriceChart() {
       localization: { priceFormatter: p => fmt(p, decRef.current) }
     });
 
-    // [PATCH:CENTER-PRICE] provider autoscale dipasang di kedua series
     const provider = makeCenterProvider(followRef, spanRatioRef, lastRef);
 
     const candle = chart.addCandlestickSeries({
@@ -503,7 +493,6 @@ export default function PriceChart() {
       visible: false,
       autoscaleInfoProvider: provider
     });
-    // [/PATCH:CENTER-PRICE]
 
     chartRef.current = chart;
     seriesRef.current = { candle, area };
@@ -522,14 +511,12 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Dipakai resize/fit: hanya menggeser chart ke ujung kanan tanpa mengubah zoom
   const scrollToLatest = useCallback(() => {
     const chart = chartRef.current;
     if (!chart) return;
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
-  // [PATCH:CENTER-PRICE] tombol +: geser ke candle terbaru + harga di tengah, zoom tidak berubah
   const centerOnPrice = useCallback(() => {
     const chart = chartRef.current;
     const s = typeRef.current === "area" ? seriesRef.current.area : seriesRef.current.candle;
@@ -543,18 +530,15 @@ export default function PriceChart() {
       followRef.current = true;
     }
     chart.priceScale("right").applyOptions({ autoScale: true });
-    // paksa hitung ulang autoscale
     seriesRef.current.candle.applyOptions({});
     seriesRef.current.area.applyOptions({});
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
-  // reset mode ikuti saat interval berganti (rentang candle berubah)
   useEffect(() => {
     followRef.current = false;
     if (chartRef.current) chartRef.current.priceScale("right").applyOptions({ autoScale: true });
   }, [iv]);
-  // [/PATCH:CENTER-PRICE]
 
   const compute = useCallback(() => {
     const cfg = IV[ivRef.current];
@@ -608,9 +592,7 @@ export default function PriceChart() {
       chart.applyOptions({ timeScale: { timeVisible: sub, secondsVisible: cfg.type === "inf" || cfg.type === "tick" || cfg.type === "sec" } });
     }
 
-    // [PATCH:CENTER-PRICE] lastRef diperbarui SEBELUM update series agar provider memakai harga terbaru
     lastRef.current = last.close;
-    // [/PATCH:CENTER-PRICE]
 
     if (incremental) {
       if (n === prev.len + 1) {
@@ -709,7 +691,6 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitRef]);
 
-  // ───────── Ambil Riwayat Sampai Akar ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -842,7 +823,6 @@ export default function PriceChart() {
     loadDataProgressive();
   }, [rates, baseBin, refresh]);
 
-  // ───────── Live: WebSocket + Animasi Ular & Interval Sangat Halus LERP ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
@@ -1030,7 +1010,6 @@ export default function PriceChart() {
                 CSC
               </button>
 
-              {/* Tombol ikon mode disembunyikan secara default, terbuka jika memasukkan password: Coconut Shell Charcoal */}
               {unlocked && (
                 <>
                   <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
@@ -1070,7 +1049,6 @@ export default function PriceChart() {
               )}
             </div>
 
-            {/* [PATCH:CENTER-PRICE] TOMBOL +: harga di tengah, chart ikut bergeser mengikuti candle, zoom tidak berubah */}
             <button
               type="button"
               className={`${styles.currencyBtn} ${styles.smallBtn}`}
@@ -1080,7 +1058,6 @@ export default function PriceChart() {
             >
               +
             </button>
-            {/* [/PATCH:CENTER-PRICE] */}
 
             <button
               type="button"
@@ -1093,43 +1070,6 @@ export default function PriceChart() {
           </div>
         </div>
 
-        <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
-          <div
-            className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
-            onDoubleClick={() => centerOnPrice() /* [PATCH:CENTER-PRICE] */}
-            style={{
-              position: "relative", width: "100%",
-              ...(isFull ? { flex: 1, minHeight: 0 } : { height: "480px" }),
-              opacity: fade ? 0 : 1,
-              transition: "opacity 0.14s ease"
-            }}
-          >
-            <div ref={chartContainerRef} style={{ position: "absolute", inset: 0, zIndex: 2 }}></div>
-
-            {pendingMode && (
-              <div style={{ position: "absolute", inset: 0, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.88)" }}>
-                <form onSubmit={submitPw} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center", maxWidth: 360, padding: 16 }}>
-                  <input
-                    type="password"
-                    autoFocus
-                    value={pw}
-                    onChange={(e) => { setPw(e.target.value); setPwErr(false); }}
-                    placeholder="Sandi"
-                    autoComplete="off"
-                    style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "#fff", color: "#111" }}
-                  />
-                  <button className={styles.currencyBtn} type="submit">BUKA</button>
-                  <button className={styles.currencyBtn} type="button" onClick={() => setPendingMode(null)}>BATAL</button>
-                  {pwErr && <span style={{ width: "100%", textAlign: "center", color: "#f23645", fontSize: 13 }}>Password salah.</span>}
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
           <div
             className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
@@ -1165,14 +1105,9 @@ export default function PriceChart() {
         </div>
       </div>
 
-      {/* --- PENAMBAHAN URUTAN PEMANGGILAN DI PALING BAWAH --- */}
+      {/* --- URUTAN PEMANGGILAN DI PALING BAWAH --- */}
       <div style={{ marginTop: "2rem" }}>
-        {/* 1. Chart (Sudah ada di dalam struktur Card di atas) */}
-        
-        {/* 2. Trade */}
         <Trade />
-
-        {/* 3. Invest */}
         <Invest />
       </div>
     </section>
