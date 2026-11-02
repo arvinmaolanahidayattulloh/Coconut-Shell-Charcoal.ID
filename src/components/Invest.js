@@ -1,22 +1,20 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAccount } from '../Account'; // Pastikan path ini sesuai dengan struktur folder Anda
+import { useAccount } from './Account'; 
 import styles from './Invest.module.css';
 
 const Invest = () => {
-  // Ambil state dan fungsi login/logout dari Account.js, bukan dari Firebase
   const { user, login, logout } = useAccount();
   const [invested, setInvested] = useState(false);
 
   const handleLogout = () => {
     logout();
-    setInvested(false); // Reset status investasi jika user logout
+    setInvested(false); 
   };
 
   const handleInvest = () => {
     setInvested(true);
-    // Menggunakan user.name sesuai dengan response dari Google OAuth
     alert(`Terima kasih ${user.name || 'Investor'}, investasi sebesar 75 Ton berhasil diproses!`);
   };
 
@@ -45,7 +43,6 @@ const Invest = () => {
           ) : (
             <div className={styles.userDashboard}>
               <div className={styles.userInfo}>
-                {/* Menggunakan user.picture dari Google OAuth */}
                 <img 
                   src={user.picture || 'https://via.placeholder.com/40'} 
                   alt="Profile" 
