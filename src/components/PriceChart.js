@@ -140,7 +140,7 @@ function Smooth({ value, render, ms }) {
 
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
-  const [mode, setMode] = useState("yuan"); // Default mode ke yuan (中)
+  const [mode, setMode] = useState("yuan");
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -172,12 +172,12 @@ export default function PriceChart() {
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
 
-  // Definisi Rumus Multiplier Berdasarkan Kurva CNY/USD Google Finance
+  // Multiplier Rumus Chart
   const dsRef = useRef({
     yuan: { 
       raw: [], 
       mult: (ratesObj, targetRate) => {
-        // Rumus: 4750 * (Nilai CNY/USD mentah dari chart) * Kurs Mata Uang Target (IDR, dll)
+        // Raw Data (berada di sekitar ~0.1501 CNY/USD) * 4750 Yuan * Target Kurs
         return YUAN_BASE * targetRate; 
       } 
     },
@@ -186,7 +186,8 @@ export default function PriceChart() {
   });
 
   const tokenRef = useRef(0);
-  const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, cnyUsd: 0.1501, btcSrc: "Bitstamp" });
+  // Tambah eurusdt sebagai referensi proxy pergerakan chart valas yang realistis
+  const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, eurusdt: 1.08, btcSrc: "Bitstamp" });
   const wsRef = useRef({ binance: null, bitstamp: null });
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
@@ -262,7 +263,7 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // INFINITE SCROLL LISTENER (Memuat riwayat kurva persis Google Finance CNY/USD)
+  // INFINITE SCROLL LISTENER (Memuat Real Data Valas untuk dikonversi menjadi pergerakan realistis CNY/USD)
   useEffect(() => {
     if (!chartRef.current) return;
     const ts = chartRef.current.timeScale();
@@ -287,10 +288,18 @@ export default function PriceChart() {
             noMoreHistory.current = true;
             setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat" }));
           } else {
+            // Kalkulasi skala untuk menyesuaikan volatility EURUSD agar cocok posisinya dengan nilai riil CNY/USD (~0.15)
+            const currentCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
+            const fixedScale = currentCnyUsd / 1.08; 
+
             const oldRows = rows.map((r) => {
-              // Menyesuaikan skala persis kurva CNY/USD (~0.1501)
-              const scaleVal = 0.1501 + ((+r[4] - 1.1) * 0.015); 
-              return { time: Math.floor(r[0]/1000) + WIB, open: scaleVal * 0.999, high: scaleVal * 1.001, low: scaleVal * 0.999, close: scaleVal };
+              return { 
+                time: Math.floor(r[0]/1000) + WIB, 
+                open: +r[1] * fixedScale, 
+                high: +r[2] * fixedScale, 
+                low: +r[3] * fixedScale, 
+                close: +r[4] * fixedScale 
+              };
             });
 
             dsRef.current.yuan.raw = uniqSorted([...oldRows, ...dYuan]);
@@ -406,7 +415,6 @@ export default function PriceChart() {
     const d = dsRef.current[mode];
     if (!d || !d.raw) return;
     
-    // Multiplier akhir: Raw CNY/USD * 4750 * Kurs Target (IDR)
     const m = mode === "yuan" ? YUAN_BASE * rate : d.mult(rates, rate);
     
     const cs = d.raw.map(x => ({
@@ -519,6 +527,8 @@ export default function PriceChart() {
     };
 
     const pGold = fetchBinancePage("PAXGUSDT", binanceIv, count);
+    const pForex = fetchBinancePage("EURUSDT", binanceIv, count); // Tarik data forex asli
+
     let btcSrc = "Bitstamp";
     const pBtc = fetchBitstampPage(binanceIv, count).then(cs => {
       if (!cs.length) throw new Error("data kosong"); return cs;
@@ -526,17 +536,26 @@ export default function PriceChart() {
       btcSrc = "Binance"; return fetchBinancePage("BTCUSDT", binanceIv, count);
     });
 
-    Promise.all([pGold, pBtc]).then(res => {
+    Promise.all([pGold, pBtc, pForex]).then(res => {
       if (currentToken !== tokenRef.current) return;
       livePrices.current.btcSrc = btcSrc;
       
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
+      const forexRaw = res[2];
 
-      // Membentuk kurva data Yuan presisi mengikuti tren CNY/USD Google Finance
-      dsRef.current.yuan.raw = res[0].map((x, idx) => {
-        const baseVal = 0.1501 + (Math.sin(idx * 0.05) * 0.008);
-        return { time: x.time, open: baseVal * 0.999, high: baseVal * 1.001, low: baseVal * 0.999, close: baseVal };
+      // Hilangkan gelombang Math.sin, gunakan pure forex volatility dan skalakan presisi ke rate CNY/USD asli
+      const currentCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
+      const fixedScale = currentCnyUsd / 1.08; 
+
+      dsRef.current.yuan.raw = forexRaw.map((x) => {
+        return { 
+          time: x.time, 
+          open: x.open * fixedScale, 
+          high: x.high * fixedScale, 
+          low: x.low * fixedScale, 
+          close: x.close * fixedScale 
+        };
       });
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
@@ -564,13 +583,15 @@ export default function PriceChart() {
     const connectBinance = () => {
       if (disposed) return;
       try {
-        const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
+        // Tambahkan stream eurusdt untuk pergerakan real-time mode Yuan
+        const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade/eurusdt@trade");
         ws.onopen = () => setStatus({ text: "LIVE", isLive: true, error: null });
         ws.onmessage = (ev) => {
           const d = JSON.parse(ev.data).data;
           if (!d || !d.p) return;
           if (d.s === "BTCUSDT") livePrices.current.btcBn = parseFloat(d.p);
           if (d.s === "PAXGUSDT") livePrices.current.gold = parseFloat(d.p);
+          if (d.s === "EURUSDT") livePrices.current.eurusdt = parseFloat(d.p);
         };
         ws.onclose = () => { if (!disposed) tb = setTimeout(connectBinance, 3000); };
         wsRef.current.binance = ws;
@@ -600,13 +621,15 @@ export default function PriceChart() {
       const curMode = modeRef.current;
       const curRate = rateRef.current;
       const step = IV[ivRef.current].step;
+      const currentCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
+      const fixedScale = currentCnyUsd / 1.08;
 
       ["gold", "btc", "yuan"].forEach(key => {
         const d = dsRef.current[key];
         let pRaw = 1;
         if (key === "gold") pRaw = livePrices.current.gold;
         else if (key === "btc") pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
-        else pRaw = 0.1501; // Nilai live CNY/USD
+        else if (key === "yuan") pRaw = (livePrices.current.eurusdt || 1.08) * fixedScale; // Ambil nilai valas aslinya
         
         if (pRaw == null || !d.raw.length) return;
         
