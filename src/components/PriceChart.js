@@ -140,7 +140,7 @@ function Smooth({ value, render, ms }) {
 
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
-  const [mode, setMode] = useState("yuan"); // Default ke yuan (中)
+  const [mode, setMode] = useState("yuan"); // Default mode ke yuan (中)
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -172,12 +172,12 @@ export default function PriceChart() {
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
 
-  // Rumus Multiplier untuk Masing-masing Mode
+  // Definisi Multiplier / Rumus Utama Tiap Mode
   const dsRef = useRef({
     yuan: { 
       raw: [], 
       mult: (ratesObj, targetRate) => {
-        // 4.750 CNY -> USD -> Mata uang target (IDR, dll menggunakan targetRate)
+        // RUMUS UTAMA: 4750 Yuan -> USD -> Mata Uang Target (IDR, dll)
         const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.150125;
         return YUAN_BASE * cnyToUsd * targetRate; 
       } 
@@ -311,7 +311,7 @@ export default function PriceChart() {
             dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
             dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
             
-            // Sinkronisasi data historis yuan
+            // Sinkronisasi data historis yuan mengikuti grafik forex tren stabil
             const baseCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
             dsRef.current.yuan.raw = dsRef.current.gold.raw.map((x, idx) => {
               const noise = Math.sin(idx * 0.1) * 0.0005;
@@ -431,7 +431,6 @@ export default function PriceChart() {
     const d = dsRef.current[mode];
     if (!d || !d.raw) return;
     
-    // Perhitungan multiplier murni berdasarkan rumus mode masing-masing
     const m = d.mult(rates, rate);
     
     const cs = d.raw.map(x => ({
@@ -536,7 +535,7 @@ export default function PriceChart() {
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
       const rows = j?.data?.ohlc || [];
-      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.high, close: +o.close }));
       all = cs.concat(all);
       left -= n;
       if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
@@ -558,7 +557,6 @@ export default function PriceChart() {
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
 
-      // Mengisi raw data Yuan dengan nilai kurs CNY-USD
       const baseCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
       dsRef.current.yuan.raw = res[0].map((x, idx) => {
         const noise = Math.sin(idx * 0.1) * 0.0005;
