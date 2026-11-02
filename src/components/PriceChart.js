@@ -11,7 +11,7 @@ const BTC_FACTOR = 0.01;
 
 // Tambahan Konstanta Baru
 const YUAN_BASE = 5000;
-const USD_BASE = 500;
+const USD_BASE = 1000;
 const JPY_BASE = 100;
 const SAR_BASE = 2.5;
 
