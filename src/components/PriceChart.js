@@ -12,7 +12,7 @@ const BTC_FACTOR = 0.01;
 // Konstanta Basis Masing-Masing Pilar
 const YUAN_BASE = 5000;
 const USD_BASE = 1000;
-const JPY_BASE = 10000;
+const JPY_BASE = 1000000;
 const SAR_BASE = 5000;
 
 const WIB = 7 * 3600; 
