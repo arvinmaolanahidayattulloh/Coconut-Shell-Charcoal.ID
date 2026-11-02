@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useAccount } from '../Account'; // Memanggil context akun
 import styles from './Trade.module.css';
 
 export default function Trade() {
+  const { user, login } = useAccount(); // Mengambil data user dan fungsi login
   const [amount, setAmount] = useState('');
   const [tradeType, setTradeType] = useState('buy'); // buy, sell, sellAll
   const [successMsg, setSuccessMsg] = useState('');
@@ -11,14 +13,17 @@ export default function Trade() {
   const handleTradeSubmit = (e) => {
     e.preventDefault();
     
+    // Keamanan tambahan: Cegah eksekusi jika belum login
+    if (!user) return;
+    
     if (tradeType === 'sellAll') {
-      setSuccessMsg(`Berhasil mengeksekusi perintah SELL ALL untuk seluruh aset Arang Tempurung Kelapa Anda.`);
+      setSuccessMsg(`Berhasil mengeksekusi perintah SELL ALL untuk seluruh aset Arang Tempurung Kelapa milik ${user.name}.`);
     } else {
       if (!amount || isNaN(amount) || Number(amount) <= 0) {
         alert('Masukkan jumlah ton yang valid.');
         return;
       }
-      setSuccessMsg(`Berhasil menempatkan order ${tradeType.toUpperCase()} sebesar ${amount} Ton Arang Tempurung Kelapa.`);
+      setSuccessMsg(`Berhasil menempatkan order ${tradeType.toUpperCase()} sebesar ${amount} Ton Arang Tempurung Kelapa untuk ${user.name}.`);
     }
     
     setAmount('');
@@ -72,14 +77,27 @@ export default function Trade() {
               placeholder={tradeType === 'sellAll' ? "Seluruh Saldo Aset" : "Contoh: 10"}
               value={tradeType === 'sellAll' ? 'MAKSIMAL (SELL ALL)' : amount}
               onChange={(e) => setAmount(e.target.value)}
-              disabled={tradeType === 'sellAll'}
+              disabled={tradeType === 'sellAll' || !user} // Input dikunci jika belum login
               className={styles.tradeInput}
             />
           </div>
 
-          <button type="submit" className={`${styles.submitBtn} ${tradeType === 'buy' ? styles.buyBtnBg : styles.sellBtnBg}`}>
-            Eksekusi {tradeType === 'sellAll' ? 'SELL ALL' : tradeType.toUpperCase()}
-          </button>
+          {!user ? (
+            // Tombol login muncul jika user belum masuk
+            <button 
+              type="button" 
+              onClick={login} 
+              className={styles.submitBtn} 
+              style={{ backgroundColor: '#4285F4', color: '#fff' }}
+            >
+              LOGIN UNTUK TRADING
+            </button>
+          ) : (
+            // Tombol eksekusi normal jika user sudah masuk
+            <button type="submit" className={`${styles.submitBtn} ${tradeType === 'buy' ? styles.buyBtnBg : styles.sellBtnBg}`}>
+              Eksekusi {tradeType === 'sellAll' ? 'SELL ALL' : tradeType.toUpperCase()}
+            </button>
+          )}
         </form>
       </div>
     </section>
