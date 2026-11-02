@@ -444,18 +444,9 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat chart (Mentok Kanan Sempurna, Harga di Tengah, Zoom Bebas) ─────────
+  // ───────── Buat chart (Zoom Vertikal Bebas & Mentok Kanan Sempurna) ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
-
-    const centerProvider = (orig) => {
-      const res = orig();
-      const last = lastRef.current;
-      if (!res || !res.priceRange || last == null) return res;
-      const { minValue, maxValue } = res.priceRange;
-      const span = Math.max(maxValue - last, last - minValue) * 1.5 || Math.abs(last) * 0.001;
-      return { ...res, priceRange: { minValue: last - span, maxValue: last + span } };
-    };
 
     const chart = createChart(chartContainerRef.current, {
       autoSize: true,
@@ -467,9 +458,9 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 0,           // MENTOK KANAN TANPA CELAH
+        rightOffset: 0,           // MENTOK KANAN TANPA CELAH KOSONG
         fixLeftEdge: false,
-        fixRightEdge: true,       // MENAHAN AGAR TIDAK BISA DIGESER KE MASA DEPAN KOSONG
+        fixRightEdge: true,       // MENAHAN AGAR TIDAK BISA DIGESER MELEWATI HARGA TERBARU
         shiftVisibleRangeOnNewBar: true, 
         minBarSpacing: 0.5
       },
@@ -479,15 +470,13 @@ export default function PriceChart() {
 
     const candle = chart.addCandlestickSeries({
       upColor: "#089981", downColor: "#f23645", borderVisible: false,
-      wickUpColor: "#089981", wickDownColor: "#f23645",
-      autoscaleInfoProvider: centerProvider
+      wickUpColor: "#089981", wickDownColor: "#f23645"
     });
 
     const area = chart.addAreaSeries({
       lineColor: "#2962ff", lineWidth: 2,
       topColor: "rgba(41, 98, 255, 0.28)", bottomColor: "rgba(41, 98, 255, 0.02)",
-      visible: false,
-      autoscaleInfoProvider: centerProvider
+      visible: false
     });
 
     chartRef.current = chart;
@@ -511,8 +500,6 @@ export default function PriceChart() {
     const chart = chartRef.current;
     const n = lenRef.current;
     if (!chart || !n) return;
-    chart.priceScale("right").applyOptions({ autoScale: true });
-    // Mengunci posisi tepat di ujung kanan secara halus tanpa membatasi zoom
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
