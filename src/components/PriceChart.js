@@ -6,7 +6,6 @@ import styles from "./PriceChart.module.css";
 
 const OZ = 31.1034768;
 const GRAMS = 5;
-const MARKUP = 1;
 const BTC_FACTOR = 0.01; 
 
 // Konstanta Basis Masing-Masing Pilar
@@ -195,7 +194,7 @@ export default function PriceChart() {
       const sarToUsd = ratesObj && ratesObj.SAR ? (1 / ratesObj.SAR) : 0.2666;
       return SAR_BASE * sarToUsd * targetRate;
     }},
-    gold: { raw: [], mult: (ratesObj, targetRate) => GRAMS * MARKUP / OZ * targetRate },
+    gold: { raw: [], mult: (ratesObj, targetRate) => GRAMS / OZ * targetRate },
     btc:  { raw: [], mult: (ratesObj, targetRate) => BTC_FACTOR * targetRate },
     csc:  { raw: [] } 
   });
