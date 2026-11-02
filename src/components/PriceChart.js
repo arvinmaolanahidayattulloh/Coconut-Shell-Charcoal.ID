@@ -28,15 +28,15 @@ const IV = {
 };
 
 const RANGES = {
-  "1D":  { iv: "5m",  count: 300,  label: "1D" },
-  "5D":  { iv: "15m", count: 500,  label: "5D" },
-  "1M":  { iv: "1h",  count: 750,  label: "1M" },
-  "3M":  { iv: "4h",  count: 550,  label: "3M" },
-  "6M":  { iv: "12h", count: 370,  label: "6M" },
+  "1D":  { iv: "5m",  count: 150,  label: "1D" },
+  "5D":  { iv: "15m", count: 250,  label: "5D" },
+  "1M":  { iv: "1h",  count: 350,  label: "1M" },
+  "3M":  { iv: "4h",  count: 280,  label: "3M" },
+  "6M":  { iv: "12h", count: 200,  label: "6M" },
   "YTD": { iv: "1d",  count: 0,    label: "YTD" },
-  "1Y":  { iv: "1d",  count: 370,  label: "1Y" },
-  "5Y":  { iv: "3d",  count: 610,  label: "5Y" },
-  "10Y": { iv: "3d",  count: 1220, label: "10Y" }
+  "1Y":  { iv: "1d",  count: 200,  label: "1Y" },
+  "5Y":  { iv: "3d",  count: 180,  label: "5Y" },
+  "10Y": { iv: "3d",  count: 250,  label: "10Y" }
 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
@@ -93,7 +93,8 @@ function uniqSorted(list) {
   return out.sort((a, b) => a.time - b.time);
 }
 
-function animateRange(ts, to, animRef, ms = 420) {
+// Fungsi Animasi Zoom/Pan yang halus dan stabil menempatkan harga di tengah
+function animateRange(ts, to, animRef, ms = 300) {
   cancelAnimationFrame(animRef.current);
   const from = ts.getVisibleLogicalRange();
   if (!from) { ts.setVisibleLogicalRange(to); return; }
@@ -110,7 +111,7 @@ function animateRange(ts, to, animRef, ms = 420) {
   animRef.current = requestAnimationFrame(step);
 }
 
-function useSmooth(target, ms = 400) {
+function useSmooth(target, ms = 300) {
   const [v, setV] = useState(target);
   const curRef = useRef(target);
   useEffect(() => {
@@ -137,8 +138,8 @@ function useSmooth(target, ms = 400) {
   return v;
 }
 
-function Smooth({ value, render, ms }) {
-  const v = useSmooth(value, ms);
+function Smooth({ value, render }) {
+  const v = useSmooth(value);
   return <>{render(v)}</>;
 }
 
@@ -152,7 +153,6 @@ export default function PriceChart() {
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
   
-  // State untuk kontrol unhide tombol lewat password
   const [unlocked, setUnlocked] = useState(false);
   
   const [cur, setCur] = useState("IDR");
@@ -242,9 +242,9 @@ export default function PriceChart() {
         borderColor: "#e0e3eb", 
         timeVisible: IV[ivRef.current]?.step < 86400, 
         secondsVisible: false, 
-        rightOffset: 2,
+        rightOffset: 6, // Memberikan ruang pas di sebelah kanan agar candle terbaru ada di tengah-kanan yang nyaman
         fixLeftEdge: false,
-        fixRightEdge: true 
+        fixRightEdge: false 
       },
       crosshair: { mode: 0 },
       localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
@@ -278,7 +278,7 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // AUTO-FOKUS & SMOOTH ZOOM DINAMIS KE KANDLE TERBARU
+  // FUNGSI AUTO FOKUS & ZOOM STANDAR YANG NYAMAN (Pusatkan kursor/tampilan di candle terbaru)
   const fitView = useCallback((smooth = true) => {
     const targetKey = mode === "csc" ? "usd" : mode;
     const d = dsRef.current[targetKey];
@@ -287,15 +287,13 @@ export default function PriceChart() {
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
     
-    let visibleBars = 120; 
-    if (range) {
-       if (range === "1D") visibleBars = 288;
-       else if (range === "5D") visibleBars = 480;
-       else if (range === "1M") visibleBars = 720;
-       else visibleBars = n; 
-    }
+    // Zoom standar dengan rentang pas (misal menampilkan 80 bar terakhir agar tidak terlalu jauh/kecil)
+    let visibleBars = 80; 
+    if (range === "1D") visibleBars = 60;
+    else if (range === "5D") visibleBars = 90;
+    else if (range === "1M") visibleBars = 100;
     
-    const target = { from: Math.max(0, n - visibleBars), to: n + 1 };
+    const target = { from: Math.max(0, n - visibleBars), to: n + 6 };
     
     if (smooth) {
       animateRange(ts, target, animRef);
@@ -305,7 +303,6 @@ export default function PriceChart() {
     }
   }, [mode, range]);
 
-  // Handle klik tombol CSC dengan Password Prompt
   const handleCscClick = () => {
     if (!unlocked) {
       const pass = prompt("Masukan Kunci");
@@ -320,7 +317,6 @@ export default function PriceChart() {
     }
   };
 
-  // INFINITE SCROLL LISTENER 
   useEffect(() => {
     if (!chartRef.current) return;
     const ts = chartRef.current.timeScale();
@@ -464,7 +460,6 @@ export default function PriceChart() {
     };
   }, [fitView]);
 
-  // Fungsi Pembuat Data Index Hibrida
   const buildCscData = useCallback((targetRate) => {
     const dUsdProxy = dsRef.current.usd.raw; 
     const dGold = dsRef.current.gold.raw;
@@ -580,6 +575,7 @@ export default function PriceChart() {
   rateRef.current = rate;
   ivRef.current = iv;
 
+  // Efek transisi yang langsung memicu auto-fokus stabil saat mode/interval/kontainer/currency diubah
   useEffect(() => {
     const applyVis = () => {
       if (!seriesRef.current.candle) return;
@@ -596,11 +592,11 @@ export default function PriceChart() {
       applyVis();
       applyData();
       updateLegend();
-      fitView(true);
+      fitView(true); // Auto fokus langsung aktif secara smooth
       setFade(false);
-    }, 180);
+    }, 150);
     return () => clearTimeout(t);
-  }, [mode, containerMode, rate, type, rates, iv, range]);
+  }, [mode, containerMode, rate, type, rates, iv, range, cur, fitView, applyData, updateLegend]);
 
   useEffect(() => {
     if (!rates) return;
@@ -684,7 +680,7 @@ export default function PriceChart() {
       legendRef.current();
       fitRef.current(true);
       setFade(false);
-      setTimeout(() => { if (currentToken === tokenRef.current) fitRef.current(true); }, 350);
+      setTimeout(() => { if (currentToken === tokenRef.current) fitRef.current(true); }, 250);
     }).catch(e => {
       if (currentToken !== tokenRef.current) return;
       setFade(false);
@@ -882,7 +878,6 @@ export default function PriceChart() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
-              {/* Tombol CSC yang Berfungsi Membuka Password */}
               <button
                 type="button"
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
@@ -893,7 +888,6 @@ export default function PriceChart() {
                 CSC
               </button>
 
-              {/* Tombol Lainnya Disembunyikan Kecuali Sudah Terbuka (Unlocked) */}
               {unlocked && (
                 <>
                   <button
@@ -948,7 +942,6 @@ export default function PriceChart() {
               )}
             </div>
 
-            {/* Tombol Kontainer T & 40ft */}
             <div className={styles.modeSwitch} style={{ marginLeft: "8px" }}>
               <button
                 type="button"
