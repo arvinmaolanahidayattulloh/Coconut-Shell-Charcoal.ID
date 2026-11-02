@@ -15,7 +15,7 @@ const SAR_BASE = 5000;
 
 const WIB = 7 * 3600; 
 
-// Interval Berbasis Tick & Detik (Sec)
+// Interval Berbasis Tick & Detik (Sec) sesuai permintaan
 const IV = {
   "t1":   { type: "tick", count: 1,    label: "1 Tick" },
   "t10":  { type: "tick", count: 10,   label: "10 Tick" },
@@ -51,11 +51,6 @@ const CURRENCIES = [
 
 function fmt(num, dec) {
   return new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(num);
-}
-
-function ytdDays() {
-  const n = new Date();
-  return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
 function isXauMarketOpen() {
@@ -144,6 +139,7 @@ export default function PriceChart() {
   const [type, setType] = useState("candle");
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
+  
   const [unlocked, setUnlocked] = useState(false);
   
   const [cur, setCur] = useState("IDR");
@@ -169,9 +165,6 @@ export default function PriceChart() {
   const containerModeRef = useRef("T");
   const rateRef = useRef(1);
   const ivRef = useRef("5s");
-  
-  const isFetchingHistory = useRef(false);
-  const noMoreHistory = useRef(false);
 
   const dsRef = useRef({
     usd: { raw: [], mult: (ratesObj, targetRate) => USD_BASE * targetRate },
@@ -194,7 +187,7 @@ export default function PriceChart() {
 
   const tokenRef = useRef(0);
   const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, eurusdt: 1.08, btcSrc: "Bitstamp" });
-  const wsRef = useRef({ binance: null, bitstamp: null });
+  const wsRef = useRef({ binance: null });
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
@@ -213,7 +206,7 @@ export default function PriceChart() {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Memastikan harga terbaru terpaku di tengah secara vertikal dengan padding dinamis
+    // Autoscale provider untuk memusatkan harga secara vertikal di tengah secara proporsional
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -264,7 +257,6 @@ export default function PriceChart() {
     };
   }, []);
 
-  // FUNGSI AUTO FOKUS & PEMUSATAN TAMPILAN
   const fitView = useCallback((smooth = true) => {
     const targetKey = mode === "csc" ? "usd" : mode;
     const d = dsRef.current[targetKey];
@@ -346,7 +338,7 @@ export default function PriceChart() {
     };
   }, [fitView]);
 
-  // Pembangun Data Candle berdasarkan Interval Tick & Sec
+  // Fungsi pengelompokan data berdasarkan Interval Tick & Sec
   const generateIntervalData = useCallback((rawList, intervalConfig) => {
     if (!rawList || !rawList.length) return [];
     if (intervalConfig.type === "sec") {
@@ -364,7 +356,6 @@ export default function PriceChart() {
       });
       return Object.values(grouped).sort((a, b) => a.time - b.time);
     } else {
-      // Berbasis Tick Count
       const count = intervalConfig.count;
       const out = [];
       for (let i = 0; i < rawList.length; i += count) {
@@ -525,7 +516,7 @@ export default function PriceChart() {
     const currentToken = tokenRef.current;
     setFade(true);
     
-    const count = 500; 
+    const count = 300; 
     const binanceIv = "1m";
     
     dsRef.current.gold.raw = [];
@@ -543,7 +534,7 @@ export default function PriceChart() {
     };
 
     const fetchBitstampPage = async () => {
-      const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=60&limit=500`);
+      const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=60&limit=300`);
       const j = await r.json();
       return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
     };
@@ -690,7 +681,7 @@ export default function PriceChart() {
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
                 onClick={handleCscClick}
                 style={{ fontWeight: "bold" }}
-                title="CSC Index"
+                title="CSC Index (Klik masukkan kunci untuk membuka chart lain)"
               >
                 CSC
               </button>
