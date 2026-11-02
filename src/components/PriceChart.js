@@ -24,8 +24,9 @@ async function sha256(s) {
   return Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
-// URUTAN INTERVAL
+// URUTAN INTERVAL (Infinite paling atas, 10Y paling bawah)
 const IV = {
+  "inf":   { type: "inf",  label: "∞", bin: "1m" },
   "t1":    { type: "tick", count: 1,    label: "1 Tick" },
   "t10":   { type: "tick", count: 10,   label: "10 Tick" },
   "t100":  { type: "tick", count: 100,  label: "100 Tick" },
@@ -46,7 +47,8 @@ const IV = {
   "3d":    { type: "min",  step: 3 * DAY, bin: "3d", label: "3D" },
   "1w":    { type: "min",  step: 7 * DAY, off: 4 * DAY, bin: "1w", label: "1W" },
   "1mo":   { type: "cal",  unit: "month", bin: "1M", label: "1MO" },
-  "1y":    { type: "cal",  unit: "year",  bin: "1M", label: "1Y" }
+  "1y":    { type: "cal",  unit: "year",  bin: "1M", label: "1Y" },
+  "10y":   { type: "cal",  unit: "year",  step: 10, bin: "1M", label: "10Y" }
 };
 
 const BASE = {
@@ -64,19 +66,11 @@ const BASE = {
 };
 
 const BS_STEP = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "12h": 43200, "1d": 86400, "3d": 259200 };
-
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
-
 const CURRENCIES = [
-  { code: "IDR", symbol: "Rp" },
-  { code: "USD", symbol: "$" },
-  { code: "EUR", symbol: "€" },
-  { code: "GBP", symbol: "£" },
-  { code: "JPY", symbol: "¥" },
-  { code: "SGD", symbol: "S$" },
-  { code: "MYR", symbol: "RM" },
-  { code: "AUD", symbol: "A$" },
-  { code: "CNY", symbol: "¥" },
+  { code: "IDR", symbol: "Rp" }, { code: "USD", symbol: "$" }, { code: "EUR", symbol: "€" },
+  { code: "GBP", symbol: "£" }, { code: "JPY", symbol: "¥" }, { code: "SGD", symbol: "S$" },
+  { code: "MYR", symbol: "RM" }, { code: "AUD", symbol: "A$" }, { code: "CNY", symbol: "¥" },
   { code: "SAR", symbol: "SAR" }
 ];
 
@@ -118,8 +112,9 @@ function bucketOf(t, cfg) {
   const u = t - WIB;
   if (cfg.type === "cal") {
     const d = new Date(u * 1000);
-    if (cfg.unit === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / 1000 + WIB;
-    return Date.UTC(d.getUTCFullYear(), 0, 1) / 1000 + WIB;
+    const y = Math.floor(d.getUTCFullYear() / (cfg.step || 1)) * (cfg.step || 1);
+    if (cfg.unit === "month") return Date.UTC(y, d.getUTCMonth(), 1) / 1000 + WIB;
+    return Date.UTC(y, 0, 1) / 1000 + WIB;
   }
   const off = cfg.off || 0;
   return Math.floor((u - off) / cfg.step) * cfg.step + off + WIB;
@@ -127,6 +122,7 @@ function bucketOf(t, cfg) {
 
 function aggregate(rows, cfg) {
   if (!rows.length) return [];
+  if (cfg.type === "inf") return rows; // Ular Infinite mengalir tanpa agregasi
   if (cfg.type === "tick") {
     const out = [];
     const n = cfg.count;
@@ -159,6 +155,7 @@ function aggregate(rows, cfg) {
 }
 
 function srcOf(d, cfg) {
+  if (cfg.type === "inf") return d.inf;
   if (cfg.type === "tick" || cfg.type === "sec") return d.sec;
   return d.raw;
 }
@@ -202,7 +199,9 @@ function mergeCsc(f, g, b, calc) {
   return out;
 }
 
-// EA — PENCETAK HARGA DI BAWAH 1 MENIT
+// ─────────────────────────────────────────────────────────────
+// EA — PENCETAK HARGA DI BAWAH 1 MENIT (DETIK & TICK)
+// ─────────────────────────────────────────────────────────────
 const EA_BODY = 0.00003;
 const EA_MAXROWS = 7200;
 
@@ -315,6 +314,7 @@ function buildEaHistory(key, raw) {
   return rows.length > EA_MAXROWS ? rows.slice(-EA_MAXROWS) : rows;
 }
 
+// ─────────────────────────────────────────────────────────────
 function useSmooth(target, ms = 300) {
   const [v, setV] = useState(target);
   const curRef = useRef(target);
@@ -392,9 +392,9 @@ export default function PriceChart() {
   const fitRef = useRef(() => {});
 
   const dsRef = useRef({
-    gold: { raw: [], sec: [] },
-    btc:  { raw: [], sec: [] },
-    usd:  { raw: [], sec: [] }
+    gold: { raw: [], sec: [], inf: [] },
+    btc:  { raw: [], sec: [], inf: [] },
+    usd:  { raw: [], sec: [], inf: [] }
   });
 
   const tokenRef = useRef(0);
@@ -479,10 +479,10 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 0,           // MENTOK PALING KANAN TANPA RUANG KOSONG
+        rightOffset: 0,           // MENTOK KANAN TANPA RUANG KOSONG
         fixLeftEdge: false,
-        fixRightEdge: true,       // MENAHAN AGAR TIDAK BISA DIGESER MELEWATI HARGA TERBARU
-        shiftVisibleRangeOnNewBar: true, 
+        fixRightEdge: true,       // TIDAK BISA DITARIK KE RUANG KOSONG MASA DEPAN
+        shiftVisibleRangeOnNewBar: true, // SCROLL MULUS OTOMATIS
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -519,15 +519,12 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Animasi smooth menyentuh batas paling kanan saat di-load
   const fitView = useCallback(() => {
     const chart = chartRef.current;
     const n = lenRef.current;
     if (!chart || !n) return;
-    
     chart.priceScale("right").applyOptions({ autoScale: true });
-    
-    // Perintah sakti untuk meluncur dengan mulus ke barisan terakhir (mentok kanan)
+    // Slide / gulir dengan mulus (smooth = true) menabrak bar terakhir
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
@@ -579,8 +576,8 @@ export default function PriceChart() {
       ((n === prev.len && last.time === prev.time) || (n === prev.len + 1 && cs[n - 2].time === prev.time));
 
     if (full) {
-      const sub = cfg.type === "tick" || cfg.type === "sec" || (cfg.type === "min" && cfg.step < DAY);
-      chart.applyOptions({ timeScale: { timeVisible: sub, secondsVisible: cfg.type === "tick" || cfg.type === "sec" } });
+      const sub = cfg.type === "inf" || cfg.type === "tick" || cfg.type === "sec" || (cfg.type === "min" && cfg.step < DAY);
+      chart.applyOptions({ timeScale: { timeVisible: sub, secondsVisible: cfg.type === "inf" || cfg.type === "tick" || cfg.type === "sec" } });
     }
 
     if (incremental) {
@@ -681,7 +678,7 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
-  // ───────── Ambil Riwayat Sejauh Mungkin (Tidak Dibatasi / Progressive) ─────────
+  // ───────── Ambil Riwayat Sejauh Mungkin (Tidak Dibatasi / Progressive / Hingga Akar) ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -690,9 +687,8 @@ export default function PriceChart() {
     
     setFade(true);
 
-    const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec";
-    // Tarik 1000 candle pertama secara instant
-    const baseLimit = sub ? 130 : 1000;
+    const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec" || IV[ivRef.current].type === "inf";
+    const baseLimit = sub ? 200 : 1000;
     
     const fetchBinanceChunk = async (symbol, bin, limit, endTime) => {
       let url = `/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${limit}`;
@@ -722,7 +718,7 @@ export default function PriceChart() {
 
     const loadDataProgressive = async () => {
       try {
-        // 1. Tampil Instan (Load batch pertama)
+        // TAHAP 1: Load instan
         const [resGold, resBtc, resUsd] = await Promise.all([
           fetchBinanceChunk("PAXGUSDT", reqBin, baseLimit),
           fetchBtcChunk(reqBin, baseLimit),
@@ -737,7 +733,28 @@ export default function PriceChart() {
         ds.usd.raw = resUsd.data.map(x => ({ ...x, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 }));
 
         if (baseBin === "1m") {
-          ["gold", "btc", "usd"].forEach(k => { ds[k].sec = buildEaHistory(k, ds[k].raw); });
+          const nowT = Math.floor(Date.now() / 1000) + WIB;
+          ["gold", "btc", "usd"].forEach(k => {
+            const raw = ds[k].raw;
+            ds[k].sec = buildEaHistory(k, raw);
+            
+            // Generate History Initial buat ular (inf mode)
+            if (raw.length > 0) {
+              const lastClose = raw[raw.length - 1].close;
+              const sigma = eaSigma(raw) || (lastClose * 0.0001);
+              const infArr = [];
+              let p = lastClose;
+              const r = rng(hashStr(k + "inf"));
+              for (let i = -150; i <= 0; i++) {
+                const open = p;
+                p += gauss(r) * sigma * 0.6;
+                const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.3);
+                const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.3);
+                infArr.push({ time: nowT + i, open, high: h, low: l, close: p });
+              }
+              ds[k].inf = infArr;
+            }
+          });
         }
 
         loadedBinRef.current = baseBin;
@@ -746,11 +763,10 @@ export default function PriceChart() {
         fitView(); 
         setFade(false);
 
-        // 2. Loop Terus Ke Belakang Hingga Akar (History Habis)
+        // TAHAP 2: Tarik Terus Kebelakang TANPA BATAS WAKTU (Loop Mentok Akar)
         let endGold = resGold.end, endBtc = resBtc.end, endUsd = resUsd.end;
         const batchLimit = 1000;
 
-        // Loop berjalan terus SELAMA masih ada sisa data di exchange (end tidak null)
         while (endGold || endBtc || endUsd) {
           if (tok !== tokenRef.current) return;
           
@@ -761,23 +777,32 @@ export default function PriceChart() {
           ]);
 
           if (tok !== tokenRef.current) return;
-          
-          // Berhenti jika ketiganya benar-benar sudah tidak memiliki data masalalu
           if (!nextGold.data.length && !nextBtc.data.length && !nextUsd.data.length) break;
 
-          // Gabungkan ke depan (masa lalu dimasukkan ke indeks terkecil)
           ds.gold.raw = nextGold.data.concat(ds.gold.raw);
           ds.btc.raw = nextBtc.data.concat(ds.btc.raw);
           const usdMapped = nextUsd.data.map(x => ({ ...x, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 }));
           ds.usd.raw = usdMapped.concat(ds.usd.raw);
 
-          // Update chart TANPA re-trigger auto-scroll agar animasi scroll user ke masa lalu halus
+          const timeScale = chartRef.current?.timeScale();
+          const oldRange = timeScale?.getVisibleLogicalRange();
+          const oldLen = lenRef.current;
+          const isAtRightEdge = oldRange && (oldRange.to >= oldLen - 2);
+
           refresh(false);
 
-          endGold = nextGold.end; endBtc = nextBtc.end; endUsd = nextUsd.end;
+          const addedBars = lenRef.current - oldLen;
+          if (isAtRightEdge) {
+            fitView(); // Pertahankan di paling kanan agar tidak loncat saat harga jalan
+          } else if (addedBars > 0 && oldRange) {
+            timeScale?.setVisibleLogicalRange({
+              from: oldRange.from + addedBars,
+              to: oldRange.to + addedBars
+            });
+          }
 
-          // Delay halus agar UI (drag/scroll) sama sekali tidak lag
-          await new Promise(r => setTimeout(r, 600));
+          endGold = nextGold.end; endBtc = nextBtc.end; endUsd = nextUsd.end;
+          await new Promise(r => setTimeout(r, 600)); // Delay agar browser tidak freeze
         }
       } catch (e) {
         if (tok !== tokenRef.current) return;
@@ -789,10 +814,11 @@ export default function PriceChart() {
     loadDataProgressive();
   }, [rates, baseBin, refresh, fitView]);
 
-  // ───────── Live: WebSocket + update tiap detik ─────────
+  // ───────── Live: WebSocket + Timer untuk EA Detik dan Ular (INF) ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
+    let lastInfTime = Math.floor(Date.now() / 1000) + WIB;
 
     const connectBinance = () => {
       if (disposed) return;
@@ -819,6 +845,7 @@ export default function PriceChart() {
 
     connectBinance();
 
+    // Timer Normal 1 Detik
     const timer = setInterval(() => {
       const pGold = livePrices.current.gold;
       const pBtc = livePrices.current.btcBn;
@@ -859,12 +886,53 @@ export default function PriceChart() {
         }
       });
 
-      refresh(false);
+      if (ivRef.current !== "inf") refresh(false);
     }, 1000);
+
+    // Timer Ular (Sangat Cepat - 150ms)
+    const fastTimer = setInterval(() => {
+      if (ivRef.current !== "inf") {
+        // Resync waktu jika bukan mode inf
+        const dGold = dsRef.current.gold;
+        if (dGold.inf && dGold.inf.length) lastInfTime = dGold.inf[dGold.inf.length - 1].time;
+        return; 
+      }
+      
+      const pGold = livePrices.current.gold;
+      const pBtc = livePrices.current.btcBn;
+      const pUsd = (livePrices.current.eurusdt || 1.08) / 1.08;
+      if (!pGold || !pBtc) return;
+
+      lastInfTime += 1; // Memaksa waktu chart jalan walau di realita hanya 150ms
+
+      [["gold", pGold], ["btc", pBtc], ["usd", pUsd]].forEach(([k, target]) => {
+        const d = dsRef.current[k];
+        if (!d.inf || !d.inf.length) return;
+        const prevRow = d.inf[d.inf.length - 1];
+        const sigma = eaSigma(d.raw) || (target * 0.0001);
+        const r = rng(hashStr(k) ^ lastInfTime);
+        
+        let p = prevRow.close;
+        // Ular ditarik menuju harga target (market asli)
+        p += (target - p) * 0.15 + gauss(r) * sigma * 0.9;
+        
+        const open = prevRow.close;
+        const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.5);
+        const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.5);
+        
+        d.inf.push({ time: lastInfTime, open, high: h, low: l, close: p });
+        
+        // Jaga memori agar tidak kepenuhan oleh ular
+        if (d.inf.length > 500) d.inf.shift();
+      });
+
+      refresh(false);
+    }, 150);
 
     return () => {
       disposed = true;
       clearInterval(timer);
+      clearInterval(fastTimer);
       const ws = wsRef.current.binance;
       if (ws) { ws.onclose = null; ws.close(); }
     };
@@ -875,7 +943,8 @@ export default function PriceChart() {
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span className={styles.eyebrow}>Coconut Shell Charcoal</span>
+            {/* NAMA DIUBAH MENJADI INDEX CSCID */}
+            <span className={styles.eyebrow}>Index CSCID</span>
             <span style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Coconut Shell Charcoal Indonesia
             </span>
