@@ -7,7 +7,7 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged 
-} from '../firebase'; // Pastikan path ini benar mengarah ke file firebase.js Anda
+} from '../firebase'; 
 import styles from './Invest.module.css';
 
 const Invest = () => {
@@ -50,8 +50,8 @@ const Invest = () => {
 
   return (
     <section className={styles.investSection}>
-      <div className={styles.investContainer}>
-        <h2 className={styles.title}>Peluang Investasi Arang Tempurung Kelapa</h2>
+      <div className={styles.investCard}>
+        <h2 className={styles.eyebrow}>Peluang Investasi</h2>
         <p className={styles.subtitle}>
           Amankan alokasi kuota komoditas ekspor Anda sekarang.
         </p>
@@ -80,14 +80,14 @@ const Invest = () => {
                   className={styles.avatar} 
                 />
                 <span>Halo, <strong>{user.displayName}</strong></span>
-                <button onClick={handleLogout} className={styles.logoutBtn}>Keluar</button>
+                <button onClick={handleLogout} className={styles.logoutBtn}>KELUAR</button>
               </div>
 
               <button 
                 onClick={handleInvest} 
                 className={`${styles.investBtn} ${invested ? styles.successBtn : ''}`}
               >
-                {invested ? '✓ Berhasil Investasi 75 Ton' : '🚀 Invest 75 Ton'}
+                {invested ? '✓ Investasi 75 Ton Berhasil' : 'Invest 75 Ton'}
               </button>
             </div>
           )}
