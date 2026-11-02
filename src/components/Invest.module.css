@@ -1,67 +1,67 @@
 .investSection {
-  padding: 4rem 1.5rem;
-  background-color: #0f172a; /* Warna latar belakang gelap khas web modern */
-  color: #ffffff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 0 24px;
+  max-width: 100%;
+  margin: 0 auto 80px;
 }
 
-.investContainer {
-  max-width: 600px;
-  width: 100%;
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 2.5rem;
-  border-radius: 16px;
+.investCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 48px 56px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
   text-align: center;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
-.title {
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  color: #f8fafc;
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #c45e20;
+  margin-bottom: 8px;
 }
 
 .subtitle {
-  font-size: 1rem;
-  color: #94a3b8;
-  margin-bottom: 2rem;
+  font-size: 14px;
+  color: #9ca3af;
+  font-weight: 500;
+  margin-bottom: 32px;
 }
 
 .actionWrapper {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 1rem;
+  min-height: 100px;
 }
 
-/* Tombol Login Google */
 .googleLoginBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  background-color: #ffffff;
-  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  font-size: 15px;
   font-weight: 600;
-  font-size: 1rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
+  padding: 14px 28px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-image-width: 320px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .googleLoginBtn:hover {
-  background-color: #f1f5f9;
+  border-color: #c45e20;
+  color: #c45e20;
+  box-shadow: 0 8px 24px rgba(196, 94, 32, 0.1);
   transform: translateY(-2px);
+}
+
+.googleLoginBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .googleIcon {
@@ -69,69 +69,92 @@
   height: 20px;
 }
 
-/* Dashboard pengguna setelah login */
 .userDashboard {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  width: 100%;
   align-items: center;
+  gap: 24px;
+  width: 100%;
 }
 
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(15, 23, 42, 0.5);
-  padding: 0.5rem 1rem;
-  border-radius: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 0.9rem;
+  background: #fafaf9;
+  border: 1px solid #f3f4f6;
+  padding: 8px 16px 8px 8px;
+  border-radius: 9999px;
+  gap: 12px;
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.userInfo span {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.userInfo strong {
+  color: #111827;
+  font-weight: 700;
 }
 
 .logoutBtn {
   background: transparent;
   border: none;
-  color: #f87171;
-  font-size: 0.8rem;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  margin-left: 10px;
-  text-decoration: underline;
+  margin-left: 8px;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
 }
 
 .logoutBtn:hover {
-  color: #ef4444;
+  color: #f23645;
 }
 
-/* Tombol Investasi Utama (Invest 75 Ton) */
 .investBtn {
-  width: 100%;
-  padding: 1rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  background: #c45e20;
+  color: #ffffff;
   border: none;
-  border-radius: 10px;
+  padding: 18px 48px;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(196, 94, 32, 0.2);
 }
 
 .investBtn:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  background: #a34e1a;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+  box-shadow: 0 12px 32px rgba(196, 94, 32, 0.3);
 }
 
 .successBtn {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+  background: #089981 !important;
+  box-shadow: 0 8px 24px rgba(8, 153, 129, 0.2) !important;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .investCard { padding: 32px 24px; }
+  .eyebrow { font-size: 28px; }
+  .investBtn { padding: 16px 32px; font-size: 16px; width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .investSection { padding: 0 16px; }
+  .investCard { padding: 24px 16px; border-radius: 18px; }
+  .userInfo { flex-direction: column; border-radius: 16px; padding: 16px; text-align: center; }
+  .logoutBtn { margin-left: 0; margin-top: 8px; }
 }
