@@ -15,19 +15,8 @@ const SAR_BASE = 5000;
 
 const WIB = 7 * 3600; 
 
-// Menggabungkan interval waktu standar, rentang, dan interval Tick/Sec secara lengkap
+// URUTAN INTERVAL: Disusun dari yang paling kecil (Tick & Detik / Sub-1M) hingga terbesar
 const IV = {
-  // Interval Menit & Jam Standar
-  "1m":  { type: "min", step: 60,     bin: "1m",  label: "1M" },
-  "5m":  { type: "min", step: 300,    bin: "5m",  label: "5M" },
-  "15m": { type: "min", step: 900,    bin: "15m", label: "15M" },
-  "30m": { type: "min", step: 1800,   bin: "30m", label: "30M" },
-  "1h":  { type: "min", step: 3600,   bin: "1h",  label: "1H" },
-  "4h":  { type: "min", step: 14400,  bin: "4h",  label: "4H" },
-  "12h": { type: "min", step: 43200,  bin: "12h", label: "12H" },
-  "1d":  { type: "min", step: 86400,  bin: "1d",  label: "1D" },
-  "3d":  { type: "min", step: 259200, bin: "3d",  label: "3D" },
-  // Tambahan Interval Tick & Detik
   "t1":   { type: "tick", count: 1,    label: "1 Tick" },
   "t10":  { type: "tick", count: 10,   label: "10 Tick" },
   "t100": { type: "tick", count: 100,  label: "100 Tick" },
@@ -36,19 +25,28 @@ const IV = {
   "5s":   { type: "sec",  step: 5,     label: "5 Sec" },
   "10s":  { type: "sec",  step: 10,    label: "10 Sec" },
   "15s":  { type: "sec",  step: 15,    label: "15 Sec" },
-  "30s":  { type: "sec",  step: 30,    label: "30 Sec" }
+  "30s":  { type: "sec",  step: 30,    label: "30 Sec" },
+  "1m":   { type: "min",  step: 60,    bin: "1m",  label: "1M" },
+  "5m":   { type: "min",  step: 300,   bin: "5m",  label: "5M" },
+  "15m":  { type: "min",  step: 900,   bin: "15m", label: "15M" },
+  "30m":  { type: "min",  step: 1800,  bin: "30m", label: "30M" },
+  "1h":   { type: "min",  step: 3600,  bin: "1h",  label: "1H" },
+  "4h":   { type: "min",  step: 14400, bin: "4h",  label: "4H" },
+  "12h":  { type: "min",  step: 43200, bin: "12h", label: "12H" },
+  "1d":   { type: "min",  step: 86400, bin: "1d",  label: "1D" },
+  "3d":   { type: "min",  step: 259200,bin: "3d",  label: "3D" }
 };
 
 const RANGES = {
-  "1D":  { iv: "5m",  count: 150,  label: "1D" },
-  "5D":  { iv: "15m", count: 250,  label: "5D" },
-  "1M":  { iv: "1h",  count: 350,  label: "1M" },
-  "3M":  { iv: "4h",  count: 280,  label: "3M" },
-  "6M":  { iv: "12h", count: 200,  label: "6M" },
+  "1D":  { iv: "5s",  count: 300,  label: "1D" },
+  "5D":  { iv: "15s", count: 500,  label: "5D" },
+  "1M":  { iv: "30s", count: 750,  label: "1M" },
+  "3M":  { iv: "4h",  count: 550,  label: "3M" },
+  "6M":  { iv: "12h", count: 370,  label: "6M" },
   "YTD": { iv: "1d",  count: 0,    label: "YTD" },
-  "1Y":  { iv: "1d",  count: 200,  label: "1Y" },
-  "5Y":  { iv: "3d",  count: 180,  label: "5Y" },
-  "10Y": { iv: "3d",  count: 250,  label: "10Y" }
+  "1Y":  { iv: "1d",  count: 370,  label: "1Y" },
+  "5Y":  { iv: "3d",  count: 610,  label: "5Y" },
+  "10Y": { iv: "3d",  count: 1220, label: "10Y" }
 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
@@ -103,7 +101,7 @@ function uniqSorted(list) {
   return out.sort((a, b) => a.time - b.time);
 }
 
-function animateRange(ts, to, animRef, ms = 250) {
+function animateRange(ts, to, animRef, ms = 300) {
   cancelAnimationFrame(animRef.current);
   const from = ts.getVisibleLogicalRange();
   if (!from) { ts.setVisibleLogicalRange(to); return; }
@@ -147,8 +145,8 @@ function useSmooth(target, ms = 300) {
   return v;
 }
 
-function Smooth({ value, render }) {
-  const v = useSmooth(value);
+function Smooth({ value, render, ms }) {
+  const v = useSmooth(value, ms);
   return <>{render(v)}</>;
 }
 
@@ -156,13 +154,11 @@ export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("csc"); 
   const [containerMode, setContainerMode] = useState("T"); 
-  const [iv, setIv] = useState("1m");       
+  const [iv, setIv] = useState("5s");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
-  
-  const [unlocked, setUnlocked] = useState(false);
   
   const [cur, setCur] = useState("IDR");
   const [rates, setRates] = useState(null);
@@ -186,7 +182,10 @@ export default function PriceChart() {
   const modeRef = useRef("csc");
   const containerModeRef = useRef("T");
   const rateRef = useRef(1);
-  const ivRef = useRef("1m");
+  const ivRef = useRef("5s");
+  
+  const isFetchingHistory = useRef(false);
+  const noMoreHistory = useRef(false);
 
   const dsRef = useRef({
     usd: { raw: [], mult: (ratesObj, targetRate) => USD_BASE * targetRate },
@@ -209,7 +208,7 @@ export default function PriceChart() {
 
   const tokenRef = useRef(0);
   const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, eurusdt: 1.08, btcSrc: "Bitstamp" });
-  const wsRef = useRef({ binance: null });
+  const wsRef = useRef({ binance: null, bitstamp: null });
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
@@ -228,6 +227,7 @@ export default function PriceChart() {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    // Autoscale Provider untuk memusatkan harga secara vertikal di tengah layar
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -249,7 +249,7 @@ export default function PriceChart() {
         secondsVisible: true, 
         rightOffset: 2,
         fixLeftEdge: false,
-        fixRightEdge: true 
+        fixRightEdge: true // Mengunci agar harga terbaru mentok di kanan ala backtest EA
       },
       crosshair: { mode: 0 },
       localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
@@ -297,20 +297,6 @@ export default function PriceChart() {
     }
   }, [mode]);
 
-  const handleCscClick = () => {
-    if (!unlocked) {
-      const pass = prompt("Masukan Kunci");
-      if (pass === "Coconut Shell Charcoal") {
-        setUnlocked(true);
-        setMode("csc");
-      } else if (pass !== null) {
-        alert("Kunci salah!");
-      }
-    } else {
-      setMode("csc");
-    }
-  };
-
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
     if (!isFull) {
@@ -345,9 +331,7 @@ export default function PriceChart() {
     const onResize = () => {
       clearTimeout(t);
       t = setTimeout(() => {
-        if (chartRef.current) {
-          fitView(true);
-        }
+        if (chartRef.current) fitView(true);
       }, 100);
     };
     window.addEventListener("resize", onResize);
@@ -359,7 +343,7 @@ export default function PriceChart() {
     };
   }, [fitView]);
 
-  // Fungsi pengelompokan data berdasarkan jenis interval (Min, Sec, atau Tick)
+  // Generator Data Berdasarkan Interval (Tick, Detik, Menit/Jam)
   const generateIntervalData = useCallback((rawList, intervalConfig) => {
     if (!rawList || !rawList.length) return [];
     if (intervalConfig.type === "sec") {
@@ -714,28 +698,79 @@ export default function PriceChart() {
               <button
                 type="button"
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
-                onClick={handleCscClick}
+                onClick={() => setMode("csc")}
                 style={{ fontWeight: "bold" }}
-                title="CSC Index (Klik masukkan kunci untuk membuka chart lain)"
+                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
               >
                 CSC
               </button>
-
-              {unlocked && (
-                <>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => setMode("usd")}>💵</button>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => setMode("yuan")}>中</button>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => setMode("jpy")}>💴</button>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => setMode("sar")}>﷼</button>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => setMode("gold")}>{marketClosed ? "🔒" : "🔐"}</button>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => setMode("btc")}>⭐</button>
-                </>
-              )}
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("usd")}
+                title="USD Mode"
+              >
+                💵
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("yuan")}
+                title="Yuan Mode"
+              >
+                中
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("jpy")}
+                title="Yen Mode"
+              >
+                💴
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("sar")}
+                title="Riyal Mode"
+              >
+                ﷼
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("gold")}
+                title="Gold Mode"
+              >
+                {marketClosed ? "🔒" : "🔐"}
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("btc")}
+                title="Bitcoin Mode"
+              >
+                ⭐
+              </button>
             </div>
 
             <div className={styles.modeSwitch} style={{ marginLeft: "8px" }}>
-              <button type="button" className={`${styles.modeBtn} ${containerMode === "T" ? styles.modeBtnActive : ""}`} onClick={() => setContainerMode("T")}>T</button>
-              <button type="button" className={`${styles.modeBtn} ${containerMode === "40ft" ? styles.modeBtnActive : ""}`} onClick={() => setContainerMode("40ft")}>40ft</button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${containerMode === "T" ? styles.modeBtnActive : ""}`}
+                onClick={() => setContainerMode("T")}
+                title="Harga Per Ton (1 Ton)"
+              >
+                T
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${containerMode === "40ft" ? styles.modeBtnActive : ""}`}
+                onClick={() => setContainerMode("40ft")}
+                title="Harga Total Kontainer 40ft (x25 Ton)"
+              >
+                40ft
+              </button>
             </div>
 
             <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
@@ -750,17 +785,10 @@ export default function PriceChart() {
               </button>
               {timeDropOpen && (
                 <div className={`${styles.currencyDropdown}`}>
-                  <div className={styles.dropLabel}>INTERVAL</div>
+                  <div className={styles.dropLabel}>INTERVAL (TICK, SEC & MIN)</div>
                   {Object.keys(IV).map(v => (
                     <button key={v} className={`${styles.currencyOption} ${iv === v ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
                       <span>{IV[v].label}</span>
-                    </button>
-                  ))}
-                  <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
-                  <div className={styles.dropLabel}>RENTANG</div>
-                  {Object.keys(RANGES).map(r => (
-                    <button key={r} className={`${styles.currencyOption} ${range === r ? styles.currencyActive : ""}`} onClick={() => { setRange(r); setIv(RANGES[r].iv); setTimeDropOpen(false); }}>
-                      <span>{RANGES[r].label}</span>
                     </button>
                   ))}
                 </div>
