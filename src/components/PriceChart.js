@@ -64,7 +64,7 @@ const BASE = {
   "1M":  { type: "cal", unit: "month" }
 };
 
-const BS_STEP = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "12h": 43200, "1d": DAY, "3d": 3 * DAY };
+const BS_STEP = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "12h": 43200, "1d": 86400, "3d": 259200 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
 
@@ -115,6 +115,9 @@ function uniqSorted(list) {
 
 const binOf = (ivKey) => IV[ivKey].bin || "1m";
 
+// ─────────────────────────────────────────────────────────────
+// BUCKET WAKTU
+// ─────────────────────────────────────────────────────────────
 function bucketOf(t, cfg) {
   const u = t - WIB;
   if (cfg.type === "cal") {
@@ -203,6 +206,9 @@ function mergeCsc(f, g, b, calc) {
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────
+// EA — PENCETAK HARGA DI BAWAH 1 MENIT
+// ─────────────────────────────────────────────────────────────
 const EA_BODY = 0.00003;
 const EA_MAXROWS = 7200;
 
@@ -315,6 +321,7 @@ function buildEaHistory(key, raw) {
   return rows.length > EA_MAXROWS ? rows.slice(-EA_MAXROWS) : rows;
 }
 
+// ─────────────────────────────────────────────────────────────
 function useSmooth(target, ms = 300) {
   const [v, setV] = useState(target);
   const curRef = useRef(target);
@@ -377,7 +384,6 @@ export default function PriceChart() {
 
   const lastRef = useRef(null);       
   const lenRef = useRef(0);           
-  const barsRef = useRef(60);         
   const lastBarRef = useRef(null);    
   const loadedBinRef = useRef(null);  
 
@@ -416,6 +422,7 @@ export default function PriceChart() {
   typeRef.current = type;
   decRef.current = dec;
 
+  // ───────── Password ─────────
   useEffect(() => {
     try { if (sessionStorage.getItem("csc_unlock") === "1") setUnlocked(true); } catch (e) {}
   }, []);
@@ -456,6 +463,7 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
+  // ───────── Buat chart ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -478,10 +486,10 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 0, // Pastikan tidak ada ruang kosong di kanan
+        rightOffset: 1,         // Jarak minimum ke ujung kanan agar terasa sangat mentok
         fixLeftEdge: false,
-        fixRightEdge: true, 
-        shiftVisibleRangeOnNewBar: true,
+        fixRightEdge: false,
+        shiftVisibleRangeOnNewBar: true, // Chart selalu bergeser otomatis saat ada bar baru
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -518,15 +526,23 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
+  // Memaksa posisi chart selalu mentok ke harga terbaru
   const fitView = useCallback(() => {
     const chart = chartRef.current;
     const n = lenRef.current;
     if (!chart || !n) return;
-    const left = Math.min(barsRef.current, Math.max(10, n));
+    
     chart.priceScale("right").applyOptions({ autoScale: true });
-    // Memusatkan tepat sampai candle paling akhir tanpa gap
-    chart.timeScale().scrollToPosition(0, true);
-    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n - 1 });
+    
+    // Hitung jumlah bar yang ideal untuk ditampilkan di layar agar tidak terlalu rapat/jauh
+    const w = chartContainerRef.current ? chartContainerRef.current.clientWidth : 600;
+    const visibleBars = Math.max(30, Math.min(150, Math.floor(w / 10)));
+    
+    // Set view tepat menyentuh bar terakhir (n - 1) di ujung kanan
+    chart.timeScale().setVisibleLogicalRange({ 
+      from: Math.max(0, n - visibleBars), 
+      to: n - 1 
+    });
   }, []);
 
   const compute = useCallback(() => {
@@ -569,9 +585,6 @@ export default function PriceChart() {
     if (!cs.length) return;
 
     const cfg = IV[ivRef.current];
-    const w = chartContainerRef.current ? chartContainerRef.current.clientWidth : 600;
-    barsRef.current = Math.max(36, Math.min(160, Math.round(w / 9)));
-
     const n = cs.length;
     const last = cs[n - 1];
     const prev = lastBarRef.current;
@@ -681,18 +694,24 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
+  // ───────── Ambil riwayat dengan Paginasi Otomatis (Deep History) ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
     const tok = tokenRef.current;
-    const bin = baseBin;
+    
+    // Jika user request 1w, 1M, atau 1y, kita ambil data 1d lalu biarkan sistem meng-aggregate nya.
+    // Ini mengizinkan riwayat ditarik sejauh mungkin (sampai ke akar) karena API seringkali membatasi interval 1w/1m.
+    const reqBin = ["1w", "1M"].includes(baseBin) ? "1d" : baseBin;
+    
     setFade(true);
 
     const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec";
+    const baseLimit = sub ? 130 : 1000;
     
-    // Perbesar Limit Deep History Hingga 50,000 Candle untuk Timeframe 1 Hari ke atas
-    const isDeep = ["1d", "3d", "1w", "1M"].includes(bin);
-    const deepLimit = isDeep ? 50000 : (sub ? 130 : 10000); 
+    // Batas loop paginasi. Untuk 1d ke atas kita buka limit sampai 30000 bar (~82 tahun).
+    const isDeep = ["1d", "3d", "1w", "1M"].includes(baseBin);
+    const deepLimit = isDeep ? 30000 : baseLimit; 
 
     const fetchBinance = async (symbol) => {
       let rows = [];
@@ -700,21 +719,17 @@ export default function PriceChart() {
       
       while (rows.length < deepLimit) {
         const batchLimit = Math.min(1000, deepLimit - rows.length);
-        let url = `/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${batchLimit}`;
+        let url = `/api/v3/klines?symbol=${symbol}&interval=${reqBin}&limit=${batchLimit}`;
         if (end) url += `&endTime=${end}`;
         
-        try {
-          const res = await getJson(url);
-          if (!res || res.length === 0) break;
-          
-          const mapped = res.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
-          rows = mapped.concat(rows); 
-          
-          if (res.length < batchLimit) break;
-          end = res[0][0] - 1; // Tarik terus data lebih lama dari candle paling awal
-        } catch (e) {
-          break; 
-        }
+        const res = await getJson(url);
+        if (!res || res.length === 0) break;
+        
+        const mapped = res.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
+        rows = mapped.concat(rows); 
+        
+        if (res.length < batchLimit) break;
+        end = res[0][0] - 1; 
       }
       return rows;
     };
@@ -728,26 +743,22 @@ export default function PriceChart() {
         let url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${batchLimit}`;
         if (end) url += `&end=${end}`;
         
-        try {
-          const r = await fetch(url);
-          const j = await r.json();
-          const batch = j?.data?.ohlc || [];
-          if (!batch.length) break;
-          
-          const mapped = batch.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
-          rows = mapped.concat(rows);
-          
-          if (batch.length < batchLimit) break;
-          end = Number(batch[0].timestamp) - 1;
-        } catch (e) {
-          break;
-        }
+        const r = await fetch(url);
+        const j = await r.json();
+        const batch = j?.data?.ohlc || [];
+        if (!batch.length) break;
+        
+        const mapped = batch.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+        rows = mapped.concat(rows);
+        
+        if (batch.length < batchLimit) break;
+        end = Number(batch[0].timestamp) - 1;
       }
       if (!rows.length) throw new Error("empty");
       return rows;
     };
 
-    const bsStep = BS_STEP[bin];
+    const bsStep = BS_STEP[reqBin];
     const btcP = bsStep
       ? fetchBitstamp(bsStep).catch(() => fetchBinance("BTCUSDT"))
       : fetchBinance("BTCUSDT");
@@ -761,11 +772,11 @@ export default function PriceChart() {
         time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08
       }));
 
-      if (bin === "1m") {
+      if (baseBin === "1m") {
         ["gold", "btc", "usd"].forEach(k => { ds[k].sec = buildEaHistory(k, ds[k].raw); });
       }
 
-      loadedBinRef.current = bin;
+      loadedBinRef.current = baseBin;
       lastBarRef.current = null;
       refresh(true);
       fitView();
@@ -777,6 +788,7 @@ export default function PriceChart() {
     });
   }, [rates, baseBin, refresh, fitView]);
 
+  // ───────── Live: WebSocket + update tiap detik ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
@@ -861,17 +873,9 @@ export default function PriceChart() {
     <section className={styles.priceSection} id="harga">
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
-          
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span 
-              className={styles.eyebrow} 
-              onClick={() => setPendingMode("csc_unlock")}
-              style={{ cursor: "pointer", display: "inline-block" }}
-              title="Klik untuk membuka menu rahasia"
-            >
-              Index CSC Indonesia
-            </span>
-            <span style={{ fontSize: "11px", color: "#787b86", marginTop: "2px" }}>
+            <span className={styles.eyebrow}>Coconut Shell Charcoal</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Coconut Shell Charcoal Indonesia
             </span>
           </div>
@@ -920,21 +924,20 @@ export default function PriceChart() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
-              
               <button 
                 type="button" 
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} 
                 onClick={() => {
-                  setMode("csc");
-                  fitView(); // Memusatkan chart ke posisi default
+                  if (!unlocked) setPendingMode("csc_unlock");
+                  else setMode("csc");
                 }} 
-                style={{ fontWeight: "bold", fontSize: "16px", padding: "4px 14px" }} 
-                title="Pusatkan Harga & Posisi Chart"
+                style={{ fontWeight: "bold" }} 
+                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
               >
-                +
+                CSC
               </button>
               
-              {/* TOMBOL LAIN HANYA MUNCUL JIKA UNLOCKED DARI JUDUL */}
+              {/* TOMBOL LAIN HANYA MUNCUL JIKA UNLOCKED */}
               {unlocked && (
                 <>
                   <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
