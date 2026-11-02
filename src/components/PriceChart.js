@@ -13,7 +13,7 @@ const BTC_FACTOR = 0.01;
 const YUAN_BASE = 5000;
 const USD_BASE = 1000;
 const JPY_BASE = 100;
-const SAR_BASE = 2.5;
+const SAR_BASE = 5;
 
 const WIB = 7 * 3600; 
 
