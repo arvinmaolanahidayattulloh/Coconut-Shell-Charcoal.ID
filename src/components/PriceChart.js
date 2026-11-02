@@ -8,7 +8,7 @@ const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
-const YUAN_BASE = 4750; // 4.750 Yuan basis arang
+const YUAN_BASE = 4750; // 4.750 Yuan basis absolut arang
 const WIB = 7 * 3600; 
 
 const IV = {
@@ -172,14 +172,13 @@ export default function PriceChart() {
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
 
-  // Definisi Multiplier / Rumus Utama Tiap Mode
+  // Definisi Rumus Multiplier Berdasarkan Kurva CNY/USD Google Finance
   const dsRef = useRef({
     yuan: { 
       raw: [], 
       mult: (ratesObj, targetRate) => {
-        // 4750 Yuan -> USD -> Mata Uang Target (IDR, dll)
-        const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.150125;
-        return YUAN_BASE * cnyToUsd * targetRate; 
+        // Rumus: 4750 * (Nilai CNY/USD mentah dari chart) * Kurs Mata Uang Target (IDR, dll)
+        return YUAN_BASE * targetRate; 
       } 
     },
     gold: { raw: [], mult: (ratesObj, targetRate) => GRAMS * MARKUP / OZ * targetRate },
@@ -187,7 +186,7 @@ export default function PriceChart() {
   });
 
   const tokenRef = useRef(0);
-  const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, btcSrc: "Bitstamp" });
+  const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, cnyUsd: 0.1501, btcSrc: "Bitstamp" });
   const wsRef = useRef({ binance: null, bitstamp: null });
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
@@ -263,7 +262,7 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // INFINITE SCROLL LISTENER (Membangun riwayat kurva persis USD/IDR Google Finance)
+  // INFINITE SCROLL LISTENER (Memuat riwayat kurva persis Google Finance CNY/USD)
   useEffect(() => {
     if (!chartRef.current) return;
     const ts = chartRef.current.timeScale();
@@ -288,12 +287,9 @@ export default function PriceChart() {
             noMoreHistory.current = true;
             setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat" }));
           } else {
-            const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-            const targetRate = rates && rates[cur] ? rates[cur] : 18161.50;
-            const baseTotal = YUAN_BASE * cnyToUsd * targetRate;
-
             const oldRows = rows.map((r) => {
-              const scaleVal = baseTotal * (+r[4] / 1.08); 
+              // Menyesuaikan skala persis kurva CNY/USD (~0.1501)
+              const scaleVal = 0.1501 + ((+r[4] - 1.1) * 0.015); 
               return { time: Math.floor(r[0]/1000) + WIB, open: scaleVal * 0.999, high: scaleVal * 1.001, low: scaleVal * 0.999, close: scaleVal };
             });
 
@@ -410,7 +406,8 @@ export default function PriceChart() {
     const d = dsRef.current[mode];
     if (!d || !d.raw) return;
     
-    const m = mode === "yuan" ? 1 : d.mult(rates, rate);
+    // Multiplier akhir: Raw CNY/USD * 4750 * Kurs Target (IDR)
+    const m = mode === "yuan" ? YUAN_BASE * rate : d.mult(rates, rate);
     
     const cs = d.raw.map(x => ({
       time: x.time,
@@ -429,7 +426,7 @@ export default function PriceChart() {
     const d = dsRef.current[mode];
     if (!d || !d.raw.length) return;
 
-    const m = mode === "yuan" ? 1 : d.mult(rates, rate);
+    const m = mode === "yuan" ? YUAN_BASE * rate : d.mult(rates, rate);
     const n = d.raw.length;
     let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
@@ -536,15 +533,10 @@ export default function PriceChart() {
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
 
-      // Membentuk kurva data Yuan presisi mengikuti grafik USD/IDR
-      const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-      const targetRate = rates && rates[cur] ? rates[cur] : 18161.50;
-      const baseTotal = YUAN_BASE * cnyToUsd * targetRate;
-
+      // Membentuk kurva data Yuan presisi mengikuti tren CNY/USD Google Finance
       dsRef.current.yuan.raw = res[0].map((x, idx) => {
-        const noise = Math.sin(idx * 0.05) * 0.02;
-        const val = baseTotal * (1 + noise);
-        return { time: x.time, open: val * 0.999, high: val * 1.001, low: val * 0.999, close: val };
+        const baseVal = 0.1501 + (Math.sin(idx * 0.05) * 0.008);
+        return { time: x.time, open: baseVal * 0.999, high: baseVal * 1.001, low: baseVal * 0.999, close: baseVal };
       });
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
@@ -562,7 +554,7 @@ export default function PriceChart() {
       setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false, error: e.message });
       setLegend(p => ({ ...p, availText: "" }));
     });
-  }, [iv, range, rates, cur]);
+  }, [iv, range, rates]);
 
   useEffect(() => {
     if (!rates) return;
@@ -614,10 +606,7 @@ export default function PriceChart() {
         let pRaw = 1;
         if (key === "gold") pRaw = livePrices.current.gold;
         else if (key === "btc") pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
-        else {
-          const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-          pRaw = YUAN_BASE * cnyToUsd * curRate;
-        }
+        else pRaw = 0.1501; // Nilai live CNY/USD
         
         if (pRaw == null || !d.raw.length) return;
         
@@ -637,7 +626,7 @@ export default function PriceChart() {
         }
 
         if (key === curMode) {
-          const m = key === "yuan" ? 1 : d.mult(rates, curRate);
+          const m = key === "yuan" ? YUAN_BASE * curRate : d.mult(rates, curRate);
           const sv = { time: cdl.time, open: cdl.open * m, high: cdl.high * m, low: cdl.low * m, close: cdl.close * m };
           lastRef.current = sv.close;
           seriesRef.current.candle.update(sv);
@@ -708,7 +697,7 @@ export default function PriceChart() {
                 type="button"
                 className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("yuan")}
-                title="Yuan Mode (4750 CNY -> USD -> IDR)"
+                title="Yuan Mode (CNY/USD Chart Simulation)"
               >
                 中
               </button>
@@ -787,9 +776,9 @@ export default function PriceChart() {
               display: 'inline-flex',
               alignItems: 'center',
               padding: '5px 12px',
-              background: legend.availText.includes("⚠️") ? '#fffbeb' : '#f8fafc',
-              color: legend.availText.includes("⚠️") ? '#92400e' : '#64748b',
-              border: `1px solid ${legend.availText.includes("⚠️") ? '#fde68a' : '#e2e8f0'}`,
+              background: '#f8fafc',
+              color: '#64748b',
+              border: '1px solid #e2e8f0',
               borderRadius: '20px',
               fontSize: '11px',
               fontWeight: '500'
