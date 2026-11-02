@@ -175,6 +175,30 @@ function aggregate(rows, cfg) {
   return out;
 }
 
+// Di bawah 1 menit: candle disambung ke close sebelumnya dan diberi body minimum
+// supaya tidak jadi garis tipis. Close tetap = harga terbaru.
+const MIN_BODY_PCT = 0.00006;
+function fixThin(cs, cfg) {
+  if ((cfg.type !== "tick" && cfg.type !== "sec") || cs.length < 2) return cs;
+  let prevDir = 1;
+  for (let i = 1; i < cs.length; i++) {
+    const k = cs[i];
+    k.open = cs[i - 1].close;
+    const minBody = Math.abs(k.close) * MIN_BODY_PCT;
+    let d = k.close - k.open;
+    if (Math.abs(d) < minBody) {
+      const dir = d > 0 ? 1 : d < 0 ? -1 : prevDir;
+      k.open = k.close - dir * minBody;
+      d = k.close - k.open;
+    }
+    prevDir = d >= 0 ? 1 : -1;
+    const hiB = Math.max(k.open, k.close), loB = Math.min(k.open, k.close);
+    if (k.high < hiB) k.high = hiB;
+    if (k.low > loB) k.low = loB;
+  }
+  return cs;
+}
+
 // Sumber data: untuk Tick/Detik gunakan sampel live per-detik, selain itu candle dasar
 function srcOf(d, cfg) {
   if ((cfg.type === "tick" || cfg.type === "sec") && d.sec.length) {
@@ -275,31 +299,19 @@ function buildForecast(cs, cfg, count, seedKey) {
   const rnd = rng(seed);
   const tickStep = medianStep(cs);
 
-  const out = [];
-  let price = lastBar.close;
-  let t = lastBar.time;
-  let streak = 0, lastDir = 0;
+  // Keputusan EA untuk 1 candle berikutnya: stabil selama candle terakhir belum tertutup
+  const ref = closes[closes.length - 1];
+  const dev = Math.max(-3, Math.min(3, (ref - slow) / atr));
+  const score = bias - 0.03 * dev;
+  const r1 = rnd();
+  const dir = Math.abs(score) > 0.005 ? (score > 0 ? 1 : -1) : (r1 < 0.5 ? 1 : -1);
 
-  for (let i = 0; i < count; i++) {
-    const dev = Math.max(-3, Math.min(3, (price - slow) / atr));
-    let p = 0.5 + bias * Math.exp(-i / 18) - 0.03 * dev; // tren meluruh, tarik balik ke EMA
-    p = Math.max(0.28, Math.min(0.72, p));
-    let dir = rnd() < p ? 1 : -1;
-    if (dir === lastDir && streak >= 4 && rnd() < 0.45) dir = -dir; // hindari deret terlalu panjang
-    streak = dir === lastDir ? streak + 1 : 1;
-    lastDir = dir;
-
-    const body = Math.max(atr * (0.25 + 0.75 * rnd()), atr * 0.2, Math.abs(price) * 1e-7);
-    const open = price;
-    const close = open + dir * body;
-    const high = Math.max(open, close) + atr * 0.35 * rnd();
-    const low = Math.min(open, close) - atr * 0.35 * rnd();
-
-    t = nextTime(t, cfg, tickStep);
-    out.push({ time: t, open, high, low, close });
-    price = close;
-  }
-  return out;
+  const open = lastBar.close;
+  const body = Math.max(atr * (0.35 + 0.5 * rnd()), Math.abs(open) * 6e-5);
+  const close = open + dir * body;
+  const high = Math.max(open, close) + atr * 0.25 * rnd();
+  const low = Math.min(open, close) - atr * 0.25 * rnd();
+  return [{ time: nextTime(lastBar.time, cfg, tickStep), open, high, low, close }];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -362,7 +374,7 @@ export default function PriceChart() {
 
   const lastRef = useRef(null);       // harga terakhir (pusat vertikal)
   const lenRef = useRef(0);           // jumlah candle nyata
-  const halfRef = useRef(40);         // setengah lebar view (bar)
+  const barsRef = useRef(40);         // setengah lebar view (bar)
   const lastBarRef = useRef(null);    // {first, len, time} untuk update inkremental
   const loadedBinRef = useRef(null);  // bin data dasar yang sedang termuat
 
@@ -387,6 +399,7 @@ export default function PriceChart() {
   const tokenRef = useRef(0);
   const livePrices = useRef({ gold: null, btcBn: null, eurusdt: 1.08 });
   const wsRef = useRef({ binance: null });
+  const accRef = useRef({ gold: null, btc: null, usd: null });
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
@@ -508,15 +521,15 @@ export default function PriceChart() {
     s.predLine.applyOptions({ visible: !isCandle && fc });
   }, []);
 
-  // Pusatkan: candle terakhir tepat di tengah, setengah kanan = prediksi
+  // Pusatkan: candle terakhir + 1 candle prediksi di kanan, harga di tengah vertikal
   const fitView = useCallback(() => {
     const chart = chartRef.current;
     const n = lenRef.current;
     if (!chart || !n) return;
-    const half = halfRef.current;
-    const left = Math.min(half, Math.max(10, n));
+    const bars = barsRef.current;
+    const left = Math.min(bars, Math.max(10, n));
     chart.priceScale("right").applyOptions({ autoScale: true });
-    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n - 1 + half });
+    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n + 4 });
     placeNow();
   }, [placeNow]);
 
@@ -548,7 +561,7 @@ export default function PriceChart() {
       const m = modeMult(md, r, rt) * m40;
       rows = src.map(x => ({ time: x.time, open: x.open * m, high: x.high * m, low: x.low * m, close: x.close * m }));
     }
-    return aggregate(rows, cfg);
+    return fixThin(aggregate(rows, cfg), cfg);
   }, []);
 
   // Render ke chart. full=true → setData penuh; full=false → update inkremental (halus, tanpa reset view)
@@ -563,7 +576,7 @@ export default function PriceChart() {
 
     const cfg = IV[ivRef.current];
     const w = chartContainerRef.current ? chartContainerRef.current.clientWidth : 600;
-    halfRef.current = Math.max(18, Math.min(80, Math.round(w / 18)));
+    barsRef.current = Math.max(36, Math.min(160, Math.round(w / 9)));
 
     const n = cs.length;
     const last = cs[n - 1];
@@ -595,7 +608,7 @@ export default function PriceChart() {
     // Prediksi EA
     let fc = [];
     if (forecastRef.current) {
-      const cnt = cfg.pmax ? Math.min(halfRef.current, cfg.pmax) : halfRef.current;
+      const cnt = 1;
       fc = buildForecast(cs, cfg, cnt, modeRef.current + "|" + ivRef.current + "|" + containerModeRef.current);
     }
     s.pred.setData(fc);
@@ -767,9 +780,15 @@ export default function PriceChart() {
         ws.onmessage = (ev) => {
           const d = JSON.parse(ev.data).data;
           if (!d || !d.p) return;
-          if (d.s === "BTCUSDT") livePrices.current.btcBn = parseFloat(d.p);
-          if (d.s === "PAXGUSDT") livePrices.current.gold = parseFloat(d.p);
-          if (d.s === "EURUSDT") livePrices.current.eurusdt = parseFloat(d.p);
+          const px = parseFloat(d.p);
+          const touch = (k, v) => {
+            const a = accRef.current[k];
+            if (!a) accRef.current[k] = { hi: v, lo: v };
+            else { if (v > a.hi) a.hi = v; if (v < a.lo) a.lo = v; }
+          };
+          if (d.s === "BTCUSDT") { livePrices.current.btcBn = px; touch("btc", px); }
+          if (d.s === "PAXGUSDT") { livePrices.current.gold = px; touch("gold", px); }
+          if (d.s === "EURUSDT") { livePrices.current.eurusdt = px; touch("usd", px / 1.08); }
         };
         ws.onclose = () => { if (!disposed) setTimeout(connectBinance, 3000); };
         wsRef.current.binance = ws;
@@ -791,26 +810,31 @@ export default function PriceChart() {
 
       [["gold", pGold], ["btc", pBtc], ["usd", pUsd]].forEach(([k, val]) => {
         const d = dsRef.current[k];
+        const ac = accRef.current[k];
+        accRef.current[k] = null;
+        const hi = ac ? Math.max(ac.hi, val) : val;
+        const lo = ac ? Math.min(ac.lo, val) : val;
 
-        // sampel per-detik (untuk Tick & Detik)
+        // sampel per-detik (Tick & Detik) dengan high/low dari tiap transaksi
         const sl = d.sec[d.sec.length - 1];
         if (sl && sl.time === nowT) {
-          if (val > sl.high) sl.high = val;
-          if (val < sl.low) sl.low = val;
+          if (hi > sl.high) sl.high = hi;
+          if (lo < sl.low) sl.low = lo;
           sl.close = val;
         } else {
-          d.sec.push({ time: nowT, open: val, high: val, low: val, close: val });
+          const o = sl ? sl.close : val;
+          d.sec.push({ time: nowT, open: o, high: Math.max(hi, o), low: Math.min(lo, o), close: val });
           if (d.sec.length > 7200) d.sec.splice(0, 1200);
         }
 
-        // gabung ke candle dasar (jumlah baris tidak membengkak)
+        // gabung ke candle dasar
         const last = d.raw[d.raw.length - 1];
         if (last && bucketOf(last.time, bcfg) === nb) {
-          if (val > last.high) last.high = val;
-          if (val < last.low) last.low = val;
+          if (hi > last.high) last.high = hi;
+          if (lo < last.low) last.low = lo;
           last.close = val;
         } else {
-          d.raw.push({ time: nb, open: val, high: val, low: val, close: val });
+          d.raw.push({ time: nb, open: val, high: hi, low: lo, close: val });
         }
       });
 
@@ -897,7 +921,7 @@ export default function PriceChart() {
               className={`${styles.currencyBtn} ${styles.smallBtn} ${forecastOn ? styles.currencyActive : ""}`}
               onClick={() => setForecastOn(v => !v)}
               type="button"
-              title="EA Backtest: prediksi candle ke depan (selalu naik atau turun)"
+              title="EA: prediksi 1 candle berikutnya (pasti naik atau turun)"
             >
               EA
             </button>
@@ -954,7 +978,7 @@ export default function PriceChart() {
               style={{ position: "absolute", top: 0, bottom: 26, width: 0, borderLeft: "1px dashed #b0b4c0", zIndex: 3, pointerEvents: "none", display: "none" }}
             >
               <span style={{ position: "absolute", top: 6, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#2962ff", background: "rgba(41,98,255,0.08)", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap" }}>
-                EA PREDIKSI ▸
+                EA ▸
               </span>
             </div>
           </div>
@@ -962,7 +986,7 @@ export default function PriceChart() {
 
         {forecastOn && (
           <div style={{ marginTop: 8, fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>
-            Candle transparan di kanan adalah simulasi statistik (EMA, momentum, ATR), bukan jaminan atau nasihat investasi.
+            Candle transparan di kanan = prediksi EA untuk 1 candle berikutnya (naik/turun). Simulasi statistik, bukan jaminan atau nasihat investasi.
           </div>
         )}
       </div>
