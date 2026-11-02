@@ -444,7 +444,7 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat chart (Zoom Vertikal Bebas & Mentok Kanan Sempurna) ─────────
+  // ───────── Buat Chart ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -458,9 +458,9 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 0,           // MENTOK KANAN TANPA CELAH KOSONG
+        rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true,       // MENAHAN AGAR TIDAK BISA DIGESER MELEWATI HARGA TERBARU
+        fixRightEdge: true,
         shiftVisibleRangeOnNewBar: true, 
         minBarSpacing: 0.5
       },
@@ -496,10 +496,11 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  const fitView = useCallback(() => {
+  // Fungsi Tombol [+] untuk memusatkan harga terbaru secara vertikal & horizontal
+  const centerLatestPrice = useCallback(() => {
     const chart = chartRef.current;
-    const n = lenRef.current;
-    if (!chart || !n) return;
+    if (!chart) return;
+    chart.priceScale("right").applyOptions({ autoScale: true });
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
@@ -580,7 +581,7 @@ export default function PriceChart() {
   }, [compute]);
 
   refreshRef.current = refresh;
-  fitRef.current = fitView;
+  fitRef.current = centerLatestPrice;
 
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
@@ -647,11 +648,11 @@ export default function PriceChart() {
     setFade(true);
     const t = setTimeout(() => {
       refresh(true);
-      fitView();
+      fitRef.current();
       setFade(false);
     }, 140);
     return () => clearTimeout(t);
-  }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
+  }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitRef]);
 
   // ───────── Ambil Riwayat Sampai Akar ─────────
   useEffect(() => {
@@ -733,7 +734,7 @@ export default function PriceChart() {
         loadedBinRef.current = baseBin;
         lastBarRef.current = null;
         refresh(true);
-        fitView(); 
+        fitRef.current(); 
         setFade(false);
 
         let endGold = resGold.end, endBtc = resBtc.end, endUsd = resUsd.end;
@@ -765,7 +766,7 @@ export default function PriceChart() {
 
           const addedBars = lenRef.current - oldLen;
           if (isAtRightEdge) {
-            fitView();
+            fitRef.current();
           } else if (addedBars > 0 && oldRange) {
             timeScale?.setVisibleLogicalRange({
               from: oldRange.from + addedBars,
@@ -784,7 +785,7 @@ export default function PriceChart() {
     };
 
     loadDataProgressive();
-  }, [rates, baseBin, refresh, fitView]);
+  }, [rates, baseBin, refresh]);
 
   // ───────── Live: WebSocket + Animasi Ular & Interval Sangat Halus LERP ─────────
   useEffect(() => {
@@ -974,6 +975,7 @@ export default function PriceChart() {
                 CSC
               </button>
               
+              {/* Tombol mode mata uang disembunyikan secara default, muncul jika sudah unlocked */}
               {unlocked && (
                 <>
                   <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
@@ -1013,6 +1015,17 @@ export default function PriceChart() {
               )}
             </div>
 
+            {/* TOMBOL + UNTUK MEMBUAT HARGA REAL SELALU DI TENGAH */}
+            <button
+              type="button"
+              className={`${styles.currencyBtn} ${styles.smallBtn}`}
+              onClick={centerLatestPrice}
+              title="Posisikan harga real di tengah"
+              style={{ fontWeight: "bold", padding: "0 10px" }}
+            >
+              +
+            </button>
+
             <button
               type="button"
               className={styles.fullBtn}
@@ -1027,7 +1040,7 @@ export default function PriceChart() {
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
           <div
             className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
-            onDoubleClick={() => fitView()}
+            onDoubleClick={() => centerLatestPrice()}
             style={{
               position: "relative", width: "100%",
               ...(isFull ? { flex: 1, minHeight: 0 } : { height: "480px" }),
