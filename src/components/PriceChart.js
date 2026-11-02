@@ -58,14 +58,17 @@ function ytdDays() {
   return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
+// Diperbarui agar pasar tidak lagi terbaca tutup di Senin pagi
 function isXauMarketOpen() {
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
-  if (day === 6) return false;
-  if (day === 0) return false;
-  if (day === 5 && hour >= 22) return false;
-  if (day === 1 && hour < 22) return false;
+  
+  if (day === 6) return false; // Sabtu (sepanjang hari UTC) tutup
+  if (day === 0) return false; // Minggu (sepanjang hari UTC) tutup
+  if (day === 5 && hour >= 22) return false; // Jumat setelah 22:00 UTC tutup
+  // Senin (day === 1) otomatis buka
+  
   return true;
 }
 
