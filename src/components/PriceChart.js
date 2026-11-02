@@ -335,6 +335,17 @@ function Smooth({ value, render, ms }) {
   return <>{render(v)}</>;
 }
 
+// [PATCH:CENTER-PRICE] autoscale: harga terakhir selalu di tengah, zoom vertikal tetap
+const makeCenterProvider = (followRef, spanRatioRef, lastRef) => (orig) => {
+  const res = orig();
+  const last = lastRef.current;
+  if (!followRef.current || !spanRatioRef.current || !last) return res;
+  // x0.7 karena scaleMargins top/bottom 0.15 menyisakan 70% tinggi
+  const half = (Math.abs(last) * spanRatioRef.current * 0.7) / 2;
+  return { priceRange: { minValue: last - half, maxValue: last + half }, margins: res ? res.margins : undefined };
+};
+// [/PATCH:CENTER-PRICE]
+
 export default function PriceChart() {
   const [unlocked, setUnlocked] = useState(false);
   const [pw, setPw] = useState("");
@@ -363,10 +374,10 @@ export default function PriceChart() {
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
 
-  const lastRef = useRef(null);       
-  const lenRef = useRef(0);           
-  const lastBarRef = useRef(null);    
-  const loadedBinRef = useRef(null);  
+  const lastRef = useRef(null);
+  const lenRef = useRef(0);
+  const lastBarRef = useRef(null);
+  const loadedBinRef = useRef(null);
 
   const modeRef = useRef("csc");
   const containerModeRef = useRef("T");
@@ -378,6 +389,11 @@ export default function PriceChart() {
 
   const refreshRef = useRef(() => {});
   const fitRef = useRef(() => {});
+
+  // [PATCH:CENTER-PRICE] state mode "ikuti harga di tengah"
+  const followRef = useRef(false);      // aktif setelah tombol + ditekan
+  const spanRatioRef = useRef(null);    // lebar zoom vertikal, relatif terhadap harga terakhir
+  // [/PATCH:CENTER-PRICE]
 
   const dsRef = useRef({
     gold: { raw: [], sec: [], inf: [] },
@@ -461,23 +477,29 @@ export default function PriceChart() {
         rightOffset: 0,
         fixLeftEdge: false,
         fixRightEdge: true,       // Mentok kanan tanpa ruang kosong masa depan
-        shiftVisibleRangeOnNewBar: true, 
+        shiftVisibleRangeOnNewBar: true,
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
       localization: { priceFormatter: p => fmt(p, decRef.current) }
     });
 
+    // [PATCH:CENTER-PRICE] provider autoscale dipasang di kedua series
+    const provider = makeCenterProvider(followRef, spanRatioRef, lastRef);
+
     const candle = chart.addCandlestickSeries({
       upColor: "#089981", downColor: "#f23645", borderVisible: false,
-      wickUpColor: "#089981", wickDownColor: "#f23645"
+      wickUpColor: "#089981", wickDownColor: "#f23645",
+      autoscaleInfoProvider: provider
     });
 
     const area = chart.addAreaSeries({
       lineColor: "#2962ff", lineWidth: 2,
       topColor: "rgba(41, 98, 255, 0.28)", bottomColor: "rgba(41, 98, 255, 0.02)",
-      visible: false
+      visible: false,
+      autoscaleInfoProvider: provider
     });
+    // [/PATCH:CENTER-PRICE]
 
     chartRef.current = chart;
     seriesRef.current = { candle, area };
@@ -496,12 +518,39 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Tombol [+] atau double-click: Hanya menggeser chart ke ujung kanan tanpa mengubah zoom vertikal/horizontal
+  // Dipakai resize/fit: hanya menggeser chart ke ujung kanan tanpa mengubah zoom
   const scrollToLatest = useCallback(() => {
     const chart = chartRef.current;
     if (!chart) return;
     chart.timeScale().scrollToPosition(0, true);
   }, []);
+
+  // [PATCH:CENTER-PRICE] tombol +: geser ke candle terbaru + harga di tengah, zoom tidak berubah
+  const centerOnPrice = useCallback(() => {
+    const chart = chartRef.current;
+    const s = typeRef.current === "area" ? seriesRef.current.area : seriesRef.current.candle;
+    if (!chart || !s) return;
+    const h = chartContainerRef.current ? chartContainerRef.current.clientHeight : 0;
+    const p0 = s.coordinateToPrice(0);
+    const p1 = s.coordinateToPrice(h);
+    const last = lastRef.current;
+    if (p0 != null && p1 != null && last) {
+      spanRatioRef.current = Math.abs(p0 - p1) / Math.abs(last);
+      followRef.current = true;
+    }
+    chart.priceScale("right").applyOptions({ autoScale: true });
+    // paksa hitung ulang autoscale
+    seriesRef.current.candle.applyOptions({});
+    seriesRef.current.area.applyOptions({});
+    chart.timeScale().scrollToPosition(0, true);
+  }, []);
+
+  // reset mode ikuti saat interval berganti (rentang candle berubah)
+  useEffect(() => {
+    followRef.current = false;
+    if (chartRef.current) chartRef.current.priceScale("right").applyOptions({ autoScale: true });
+  }, [iv]);
+  // [/PATCH:CENTER-PRICE]
 
   const compute = useCallback(() => {
     const cfg = IV[ivRef.current];
@@ -546,7 +595,7 @@ export default function PriceChart() {
     const n = cs.length;
     const last = cs[n - 1];
     const prev = lastBarRef.current;
-    
+
     const incremental = !full && prev && cs[0].time === prev.first &&
       ((n === prev.len && last.time === prev.time) || (n === prev.len + 1 && cs[n - 2].time === prev.time));
 
@@ -554,6 +603,10 @@ export default function PriceChart() {
       const sub = cfg.type === "inf" || cfg.type === "tick" || cfg.type === "sec" || (cfg.type === "min" && cfg.step < DAY);
       chart.applyOptions({ timeScale: { timeVisible: sub, secondsVisible: cfg.type === "inf" || cfg.type === "tick" || cfg.type === "sec" } });
     }
+
+    // [PATCH:CENTER-PRICE] lastRef diperbarui SEBELUM update series agar provider memakai harga terbaru
+    lastRef.current = last.close;
+    // [/PATCH:CENTER-PRICE]
 
     if (incremental) {
       if (n === prev.len + 1) {
@@ -567,7 +620,6 @@ export default function PriceChart() {
       s.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
     }
 
-    lastRef.current = last.close;
     lenRef.current = n;
     lastBarRef.current = { first: cs[0].time, len: n, time: last.time };
 
@@ -659,12 +711,12 @@ export default function PriceChart() {
     tokenRef.current += 1;
     const tok = tokenRef.current;
     const reqBin = baseBin;
-    
+
     setFade(true);
 
     const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec" || IV[ivRef.current].type === "inf";
     const baseLimit = sub ? 200 : 1000;
-    
+
     const fetchBinanceChunk = async (symbol, bin, limit, endTime) => {
       let url = `/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${limit}`;
       if (endTime) url += `&endTime=${endTime}`;
@@ -711,7 +763,7 @@ export default function PriceChart() {
           ["gold", "btc", "usd"].forEach(k => {
             const raw = ds[k].raw;
             ds[k].sec = buildEaHistory(k, raw);
-            
+
             if (raw.length > 0) {
               const lastClose = raw[raw.length - 1].close;
               const sigma = eaSigma(raw) || (lastClose * 0.0001);
@@ -733,7 +785,7 @@ export default function PriceChart() {
         loadedBinRef.current = baseBin;
         lastBarRef.current = null;
         refresh(true);
-        fitRef.current(); 
+        fitRef.current();
         setFade(false);
 
         let endGold = resGold.end, endBtc = resBtc.end, endUsd = resUsd.end;
@@ -741,7 +793,7 @@ export default function PriceChart() {
 
         while (endGold || endBtc || endUsd) {
           if (tok !== tokenRef.current) return;
-          
+
           const [nextGold, nextBtc, nextUsd] = await Promise.all([
             endGold ? fetchBinanceChunk("PAXGUSDT", reqBin, batchLimit, endGold) : { data: [], end: null },
             endBtc ? fetchBtcChunk(reqBin, batchLimit, endBtc) : { data: [], end: null },
@@ -866,9 +918,9 @@ export default function PriceChart() {
       if (ivRef.current !== "inf") {
         const dGold = dsRef.current.gold;
         if (dGold.inf && dGold.inf.length) lastInfTime = dGold.inf[dGold.inf.length - 1].time;
-        return; 
+        return;
       }
-      
+
       const pGold = livePrices.current.gold;
       const pBtc = livePrices.current.btcBn;
       const pUsd = (livePrices.current.eurusdt || 1.08) / 1.08;
@@ -882,15 +934,15 @@ export default function PriceChart() {
         const prevRow = d.inf[d.inf.length - 1];
         const sigma = eaSigma(d.raw) || (target * 0.0001);
         const r = rng(hashStr(k) ^ lastInfTime);
-        
+
         let p = prevRow.close + (target - prevRow.close) * 0.08 + gauss(r) * sigma * 0.4;
-        
+
         const open = prevRow.close;
         const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.2);
         const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.2);
-        
+
         d.inf.push({ time: lastInfTime, open, high: h, low: l, close: p });
-        
+
         if (d.inf.length > 300) d.inf.shift();
       });
 
@@ -961,19 +1013,19 @@ export default function PriceChart() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
-              <button 
-                type="button" 
-                className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} 
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
                 onClick={() => {
                   if (!unlocked) setPendingMode("csc_unlock");
                   else setMode("csc");
-                }} 
-                style={{ fontWeight: "bold" }} 
+                }}
+                style={{ fontWeight: "bold" }}
                 title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
               >
                 CSC
               </button>
-              
+
               {/* Tombol ikon mode disembunyikan secara default, terbuka jika memasukkan password: Coconut Shell Charcoal */}
               {unlocked && (
                 <>
@@ -1014,16 +1066,17 @@ export default function PriceChart() {
               )}
             </div>
 
-            {/* TOMBOL + UNTUK MENGGESER CHART KE KANAN TANPA MERUBAH ZOOM */}
+            {/* [PATCH:CENTER-PRICE] TOMBOL +: harga di tengah, chart ikut bergeser mengikuti candle, zoom tidak berubah */}
             <button
               type="button"
               className={`${styles.currencyBtn} ${styles.smallBtn}`}
-              onClick={scrollToLatest}
-              title="Geser ke candle terbaru"
+              onClick={centerOnPrice}
+              title="Harga di tengah, chart mengikuti candle"
               style={{ fontWeight: "bold", padding: "0 10px" }}
             >
               +
             </button>
+            {/* [/PATCH:CENTER-PRICE] */}
 
             <button
               type="button"
@@ -1039,7 +1092,7 @@ export default function PriceChart() {
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
           <div
             className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
-            onDoubleClick={() => scrollToLatest()}
+            onDoubleClick={() => centerOnPrice() /* [PATCH:CENTER-PRICE] */}
             style={{
               position: "relative", width: "100%",
               ...(isFull ? { flex: 1, minHeight: 0 } : { height: "480px" }),
