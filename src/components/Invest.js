@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { 
   auth, 
@@ -5,7 +7,7 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged 
-} from '../firebase'; // Sesuaikan path konfigurasi firebase Anda
+} from '../firebase'; // Pastikan path ini benar mengarah ke file firebase.js Anda
 import styles from './Invest.module.css';
 
 const Invest = () => {
@@ -13,7 +15,6 @@ const Invest = () => {
   const [loading, setLoading] = useState(false);
   const [invested, setInvested] = useState(false);
 
-  // Pantau status login pengguna
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -21,7 +22,6 @@ const Invest = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fungsi Login dengan Google
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
@@ -34,7 +34,6 @@ const Invest = () => {
     }
   };
 
-  // Fungsi Logout (Opsional, jika ingin mengetes kembali tombol login)
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -44,9 +43,7 @@ const Invest = () => {
     }
   };
 
-  // Fungsi Tombol Investasi 75 Ton
   const handleInvest = () => {
-    // Logika investasi atau integrasi pembayaran/smart contract di sini
     setInvested(true);
     alert(`Terima kasih ${user.displayName || 'Investor'}, investasi sebesar 75 Ton berhasil diproses!`);
   };
@@ -61,7 +58,6 @@ const Invest = () => {
 
         <div className={styles.actionWrapper}>
           {!user ? (
-            /* Kondisi 1: Belum Login -> Muncul Tombol Login dengan Google */
             <button 
               onClick={handleGoogleLogin} 
               className={styles.googleLoginBtn}
@@ -76,7 +72,6 @@ const Invest = () => {
               {loading ? 'Memproses...' : 'Login dengan Google'}
             </button>
           ) : (
-            /* Kondisi 2: Sudah Login -> Muncul Tombol Investasi 75 Ton */
             <div className={styles.userDashboard}>
               <div className={styles.userInfo}>
                 <img 
