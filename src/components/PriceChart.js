@@ -2,13 +2,19 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
-import styles from "./PriceChart.module.css"; // Menggunakan CSS yang sama
+import styles from "./PriceChart.module.css"; 
 
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
+
+// Tambahan Konstanta Baru
 const YUAN_BASE = 4750;
+const USD_BASE = 500;
+const JPY_BASE = 100;
+const SAR_BASE = 2.5;
+
 const WIB = 7 * 3600; 
 
 const IV = {
@@ -138,9 +144,9 @@ function Smooth({ value, render, ms }) {
   return <>{render(v)}</>;
 }
 
-export default function CSCChart() {
+export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
-  const [mode, setMode] = useState("csc"); // Mode bawaan disetel ke CSC Index
+  const [mode, setMode] = useState("csc"); 
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -174,10 +180,13 @@ export default function CSCChart() {
   const noMoreHistory = useRef(false);
 
   const dsRef = useRef({
-    yuan: { raw: [], mult: (ratesObj, targetRate) => YUAN_BASE * targetRate },
+    yuan: { raw: [], mult: (ratesObj, targetRate) => {
+      const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.1501;
+      return YUAN_BASE * cnyToUsd * targetRate;
+    }},
     gold: { raw: [], mult: (ratesObj, targetRate) => GRAMS * MARKUP / OZ * targetRate },
     btc:  { raw: [], mult: (ratesObj, targetRate) => BTC_FACTOR * targetRate },
-    csc:  { raw: [] } // CSC dihasilkan dari gabungan ketiga sumber di atas
+    csc:  { raw: [] } 
   });
 
   const tokenRef = useRef(0);
@@ -257,7 +266,7 @@ export default function CSCChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // INFINITE SCROLL LISTENER (Membangun riwayat untuk ketiga mode sekaligus)
+  // INFINITE SCROLL LISTENER 
   useEffect(() => {
     if (!chartRef.current) return;
     const ts = chartRef.current.timeScale();
@@ -304,11 +313,8 @@ export default function CSCChart() {
             noMoreHistory.current = true;
             setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat" }));
           } else {
-            const currentCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
-            const fixedScale = currentCnyUsd / 1.08; 
-
             const oldYuan = oldForex.map(r => ({
-              time: r.time, open: r.open * fixedScale, high: r.high * fixedScale, low: r.low * fixedScale, close: r.close * fixedScale
+              time: r.time, open: r.open / 1.08, high: r.high / 1.08, low: r.low / 1.08, close: r.close / 1.08
             }));
 
             dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
@@ -341,7 +347,6 @@ export default function CSCChart() {
   }, [rates, cur]);
 
   const fitView = useCallback((smooth = false) => {
-    // Mode csc mengambil length dari yuan sebagai patokan
     const targetKey = mode === "csc" ? "yuan" : mode;
     const d = dsRef.current[targetKey];
     if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
@@ -425,39 +430,64 @@ export default function CSCChart() {
     };
   }, [fitView]);
 
-  // Fungsi dinamis pembuat data index gabungan (CSC)
-  const buildCscData = useCallback((rate) => {
-    const dYuan = dsRef.current.yuan.raw;
+  // Fungsi Raksasa Pembuat Data Index Hibrida (6 Instrumen digabung)
+  const buildCscData = useCallback((targetRate) => {
+    const dForexProxy = dsRef.current.yuan.raw; // Forex volatility proxy
     const dGold = dsRef.current.gold.raw;
     const dBtc  = dsRef.current.btc.raw;
 
-    if (!dYuan.length || !dGold.length || !dBtc.length) return [];
+    if (!dForexProxy.length || !dGold.length || !dBtc.length) return [];
 
-    const mYuan = YUAN_BASE * rate;
-    const mGold = dsRef.current.gold.mult(rates, rate);
-    const mBtc  = dsRef.current.btc.mult(rates, rate);
+    // Kalkulasi Konversi Fiat ke Target Mata Uang
+    const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
+    const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
+    const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
+
+    // 1. Nilai USD
+    const mUsd = USD_BASE * targetRate;
+    // 2. Nilai Yuan
+    const mYuan = YUAN_BASE * cnyToUsd * targetRate;
+    // 3. Nilai JPY
+    const mJpy = JPY_BASE * jpyToUsd * targetRate;
+    // 4. Nilai SAR
+    const mSar = SAR_BASE * sarToUsd * targetRate;
+    // 5. Nilai Emas
+    const mGold = dsRef.current.gold.mult(rates, targetRate);
+    // 6. Nilai BTC
+    const mBtc = dsRef.current.btc.mult(rates, targetRate);
 
     const map = {};
-    dYuan.forEach(x => map[x.time] = { y: x, g: null, b: null });
-    dGold.forEach(x => { if(!map[x.time]) map[x.time] = {y: null, b: null}; map[x.time].g = x; });
-    dBtc.forEach(x => { if(!map[x.time]) map[x.time] = {y: null, g: null}; map[x.time].b = x; });
+    dForexProxy.forEach(x => map[x.time] = { f: x, g: null, b: null });
+    dGold.forEach(x => { if(!map[x.time]) map[x.time] = {f: null, b: null}; map[x.time].g = x; });
+    dBtc.forEach(x => { if(!map[x.time]) map[x.time] = {f: null, g: null}; map[x.time].b = x; });
 
     const times = Object.keys(map).map(Number).sort((a,b) => a-b);
-    let lastY = dYuan[0], lastG = dGold[0], lastB = dBtc[0];
+    let lastF = dForexProxy[0], lastG = dGold[0], lastB = dBtc[0];
     
     return times.map(t => {
-      if (map[t].y) lastY = map[t].y;
+      if (map[t].f) lastF = map[t].f;
       if (map[t].g) lastG = map[t].g;
       if (map[t].b) lastB = map[t].b;
       
-      if (!lastY || !lastG || !lastB) return null;
+      if (!lastF || !lastG || !lastB) return null;
+
+      // Kalkulasi Gabungan 6 Pilar dibagi 6
+      const calcVal = (fVal, gVal, bVal) => {
+        const usdPart = fVal * mUsd;
+        const yuanPart = fVal * mYuan;
+        const jpyPart = fVal * mJpy;
+        const sarPart = fVal * mSar;
+        const goldPart = gVal * mGold;
+        const btcPart = bVal * mBtc;
+        return (usdPart + yuanPart + jpyPart + sarPart + goldPart + btcPart) / 6;
+      };
 
       return {
         time: t,
-        open: (lastY.open * mYuan + lastG.open * mGold + lastB.open * mBtc) / 3,
-        high: (lastY.high * mYuan + lastG.high * mGold + lastB.high * mBtc) / 3,
-        low: (lastY.low * mYuan + lastG.low * mGold + lastB.low * mBtc) / 3,
-        close: (lastY.close * mYuan + lastG.close * mGold + lastB.close * mBtc) / 3,
+        open: calcVal(lastF.open, lastG.open, lastB.open),
+        high: calcVal(lastF.high, lastG.high, lastB.high),
+        low: calcVal(lastF.low, lastG.low, lastB.low),
+        close: calcVal(lastF.close, lastG.close, lastB.close),
       };
     }).filter(Boolean);
   }, [rates]);
@@ -467,17 +497,13 @@ export default function CSCChart() {
 
     if (mode === "csc") {
       cs = buildCscData(rate);
-      dsRef.current.csc.raw = cs; // Simpan sementara untuk kalkulasi legend
+      dsRef.current.csc.raw = cs; 
     } else {
       const d = dsRef.current[mode];
       if (!d || !d.raw) return;
-      const m = mode === "yuan" ? YUAN_BASE * rate : d.mult(rates, rate);
+      const m = d.mult(rates, rate);
       cs = d.raw.map(x => ({
-        time: x.time,
-        open: x.open * m,
-        high: x.high * m,
-        low: x.low * m,
-        close: x.close * m
+        time: x.time, open: x.open * m, high: x.high * m, low: x.low * m, close: x.close * m
       }));
     }
     
@@ -497,7 +523,7 @@ export default function CSCChart() {
     let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
     
-    const m = isCsc ? 1 : (mode === "yuan" ? YUAN_BASE * rate : d.mult(rates, rate));
+    const m = isCsc ? 1 : d.mult(rates, rate);
     
     const f = d.raw[Math.max(0, n - lookback)].open * m;
     const last = d.raw[n - 1].close;
@@ -562,7 +588,7 @@ export default function CSCChart() {
     dsRef.current.yuan.raw = [];
     dsRef.current.csc.raw = [];
     
-    setLegend(p => ({ ...p, availText: "⏳ Memuat data komposit..." }));
+    setLegend(p => ({ ...p, availText: "⏳ Memuat 6 instrumen pasar..." }));
 
     const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
       const n = Math.min(left, 1000);
@@ -607,15 +633,13 @@ export default function CSCChart() {
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
 
-      const currentCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
-      const fixedScale = currentCnyUsd / 1.08; 
-
+      // Proxy Volatility untuk 4 Mata Uang Fiat
       dsRef.current.yuan.raw = res[2].map(x => ({
-        time: x.time, open: x.open * fixedScale, high: x.high * fixedScale, low: x.low * fixedScale, close: x.close * fixedScale 
+        time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 
       }));
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-      const sinceNote = (d) => (d.raw.length > 0) ? `📅 Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
+      const sinceNote = (d) => (d.raw.length > 0) ? `📅 Hibrida sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
       
       setLegend(p => ({ ...p, availText: sinceNote(dsRef.current.yuan) }));
       applyRef.current();
@@ -676,16 +700,13 @@ export default function CSCChart() {
       const curMode = modeRef.current;
       const curRate = rateRef.current;
       const step = IV[ivRef.current].step;
-      const currentCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
-      const fixedScale = currentCnyUsd / 1.08;
-
-      // Update basic 3 streams
+      
       ["gold", "btc", "yuan"].forEach(key => {
         const d = dsRef.current[key];
         let pRaw = 1;
         if (key === "gold") pRaw = livePrices.current.gold;
         else if (key === "btc") pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
-        else if (key === "yuan") pRaw = (livePrices.current.eurusdt || 1.08) * fixedScale; 
+        else if (key === "yuan") pRaw = (livePrices.current.eurusdt || 1.08) / 1.08; 
         
         if (pRaw == null || !d.raw.length) return;
         
@@ -702,24 +723,34 @@ export default function CSCChart() {
         }
       });
 
-      // Update UI for whichever mode is active
       if (dsRef.current.yuan.raw.length > 0 && dsRef.current.gold.raw.length > 0 && dsRef.current.btc.raw.length > 0) {
         
         if (curMode === "csc") {
-          const lY = dsRef.current.yuan.raw[dsRef.current.yuan.raw.length - 1];
+          const lF = dsRef.current.yuan.raw[dsRef.current.yuan.raw.length - 1];
           const lG = dsRef.current.gold.raw[dsRef.current.gold.raw.length - 1];
           const lB = dsRef.current.btc.raw[dsRef.current.btc.raw.length - 1];
           
-          const mY = YUAN_BASE * curRate;
+          const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
+          const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
+          const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
+
+          const mUsd = USD_BASE * curRate;
+          const mYuan = YUAN_BASE * cnyToUsd * curRate;
+          const mJpy = JPY_BASE * jpyToUsd * curRate;
+          const mSar = SAR_BASE * sarToUsd * curRate;
           const mG = dsRef.current.gold.mult(rates, curRate);
           const mB = dsRef.current.btc.mult(rates, curRate);
 
+          const calcLive = (f, g, b) => {
+             return (f*mUsd + f*mYuan + f*mJpy + f*mSar + g*mG + b*mB) / 6;
+          };
+
           const sv = {
-            time: lY.time,
-            open: (lY.open * mY + lG.open * mG + lB.open * mB) / 3,
-            high: (lY.high * mY + lG.high * mG + lB.high * mB) / 3,
-            low: (lY.low * mY + lG.low * mG + lB.low * mB) / 3,
-            close: (lY.close * mY + lG.close * mG + lB.close * mB) / 3,
+            time: lF.time,
+            open: calcLive(lF.open, lG.open, lB.open),
+            high: calcLive(lF.high, lG.high, lB.high),
+            low: calcLive(lF.low, lG.low, lB.low),
+            close: calcLive(lF.close, lG.close, lB.close),
           };
           
           if (dsRef.current.csc.raw.length > 0) {
@@ -735,7 +766,7 @@ export default function CSCChart() {
         } else {
           const d = dsRef.current[curMode];
           const last = d.raw[d.raw.length - 1];
-          const m = curMode === "yuan" ? YUAN_BASE * curRate : d.mult(rates, curRate);
+          const m = d.mult(rates, curRate);
           const sv = { time: last.time, open: last.open * m, high: last.high * m, low: last.low * m, close: last.close * m };
           
           lastRef.current = sv.close;
@@ -809,6 +840,7 @@ export default function CSCChart() {
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("csc")}
                 style={{ fontWeight: "bold" }}
+                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
               >
                 CSC
               </button>
