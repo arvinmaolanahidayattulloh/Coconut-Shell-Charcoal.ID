@@ -9,9 +9,8 @@ const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.01; 
 
-// Tambahan Konstanta Baru
+// Konstanta Basis (Tanpa USD_BASE)
 const YUAN_BASE = 5000;
-const USD_BASE = 1000;
 const JPY_BASE = 100;
 const SAR_BASE = 5;
 
@@ -430,30 +429,27 @@ export default function PriceChart() {
     };
   }, [fitView]);
 
-  // Fungsi Raksasa Pembuat Data Index Hibrida (6 Instrumen digabung)
+  // Fungsi Pembuat Data Index Hibrida (5 Instrumen digabung & dibagi 5)
   const buildCscData = useCallback((targetRate) => {
-    const dForexProxy = dsRef.current.yuan.raw; // Forex volatility proxy
+    const dForexProxy = dsRef.current.yuan.raw; 
     const dGold = dsRef.current.gold.raw;
     const dBtc  = dsRef.current.btc.raw;
 
     if (!dForexProxy.length || !dGold.length || !dBtc.length) return [];
 
-    // Kalkulasi Konversi Fiat ke Target Mata Uang
     const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.1501;
     const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
     const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
 
-    // 1. Nilai USD
-    const mUsd = USD_BASE * targetRate;
-    // 2. Nilai Yuan
+    // 1. Nilai Yuan
     const mYuan = YUAN_BASE * cnyToUsd * targetRate;
-    // 3. Nilai JPY
+    // 2. Nilai JPY
     const mJpy = JPY_BASE * jpyToUsd * targetRate;
-    // 4. Nilai SAR
+    // 3. Nilai SAR
     const mSar = SAR_BASE * sarToUsd * targetRate;
-    // 5. Nilai Emas
+    // 4. Nilai Emas
     const mGold = dsRef.current.gold.mult(rates, targetRate);
-    // 6. Nilai BTC
+    // 5. Nilai BTC
     const mBtc = dsRef.current.btc.mult(rates, targetRate);
 
     const map = {};
@@ -471,15 +467,14 @@ export default function PriceChart() {
       
       if (!lastF || !lastG || !lastB) return null;
 
-      // Kalkulasi Gabungan 6 Pilar dibagi 6
+      // Kalkulasi Gabungan 5 Pilar dibagi 5
       const calcVal = (fVal, gVal, bVal) => {
-        const usdPart = fVal * mUsd;
         const yuanPart = fVal * mYuan;
         const jpyPart = fVal * mJpy;
         const sarPart = fVal * mSar;
         const goldPart = gVal * mGold;
         const btcPart = bVal * mBtc;
-        return (usdPart + yuanPart + jpyPart + sarPart + goldPart + btcPart) / 6;
+        return (yuanPart + jpyPart + sarPart + goldPart + btcPart) / 5;
       };
 
       return {
@@ -588,7 +583,7 @@ export default function PriceChart() {
     dsRef.current.yuan.raw = [];
     dsRef.current.csc.raw = [];
     
-    setLegend(p => ({ ...p, availText: "⏳ Memuat 6 instrumen pasar..." }));
+    setLegend(p => ({ ...p, availText: "⏳ Memuat instrumen pasar..." }));
 
     const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
       const n = Math.min(left, 1000);
@@ -609,7 +604,7 @@ export default function PriceChart() {
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
       const rows = j?.data?.ohlc || [];
-      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.high, close: +o.close }));
       all = cs.concat(all);
       left -= n;
       if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
@@ -633,7 +628,6 @@ export default function PriceChart() {
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
 
-      // Proxy Volatility untuk 4 Mata Uang Fiat
       dsRef.current.yuan.raw = res[2].map(x => ({
         time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 
       }));
@@ -734,7 +728,6 @@ export default function PriceChart() {
           const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
           const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
 
-          const mUsd = USD_BASE * curRate;
           const mYuan = YUAN_BASE * cnyToUsd * curRate;
           const mJpy = JPY_BASE * jpyToUsd * curRate;
           const mSar = SAR_BASE * sarToUsd * curRate;
@@ -742,7 +735,7 @@ export default function PriceChart() {
           const mB = dsRef.current.btc.mult(rates, curRate);
 
           const calcLive = (f, g, b) => {
-             return (f*mUsd + f*mYuan + f*mJpy + f*mSar + g*mG + b*mB) / 6;
+             return (f*mYuan + f*mJpy + f*mSar + g*mG + b*mB) / 5;
           };
 
           const sv = {
@@ -840,7 +833,7 @@ export default function PriceChart() {
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("csc")}
                 style={{ fontWeight: "bold" }}
-                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
+                title="5 Market Index (Yuan, Yen, Riyal, XAU, BTC)"
               >
                 CSC
               </button>
