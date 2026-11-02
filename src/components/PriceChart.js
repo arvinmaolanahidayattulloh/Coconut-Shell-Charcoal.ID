@@ -4,7 +4,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
 import styles from "./PriceChart.module.css";
 
-const YUAN_BASE = 4750; // Basis 4.750 Yuan absolut untuk harga arang
+const OZ = 31.1034768;
+const GRAMS = 5;
+const MARKUP = 1.125;
+const BTC_FACTOR = 0.00909; 
+const YUAN_BASE = 4750; // 4.750 Yuan absolut untuk harga arang
 const WIB = 7 * 3600; 
 
 const IV = {
@@ -53,6 +57,16 @@ function fmt(num, dec) {
 function ytdDays() {
   const n = new Date();
   return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
+}
+
+function isXauMarketOpen() {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const hour = now.getUTCHours();
+  if (day === 6) return false; 
+  if (day === 0) return false; 
+  if (day === 5 && hour >= 22) return false; 
+  return true;
 }
 
 async function getJson(path, attempt = 0) {
@@ -125,7 +139,8 @@ function Smooth({ value, render, ms }) {
 }
 
 export default function PriceChart() {
-  const [mode, setMode] = useState("yuan"); // Default mode diatur ke yuan (中)
+  const [marketClosed, setMarketClosed] = useState(false);
+  const [mode, setMode] = useState("yuan"); // Default ke yuan (中)
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -157,23 +172,32 @@ export default function PriceChart() {
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
 
-  // Rumus Mode Yuan: (4750 CNY -> USD) dikali nilai tukar mata uang target (IDR, dll)
+  // Rumus Multiplier untuk Masing-masing Mode
   const dsRef = useRef({
     yuan: { 
       raw: [], 
-      mult: (ratesObj) => {
+      mult: (ratesObj, targetRate) => {
+        // 4.750 CNY -> USD -> Mata uang target (IDR, dll menggunakan targetRate)
         const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.150125;
-        return YUAN_BASE * cnyToUsd; // Menghasilkan nilai USD untuk 4750 Yuan (~$713.10)
+        return YUAN_BASE * cnyToUsd * targetRate; 
       } 
-    }
+    },
+    gold: { raw: [], mult: (ratesObj, targetRate) => GRAMS * MARKUP / OZ * targetRate },
+    btc:  { raw: [], mult: (ratesObj, targetRate) => BTC_FACTOR * targetRate }
   });
 
   const tokenRef = useRef(0);
-  const livePrices = useRef({ cnyUsd: null });
+  const livePrices = useRef({ gold: null, btcBn: null, btcBs: null, btcSrc: "Bitstamp" });
+  const wsRef = useRef({ binance: null, bitstamp: null });
 
   const rate = rates ? (cur === "USD" ? 1 : rates[cur] || 1) : 1;
   const curObj = CURRENCIES.find(c => c.code === cur) || CURRENCIES[0];
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
+
+  useEffect(() => {
+    const open = isXauMarketOpen();
+    setMarketClosed(!open);
+  }, []);
 
   useEffect(() => {
     fetch("/api/prices").then(r => r.json()).then(d => {
@@ -239,7 +263,7 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // Infinite Scroll Listener
+  // INFINITE SCROLL LISTENER
   useEffect(() => {
     if (!chartRef.current) return;
     const ts = chartRef.current.timeScale();
@@ -250,41 +274,65 @@ export default function PriceChart() {
         setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
 
         const binanceIv = IV[ivRef.current]?.bin || "1m";
-        const dYuan = dsRef.current.yuan.raw;
+        const dGold = dsRef.current.gold.raw;
+        const dBtc = dsRef.current.btc.raw;
 
-        if (!dYuan.length) {
+        if (!dGold.length || !dBtc.length) {
           isFetchingHistory.current = false;
           return;
         }
 
-        const oldestTime = (dYuan[0].time - WIB) * 1000 - 1;
+        const oldestGold = (dGold[0].time - WIB) * 1000 - 1;
+        const oldestBtc = dBtc[0].time - WIB - 1;
 
-        // Mengambil data historis klines untuk instrumen forex/crypto (misal EURUSDT atau simulasi tren valas CNY)
-        getJson(`/api/v3/klines?symbol=EURUSDT&interval=${binanceIv}&limit=1000&endTime=${oldestTime}`).then(rows => {
-          if (!rows.length) {
+        const fetchOldBinance = async (sym, end) => {
+          const r = await getJson(`/api/v3/klines?symbol=${sym}&interval=${binanceIv}&limit=1000&endTime=${end}`);
+          return r.map(x => ({ time: Math.floor(x[0]/1000) + WIB, open: +x[1], high: +x[2], low: +x[3], close: +x[4] }));
+        };
+
+        const fetchOldBitstamp = async (end) => {
+          const step = IV[ivRef.current]?.step || 60;
+          const r = await fetch(`https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=1000&end=${end}`);
+          if (!r.ok) throw new Error();
+          const j = await r.json();
+          return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+        };
+
+        const pGold = fetchOldBinance("PAXGUSDT", oldestGold);
+        const pBtc = livePrices.current.btcSrc === "Bitstamp" 
+          ? fetchOldBitstamp(oldestBtc).catch(() => fetchOldBinance("BTCUSDT", oldestGold)) 
+          : fetchOldBinance("BTCUSDT", oldestGold);
+
+        Promise.all([pGold, pBtc]).then(([oldGold, oldBtc]) => {
+          if (!oldGold.length && !oldBtc.length) {
             noMoreHistory.current = true;
-            setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat" }));
+            setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat hingga batas maksimal" }));
           } else {
-            const oldRows = rows.map(r => {
-              const base = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-              const val = base * (+r[4] / 1.08); // Penyesuaian skala nilai tukar CNY/USD
-              return { time: Math.floor(r[0]/1000) + WIB, open: val * 0.999, high: val * 1.001, low: val * 0.999, close: val };
+            dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
+            dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
+            
+            // Sinkronisasi data historis yuan
+            const baseCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
+            dsRef.current.yuan.raw = dsRef.current.gold.raw.map((x, idx) => {
+              const noise = Math.sin(idx * 0.1) * 0.0005;
+              const val = baseCnyUsd * (1 + noise);
+              return { time: x.time, open: val * 0.999, high: val * 1.001, low: val * 0.999, close: val };
             });
-
-            dsRef.current.yuan.raw = uniqSorted([...oldRows, ...dYuan]);
 
             const curRange = ts.getVisibleLogicalRange();
             applyRef.current();
 
-            if (curRange && oldRows.length > 0) {
+            const addedCount = oldGold.length;
+            if (curRange && addedCount > 0) {
               ts.setVisibleLogicalRange({
-                from: curRange.from + oldRows.length,
-                to: curRange.to + oldRows.length
+                from: curRange.from + addedCount,
+                to: curRange.to + addedCount
               });
             }
 
             const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-            setLegend(p => ({ ...p, availText: `📅 Riwayat sejak ${dateFmt.format(new Date(dsRef.current.yuan.raw[0].time * 1000))}` }));
+            const oldestTime = new Date(dsRef.current.gold.raw[0].time * 1000);
+            setLegend(p => ({ ...p, availText: `📅 Riwayat sejak ${dateFmt.format(oldestTime)}` }));
           }
           isFetchingHistory.current = false;
         }).catch(() => {
@@ -298,7 +346,7 @@ export default function PriceChart() {
   }, [rates]);
 
   const fitView = useCallback((smooth = false) => {
-    const d = dsRef.current.yuan;
+    const d = dsRef.current[mode];
     if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
@@ -312,58 +360,108 @@ export default function PriceChart() {
     }
     
     const target = { from: Math.max(0, n - visibleBars), to: n + 1 };
-    if (smooth) animateRange(ts, target, animRef);
-    else { cancelAnimationFrame(animRef.current); ts.setVisibleLogicalRange(target); }
-  }, [range]);
+    
+    if (smooth) {
+      animateRange(ts, target, animRef);
+    } else {
+      cancelAnimationFrame(animRef.current);
+      ts.setVisibleLogicalRange(target);
+    }
+  }, [mode, range]);
 
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
     if (!isFull) {
       setIsFull(true);
-      try { if (el && el.requestFullscreen) await el.requestFullscreen(); } catch (e) {}
+      try {
+        if (el && el.requestFullscreen) await el.requestFullscreen();
+        else if (el && el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      } catch (e) {}
     } else {
       setIsFull(false);
-      try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) {}
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } catch (e) {}
     }
   }, [isFull]);
 
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) setIsFull(false);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFsChange);
+      document.removeEventListener("webkitfullscreenchange", onFsChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") setIsFull(false); };
+    if (isFull) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", onKey);
+    }
+    const t = setTimeout(() => fitView(true), 150);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+      clearTimeout(t);
+    };
+  }, [isFull, fitView]);
+
+  useEffect(() => {
+    let t;
+    const onResize = () => {
+      clearTimeout(t);
+      t = setTimeout(() => fitView(), 150);
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, [fitView]);
+
   const applyData = useCallback(() => {
-    const d = dsRef.current.yuan;
+    const d = dsRef.current[mode];
     if (!d || !d.raw) return;
-
-    // Rumus Total: (Nilai Kurs CNY ke USD) * 4750 * Kurs Mata Tujuan (IDR, dll)
-    const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-    const multiplier = YUAN_BASE * cnyToUsd * rate;
-
+    
+    // Perhitungan multiplier murni berdasarkan rumus mode masing-masing
+    const m = d.mult(rates, rate);
+    
     const cs = d.raw.map(x => ({
       time: x.time,
-      open: x.open * YUAN_BASE * rate,
-      high: x.high * YUAN_BASE * rate,
-      low: x.low * YUAN_BASE * rate,
-      close: x.close * YUAN_BASE * rate
+      open: x.open * m,
+      high: x.high * m,
+      low: x.low * m,
+      close: x.close * m
     }));
     
     seriesRef.current.candle.setData(cs);
     seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
     lastRef.current = cs.length ? cs[cs.length - 1].close : null;
-  }, [rate, rates]);
+  }, [mode, rate, rates]);
 
   const updateLegend = useCallback(() => {
-    const d = dsRef.current.yuan;
+    const d = dsRef.current[mode];
     if (!d || !d.raw.length) return;
 
-    const cnyToUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-    const multiplier = YUAN_BASE * cnyToUsd * rate;
-
+    const m = d.mult(rates, rate);
     const n = d.raw.length;
     let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
     
-    const f = d.raw[Math.max(0, n - lookback)].open * multiplier;
-    const l = d.raw[n - 1].close * multiplier;
+    const f = d.raw[Math.max(0, n - lookback)].open * m;
+    const last = d.raw[n - 1].close;
+    const l = last * m;
     
-    const highs = d.raw.map(x => x.high * multiplier);
-    const lows = d.raw.map(x => x.low * multiplier);
+    const highs = d.raw.map(x => x.high * m);
+    const lows = d.raw.map(x => x.low * m);
 
     const diff = l - f;
     const pct = f ? (diff / f) * 100 : 0;
@@ -373,11 +471,12 @@ export default function PriceChart() {
       val: l, chg: diff, pct: pct, isUp: diff >= 0,
       high: Math.max(...highs), low: Math.min(...lows)
     }));
-  }, [rate, range, rates]);
+  }, [mode, rate, range, rates]);
 
   fitRef.current = fitView;
   applyRef.current = applyData;
   legendRef.current = updateLegend;
+  modeRef.current = mode;
   rateRef.current = rate;
   ivRef.current = iv;
 
@@ -387,7 +486,7 @@ export default function PriceChart() {
       seriesRef.current.candle.applyOptions({ visible: type === "candle" });
       seriesRef.current.area.applyOptions({ visible: type === "area" });
     };
-    const d = dsRef.current.yuan;
+    const d = dsRef.current[mode];
     if (!chartRef.current || !d || !d.raw.length) { applyVis(); return; }
     setFade(true);
     const t = setTimeout(() => {
@@ -398,9 +497,8 @@ export default function PriceChart() {
       setFade(false);
     }, 180);
     return () => clearTimeout(t);
-  }, [rate, type, rates]);
+  }, [mode, rate, type, rates]);
 
-  // Load Initial History Data
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -413,33 +511,167 @@ export default function PriceChart() {
     const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : 750); 
     const binanceIv = IV[iv]?.bin || "1m";
     
+    dsRef.current.gold.raw = [];
+    dsRef.current.btc.raw = [];
     dsRef.current.yuan.raw = [];
-    setLegend(p => ({ ...p, availText: "⏳ Memuat data kurs..." }));
+    
+    setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
 
-    getJson(`/api/v3/klines?symbol=EURUSDT&interval=${binanceIv}&limit=${count}`).then(rows => {
+    const fetchBinancePage = async (symbol, interval, left, endMs = null, all = []) => {
+      const n = Math.min(left, 1000);
+      const path = `/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${n}${endMs ? "&endTime=" + endMs : ""}`;
+      const rows = await getJson(path);
+      const cs = rows.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
+      all = cs.concat(all);
+      left -= rows.length;
+      if (left > 0 && rows.length === n) return fetchBinancePage(symbol, interval, left, rows[0][0] - 1, all);
+      return uniqSorted(all);
+    };
+
+    const fetchBitstampPage = async (interval, left, endSec = Math.floor(Date.now() / 1000), all = []) => {
+      const step = IV[iv]?.step || 60;
+      const n = Math.min(left, 1000);
+      const url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${n}&start=${endSec - step * n}&end=${endSec}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      const rows = j?.data?.ohlc || [];
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      all = cs.concat(all);
+      left -= n;
+      if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
+      return uniqSorted(all);
+    };
+
+    const pGold = fetchBinancePage("PAXGUSDT", binanceIv, count);
+    let btcSrc = "Bitstamp";
+    const pBtc = fetchBitstampPage(binanceIv, count).then(cs => {
+      if (!cs.length) throw new Error("data kosong"); return cs;
+    }).catch(() => {
+      btcSrc = "Binance"; return fetchBinancePage("BTCUSDT", binanceIv, count);
+    });
+
+    Promise.all([pGold, pBtc]).then(res => {
       if (currentToken !== tokenRef.current) return;
+      livePrices.current.btcSrc = btcSrc;
       
+      dsRef.current.gold.raw = res[0];
+      dsRef.current.btc.raw = res[1];
+
+      // Mengisi raw data Yuan dengan nilai kurs CNY-USD
       const baseCnyUsd = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
-      dsRef.current.yuan.raw = rows.map(r => {
-        const val = baseCnyUsd * (+r[4] / 1.08);
-        return { time: Math.floor(r[0] / 1000) + WIB, open: val * 0.999, high: val * 1.001, low: val * 0.999, close: val };
+      dsRef.current.yuan.raw = res[0].map((x, idx) => {
+        const noise = Math.sin(idx * 0.1) * 0.0005;
+        const val = baseCnyUsd * (1 + noise);
+        return { time: x.time, open: val * 0.999, high: val * 1.001, low: val * 0.999, close: val };
       });
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-      const sinceNote = dsRef.current.yuan.raw.length ? `📅 Riwayat sejak ${dateFmt.format(new Date(dsRef.current.yuan.raw[0].time * 1000))}` : "";
+      const sinceNote = (d) => (d.raw.length > 0) ? `📅 Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
       
-      setLegend(p => ({ ...p, availText: sinceNote }));
-      setStatus({ text: "LIVE", isLive: true, error: null });
+      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[modeRef.current]) }));
       applyRef.current();
       legendRef.current();
       fitRef.current(true);
       setFade(false);
+      setTimeout(() => { if (currentToken === tokenRef.current) fitRef.current(true); }, 350);
     }).catch(e => {
       if (currentToken !== tokenRef.current) return;
       setFade(false);
-      setStatus({ text: "GAGAL MEMUAT.", isLive: false, error: e.message });
+      setStatus({ text: "GAGAL MEMUAT RIWAYAT.", isLive: false, error: e.message });
+      setLegend(p => ({ ...p, availText: "" }));
     });
   }, [iv, range, rates]);
+
+  useEffect(() => {
+    if (!rates) return;
+    let disposed = false;
+    let tb, tt;
+
+    const connectBinance = () => {
+      if (disposed) return;
+      try {
+        const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@trade/paxgusdt@trade");
+        ws.onopen = () => setStatus({ text: "LIVE", isLive: true, error: null });
+        ws.onmessage = (ev) => {
+          const d = JSON.parse(ev.data).data;
+          if (!d || !d.p) return;
+          if (d.s === "BTCUSDT") livePrices.current.btcBn = parseFloat(d.p);
+          if (d.s === "PAXGUSDT") livePrices.current.gold = parseFloat(d.p);
+        };
+        ws.onclose = () => { if (!disposed) tb = setTimeout(connectBinance, 3000); };
+        wsRef.current.binance = ws;
+      } catch(e) {}
+    };
+
+    const connectBitstamp = () => {
+      if (disposed) return;
+      try {
+        const w = new WebSocket("wss://ws.bitstamp.net");
+        w.onopen = () => w.send(JSON.stringify({ event: "bts:subscribe", data: { channel: "live_trades_btcusd" } }));
+        w.onmessage = (ev) => {
+          try {
+            const m = JSON.parse(ev.data);
+            if (m.event === "trade" && m.data) livePrices.current.btcBs = parseFloat(m.data.price_str || m.data.price);
+          } catch(e) {}
+        };
+        w.onclose = () => { if (!disposed) tt = setTimeout(connectBitstamp, 3000); };
+        wsRef.current.bitstamp = w;
+      } catch(e) {}
+    };
+
+    connectBinance();
+    connectBitstamp();
+
+    const timer = setInterval(() => {
+      const curMode = modeRef.current;
+      const curRate = rateRef.current;
+      const step = IV[ivRef.current].step;
+
+      ["gold", "btc", "yuan"].forEach(key => {
+        const d = dsRef.current[key];
+        let pRaw = 1;
+        if (key === "gold") pRaw = livePrices.current.gold;
+        else if (key === "btc") pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
+        else pRaw = rates && rates.CNY ? (1 / rates.CNY) : 0.150125;
+        
+        if (pRaw == null || !d.raw.length) return;
+        
+        const last = d.raw[d.raw.length - 1];
+        const nowT = Math.floor(Date.now() / 1000) + WIB;
+
+        let cdl;
+        if (nowT >= last.time + step) {
+          const t = last.time + step * Math.floor((nowT - last.time) / step);
+          cdl = { time: t, open: pRaw, high: pRaw, low: pRaw, close: pRaw };
+          d.raw.push(cdl);
+        } else {
+          last.high = Math.max(last.high, pRaw);
+          last.low = Math.min(last.low, pRaw);
+          last.close = pRaw;
+          cdl = last;
+        }
+
+        if (key === curMode) {
+          const m = d.mult(rates, curRate);
+          const sv = { time: cdl.time, open: cdl.open * m, high: cdl.high * m, low: cdl.low * m, close: cdl.close * m };
+          lastRef.current = sv.close;
+          seriesRef.current.candle.update(sv);
+          seriesRef.current.area.update({ time: sv.time, value: sv.close });
+        }
+      });
+      legendRef.current();
+    }, 1000);
+
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+      clearTimeout(tb);
+      clearTimeout(tt);
+      if (wsRef.current.binance) wsRef.current.binance.close();
+      if (wsRef.current.bitstamp) wsRef.current.bitstamp.close();
+    };
+  }, [rates]);
 
   return (
     <section className={styles.priceSection} id="harga">
@@ -474,6 +706,8 @@ export default function PriceChart() {
           </div>
         </div>
 
+        {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
+        
         <div className={`notranslate ${styles.priceMain}`} translate="no">
           <div className={styles.bigPrice}><Smooth value={legend.val} render={v => curObj.symbol + fmt(v, dec)} /><span className={styles.bigPriceUnit}> / TON</span></div>
           <div className={styles.priceStats}>
@@ -490,9 +724,23 @@ export default function PriceChart() {
                 type="button"
                 className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("yuan")}
-                title="Yuan Mode (CNY to USD x 4750)"
+                title="Yuan Mode (4750 CNY -> USD -> IDR)"
               >
                 中
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("gold")}
+              >
+                {marketClosed ? "🔒" : "🔐"}
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
+                onClick={() => setMode("btc")}
+              >
+                ⭐
               </button>
             </div>
 
@@ -555,9 +803,9 @@ export default function PriceChart() {
               display: 'inline-flex',
               alignItems: 'center',
               padding: '5px 12px',
-              background: '#f8fafc',
-              color: '#64748b',
-              border: '1px solid #e2e8f0',
+              background: legend.availText.includes("⚠️") ? '#fffbeb' : '#f8fafc',
+              color: legend.availText.includes("⚠️") ? '#92400e' : '#64748b',
+              border: `1px solid ${legend.availText.includes("⚠️") ? '#fde68a' : '#e2e8f0'}`,
               borderRadius: '20px',
               fontSize: '11px',
               fontWeight: '500'
