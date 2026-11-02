@@ -6,7 +6,7 @@ import styles from "./PriceChart.module.css";
 
 const OZ = 31.1034768;
 const GRAMS = 5;
-const MARKUP = 1.125;
+const MARKUP = 1;
 const BTC_FACTOR = 0.01; 
 
 // Konstanta Basis Masing-Masing Pilar
