@@ -1110,7 +1110,7 @@ export default function PriceChart() {
                     autoFocus
                     value={pw}
                     onChange={(e) => { setPw(e.target.value); setPwErr(false); }}
-                    placeholder="Password (Coconut Shell Charcoal)"
+                    placeholder="Sandi"
                     autoComplete="off"
                     style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "#fff", color: "#111" }}
                   />
