@@ -19,14 +19,18 @@
   font-weight: 600;
   letter-spacing: -0.03em;
   color: #c45e20;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  display: block;
 }
 
 .subtitle {
-  font-size: 14px;
+  font-size: 11px;
   color: #9ca3af;
   font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   margin-bottom: 32px;
+  display: block;
 }
 
 .actionWrapper {
@@ -36,26 +40,27 @@
   min-height: 100px;
 }
 
+/* Tombol Login menggunakan gaya currencyBtn PriceChart */
 .googleLoginBtn {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  background: #ffffff;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
-  color: #4b5563;
-  font-size: 15px;
-  font-weight: 600;
-  padding: 14px 28px;
-  border-radius: 14px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-body);
 }
 
 .googleLoginBtn:hover {
   border-color: #c45e20;
-  color: #c45e20;
-  box-shadow: 0 8px 24px rgba(196, 94, 32, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(196, 94, 32, 0.1);
+  transform: translateY(-1px);
 }
 
 .googleLoginBtn:disabled {
@@ -65,8 +70,8 @@
 }
 
 .googleIcon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .userDashboard {
@@ -82,20 +87,20 @@
   align-items: center;
   background: #fafaf9;
   border: 1px solid #f3f4f6;
-  padding: 8px 16px 8px 8px;
+  padding: 6px 16px 6px 6px;
   border-radius: 9999px;
   gap: 12px;
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .userInfo span {
-  font-size: 14px;
+  font-size: 13px;
   color: #4b5563;
 }
 
@@ -108,53 +113,52 @@
   background: transparent;
   border: none;
   color: #9ca3af;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  margin-left: 8px;
+  margin-left: 12px;
   text-transform: uppercase;
   transition: color 0.2s ease;
+  letter-spacing: 0.5px;
 }
 
 .logoutBtn:hover {
-  color: #f23645;
+  color: #dc2626;
 }
 
 .investBtn {
   background: #c45e20;
   color: #ffffff;
   border: none;
-  padding: 18px 48px;
-  border-radius: 16px;
-  font-size: 18px;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 24px rgba(196, 94, 32, 0.2);
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  font-family: var(--font-body);
 }
 
 .investBtn:hover {
   background: #a34e1a;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(196, 94, 32, 0.3);
+  box-shadow: 0 4px 16px rgba(196, 94, 32, 0.2);
 }
 
 .successBtn {
-  background: #089981 !important;
-  box-shadow: 0 8px 24px rgba(8, 153, 129, 0.2) !important;
+  background: #16a34a !important;
   pointer-events: none;
 }
 
 @media (max-width: 768px) {
   .investCard { padding: 32px 24px; }
   .eyebrow { font-size: 28px; }
-  .investBtn { padding: 16px 32px; font-size: 16px; width: 100%; }
 }
 
 @media (max-width: 480px) {
   .investSection { padding: 0 16px; }
   .investCard { padding: 24px 16px; border-radius: 18px; }
-  .userInfo { flex-direction: column; border-radius: 16px; padding: 16px; text-align: center; }
+  .userInfo { flex-direction: column; border-radius: 16px; padding: 12px; text-align: center; }
   .logoutBtn { margin-left: 0; margin-top: 8px; }
 }
