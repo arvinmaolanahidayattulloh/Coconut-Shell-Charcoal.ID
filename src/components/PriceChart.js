@@ -15,8 +15,19 @@ const SAR_BASE = 5000;
 
 const WIB = 7 * 3600; 
 
-// Interval Berbasis Tick & Detik (Sec) sesuai permintaan
+// Menggabungkan interval waktu standar, rentang, dan interval Tick/Sec secara lengkap
 const IV = {
+  // Interval Menit & Jam Standar
+  "1m":  { type: "min", step: 60,     bin: "1m",  label: "1M" },
+  "5m":  { type: "min", step: 300,    bin: "5m",  label: "5M" },
+  "15m": { type: "min", step: 900,    bin: "15m", label: "15M" },
+  "30m": { type: "min", step: 1800,   bin: "30m", label: "30M" },
+  "1h":  { type: "min", step: 3600,   bin: "1h",  label: "1H" },
+  "4h":  { type: "min", step: 14400,  bin: "4h",  label: "4H" },
+  "12h": { type: "min", step: 43200,  bin: "12h", label: "12H" },
+  "1d":  { type: "min", step: 86400,  bin: "1d",  label: "1D" },
+  "3d":  { type: "min", step: 259200, bin: "3d",  label: "3D" },
+  // Tambahan Interval Tick & Detik
   "t1":   { type: "tick", count: 1,    label: "1 Tick" },
   "t10":  { type: "tick", count: 10,   label: "10 Tick" },
   "t100": { type: "tick", count: 100,  label: "100 Tick" },
@@ -29,9 +40,15 @@ const IV = {
 };
 
 const RANGES = {
-  "1D":  { iv: "10s", count: 150, label: "1D" },
-  "5D":  { iv: "15s", count: 250, label: "5D" },
-  "1M":  { iv: "30s", count: 350, label: "1M" }
+  "1D":  { iv: "5m",  count: 150,  label: "1D" },
+  "5D":  { iv: "15m", count: 250,  label: "5D" },
+  "1M":  { iv: "1h",  count: 350,  label: "1M" },
+  "3M":  { iv: "4h",  count: 280,  label: "3M" },
+  "6M":  { iv: "12h", count: 200,  label: "6M" },
+  "YTD": { iv: "1d",  count: 0,    label: "YTD" },
+  "1Y":  { iv: "1d",  count: 200,  label: "1Y" },
+  "5Y":  { iv: "3d",  count: 180,  label: "5Y" },
+  "10Y": { iv: "3d",  count: 250,  label: "10Y" }
 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
@@ -51,6 +68,11 @@ const CURRENCIES = [
 
 function fmt(num, dec) {
   return new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(num);
+}
+
+function ytdDays() {
+  const n = new Date();
+  return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
 function isXauMarketOpen() {
@@ -134,7 +156,7 @@ export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("csc"); 
   const [containerMode, setContainerMode] = useState("T"); 
-  const [iv, setIv] = useState("5s");       
+  const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
   const [isFull, setIsFull] = useState(false);
@@ -164,7 +186,7 @@ export default function PriceChart() {
   const modeRef = useRef("csc");
   const containerModeRef = useRef("T");
   const rateRef = useRef(1);
-  const ivRef = useRef("5s");
+  const ivRef = useRef("1m");
 
   const dsRef = useRef({
     usd: { raw: [], mult: (ratesObj, targetRate) => USD_BASE * targetRate },
@@ -206,7 +228,6 @@ export default function PriceChart() {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Autoscale provider untuk memusatkan harga secara vertikal di tengah secara proporsional
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -228,7 +249,7 @@ export default function PriceChart() {
         secondsVisible: true, 
         rightOffset: 2,
         fixLeftEdge: false,
-        fixRightEdge: true // Mengunci agar harga terbaru mentok di kanan dan tidak bisa digeser kebablasan
+        fixRightEdge: true 
       },
       crosshair: { mode: 0 },
       localization: { priceFormatter: p => new Intl.NumberFormat("id-ID", { minimumFractionDigits: 4 }).format(p) }
@@ -338,10 +359,24 @@ export default function PriceChart() {
     };
   }, [fitView]);
 
-  // Fungsi pengelompokan data berdasarkan Interval Tick & Sec
+  // Fungsi pengelompokan data berdasarkan jenis interval (Min, Sec, atau Tick)
   const generateIntervalData = useCallback((rawList, intervalConfig) => {
     if (!rawList || !rawList.length) return [];
     if (intervalConfig.type === "sec") {
+      const step = intervalConfig.step;
+      const grouped = {};
+      rawList.forEach(item => {
+        const bucket = Math.floor(item.time / step) * step;
+        if (!grouped[bucket]) {
+          grouped[bucket] = { time: bucket, open: item.open, high: item.high, low: item.low, close: item.close };
+        } else {
+          grouped[bucket].high = Math.max(grouped[bucket].high, item.high);
+          grouped[bucket].low = Math.min(grouped[bucket].low, item.low);
+          grouped[bucket].close = item.close;
+        }
+      });
+      return Object.values(grouped).sort((a, b) => a.time - b.time);
+    } else if (intervalConfig.type === "min") {
       const step = intervalConfig.step;
       const grouped = {};
       rawList.forEach(item => {
@@ -394,7 +429,7 @@ export default function PriceChart() {
     const map = {};
     dUsdProxy.forEach(x => map[x.time] = { f: x, g: null, b: null });
     dGold.forEach(x => { if(!map[x.time]) map[x.time] = {f: null, b: null}; map[x.time].g = x; });
-    dBtc.forEach(x => { if(!map[x.time]) map[x.time] = {f: null, g: null}; map[x.time].b = x; });
+    dBtc.forEach(x => { if(!map[x.time]) map[x.time] = {f: null, b: null}; map[x.time].b = x; });
 
     const times = Object.keys(map).map(Number).sort((a,b) => a-b);
     let lastF = dUsdProxy[0], lastG = dGold[0], lastB = dBtc[0];
@@ -715,10 +750,17 @@ export default function PriceChart() {
               </button>
               {timeDropOpen && (
                 <div className={`${styles.currencyDropdown}`}>
-                  <div className={styles.dropLabel}>INTERVAL (TICK & SEC)</div>
+                  <div className={styles.dropLabel}>INTERVAL</div>
                   {Object.keys(IV).map(v => (
                     <button key={v} className={`${styles.currencyOption} ${iv === v ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setRange(null); setTimeDropOpen(false); }}>
                       <span>{IV[v].label}</span>
+                    </button>
+                  ))}
+                  <div style={{ borderTop: '1px solid #f3f4f6', margin: '4px 0' }}></div>
+                  <div className={styles.dropLabel}>RENTANG</div>
+                  {Object.keys(RANGES).map(r => (
+                    <button key={r} className={`${styles.currencyOption} ${range === r ? styles.currencyActive : ""}`} onClick={() => { setRange(r); setIv(RANGES[r].iv); setTimeDropOpen(false); }}>
+                      <span>{RANGES[r].label}</span>
                     </button>
                   ))}
                 </div>
