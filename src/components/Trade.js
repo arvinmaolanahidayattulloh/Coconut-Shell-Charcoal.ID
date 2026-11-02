@@ -5,16 +5,22 @@ import styles from './Trade.module.css';
 
 export default function Trade() {
   const [amount, setAmount] = useState('');
-  const [tradeType, setTradeType] = useState('buy');
+  const [tradeType, setTradeType] = useState('buy'); // buy, sell, sellAll
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleTradeSubmit = (e) => {
     e.preventDefault();
-    if (!amount || isNaN(amount) || Number(amount) <= 0) {
-      alert('Masukkan jumlah ton yang valid.');
-      return;
+    
+    if (tradeType === 'sellAll') {
+      setSuccessMsg(`Berhasil mengeksekusi perintah SELL ALL untuk seluruh aset Arang Tempurung Kelapa Anda.`);
+    } else {
+      if (!amount || isNaN(amount) || Number(amount) <= 0) {
+        alert('Masukkan jumlah ton yang valid.');
+        return;
+      }
+      setSuccessMsg(`Berhasil menempatkan order ${tradeType.toUpperCase()} sebesar ${amount} Ton Arang Tempurung Kelapa.`);
     }
-    setSuccessMsg(`Berhasil menempatkan order ${tradeType.toUpperCase()} sebesar ${amount} Ton Arang Tempurung Kelapa.`);
+    
     setAmount('');
     setTimeout(() => setSuccessMsg(''), 5000);
   };
@@ -23,8 +29,8 @@ export default function Trade() {
     <section className={styles.tradeSection}>
       <div className={styles.tradeCard}>
         <div className={styles.tradeHeader}>
-          <h3 className={styles.eyebrow}>Platform Trading CSCID</h3>
-          <p className={styles.subtitle}>Eksekusi order beli atau jual secara instan</p>
+          <span className={styles.eyebrow}>Platform Trading CSCID</span>
+          <span className={styles.subtitle}>Eksekusi order beli atau jual komoditas secara instan</span>
         </div>
 
         {successMsg && <div className={styles.successAlert}>{successMsg}</div>}
@@ -45,23 +51,34 @@ export default function Trade() {
             >
               Jual (Short)
             </button>
+            <button
+              type="button"
+              className={`${styles.tabBtn} ${tradeType === 'sellAll' ? styles.sellActive : ''}`}
+              onClick={() => {
+                setTradeType('sellAll');
+                setAmount('ALL');
+              }}
+            >
+              Sell All
+            </button>
           </div>
 
           <div className={styles.inputGroup}>
             <label htmlFor="tradeAmount">Jumlah (Ton)</label>
             <input
               id="tradeAmount"
-              type="number"
+              type={tradeType === 'sellAll' ? 'text' : 'number'}
               min="1"
-              placeholder="Contoh: 10"
-              value={amount}
+              placeholder={tradeType === 'sellAll' ? "Seluruh Saldo Aset" : "Contoh: 10"}
+              value={tradeType === 'sellAll' ? 'MAKSIMAL (SELL ALL)' : amount}
               onChange={(e) => setAmount(e.target.value)}
+              disabled={tradeType === 'sellAll'}
               className={styles.tradeInput}
             />
           </div>
 
           <button type="submit" className={`${styles.submitBtn} ${tradeType === 'buy' ? styles.buyBtnBg : styles.sellBtnBg}`}>
-            Eksekusi {tradeType.toUpperCase()}
+            Eksekusi {tradeType === 'sellAll' ? 'SELL ALL' : tradeType.toUpperCase()}
           </button>
         </form>
       </div>
