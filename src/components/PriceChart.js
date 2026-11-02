@@ -97,15 +97,6 @@ async function getJson(path, attempt = 0) {
   }
 }
 
-function uniqSorted(list) {
-  const seen = {};
-  const out = [];
-  list.forEach(c => {
-    if (!seen[c.time]) { seen[c.time] = 1; out.push(c); }
-  });
-  return out.sort((a, b) => a.time - b.time);
-}
-
 const binOf = (ivKey) => IV[ivKey].bin || "1m";
 
 function bucketOf(t, cfg) {
@@ -453,11 +444,10 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat chart (Harga selalu di tengah vertikal & Bebas Zoom) ─────────
+  // ───────── Buat chart (Mentok Kanan Sempurna, Harga di Tengah, Zoom Bebas) ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Menjaga agar harga terakhir/tengah selalu di tengah layar secara vertikal
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -477,10 +467,10 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 0,
+        rightOffset: 0,           // MENTOK KANAN TANPA CELAH
         fixLeftEdge: false,
-        fixRightEdge: false,       // BEBAS ZOOM (Tidak dipatok ketat, user bisa zoom in/out leluasa)
-        shiftVisibleRangeOnNewBar: false, 
+        fixRightEdge: true,       // MENAHAN AGAR TIDAK BISA DIGESER KE MASA DEPAN KOSONG
+        shiftVisibleRangeOnNewBar: true, 
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -522,11 +512,8 @@ export default function PriceChart() {
     const n = lenRef.current;
     if (!chart || !n) return;
     chart.priceScale("right").applyOptions({ autoScale: true });
-    // Tampilkan 60 bar terakhir secara default saat pertama load tanpa membatasi tingkat zoom user selanjutnya
-    chart.timeScale().setVisibleLogicalRange({
-      from: Math.max(0, n - 60),
-      to: n + 1
-    });
+    // Mengunci posisi tepat di ujung kanan secara halus tanpa membatasi zoom
+    chart.timeScale().scrollToPosition(0, true);
   }, []);
 
   const compute = useCallback(() => {
@@ -785,11 +772,14 @@ export default function PriceChart() {
           const timeScale = chartRef.current?.timeScale();
           const oldRange = timeScale?.getVisibleLogicalRange();
           const oldLen = lenRef.current;
+          const isAtRightEdge = oldRange && (oldRange.to >= oldLen - 2);
 
           refresh(false);
 
           const addedBars = lenRef.current - oldLen;
-          if (addedBars > 0 && oldRange) {
+          if (isAtRightEdge) {
+            fitView();
+          } else if (addedBars > 0 && oldRange) {
             timeScale?.setVisibleLogicalRange({
               from: oldRange.from + addedBars,
               to: oldRange.to + addedBars
@@ -840,7 +830,6 @@ export default function PriceChart() {
 
     connectBinance();
 
-    // Timer Normal per Detik (Semua interval diperhalus dengan LERP di dalam pembaharuan data)
     const timer = setInterval(() => {
       const pGold = livePrices.current.gold;
       const pBtc = livePrices.current.btcBn;
@@ -861,7 +850,6 @@ export default function PriceChart() {
 
         const last = d.raw[d.raw.length - 1];
         if (last && bucketOf(last.time, bcfg) === nb) {
-          // LERP halus pada update harga candle terakhir agar pergerakan tidak patah-patah
           last.close = last.close + (val - last.close) * 0.25;
           if (hi > last.high) last.high = hi;
           if (lo < last.low) last.low = lo;
@@ -887,7 +875,6 @@ export default function PriceChart() {
       if (ivRef.current !== "inf") refresh(false);
     }, 1000);
 
-    // Animasi Ular (INF) dengan peredam halus (LERP 0.08)
     const fastTimer = setInterval(() => {
       if (ivRef.current !== "inf") {
         const dGold = dsRef.current.gold;
