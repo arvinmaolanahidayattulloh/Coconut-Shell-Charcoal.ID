@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
 import styles from "./PriceChart.module.css";
 
@@ -16,35 +16,40 @@ const SAR_BASE = 5000;
 const WIB = 7 * 3600;
 const DAY = 86400;
 
-// ─────────────────────────────────────────────────────────────
-// INTERVAL: urut dari terkecil (Tick) → Detik → Menit → Jam → Hari → Minggu → Bulan → Tahun
-// pmax = batas jumlah candle prediksi (agar interval besar tidak meramal terlalu jauh)
-// ─────────────────────────────────────────────────────────────
+// SHA-256 dari password (huruf kecil, tanpa spasi di ujung)
+const PW_HASH = "113066f60804d8bc313ae94d90e236ca5e672ce32398546529e509cd5a4b2f9a";
+
+async function sha256(s) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+// URUTAN INTERVAL: dari yang paling kecil (Tick) hingga tahunan
 const IV = {
-  "t1":    { grp: "TICK",   type: "tick", count: 1,    label: "1 Tick" },
-  "t10":   { grp: "TICK",   type: "tick", count: 10,   label: "10 Tick" },
-  "t100":  { grp: "TICK",   type: "tick", count: 100,  label: "100 Tick" },
-  "t1000": { grp: "TICK",   type: "tick", count: 1000, label: "1000 Tick" },
-  "1s":    { grp: "DETIK",  type: "sec",  step: 1,     label: "1 Sec" },
-  "5s":    { grp: "DETIK",  type: "sec",  step: 5,     label: "5 Sec" },
-  "10s":   { grp: "DETIK",  type: "sec",  step: 10,    label: "10 Sec" },
-  "15s":   { grp: "DETIK",  type: "sec",  step: 15,    label: "15 Sec" },
-  "30s":   { grp: "DETIK",  type: "sec",  step: 30,    label: "30 Sec" },
-  "1m":    { grp: "MENIT",  type: "min",  step: 60,    bin: "1m",  label: "1M" },
-  "5m":    { grp: "MENIT",  type: "min",  step: 300,   bin: "5m",  label: "5M" },
-  "15m":   { grp: "MENIT",  type: "min",  step: 900,   bin: "15m", label: "15M" },
-  "30m":   { grp: "MENIT",  type: "min",  step: 1800,  bin: "30m", label: "30M" },
-  "1h":    { grp: "JAM",    type: "min",  step: 3600,  bin: "1h",  label: "1H" },
-  "4h":    { grp: "JAM",    type: "min",  step: 14400, bin: "4h",  label: "4H" },
-  "12h":   { grp: "JAM",    type: "min",  step: 43200, bin: "12h", label: "12H" },
-  "1d":    { grp: "HARI",   type: "min",  step: DAY,   bin: "1d",  label: "1D" },
-  "3d":    { grp: "HARI",   type: "min",  step: 3 * DAY, bin: "3d", label: "3D", pmax: 40 },
-  "1w":    { grp: "MINGGU", type: "min",  step: 7 * DAY, off: 4 * DAY, bin: "1w", label: "1W", pmax: 26 },
-  "1mo":   { grp: "BULAN",  type: "cal",  unit: "month", bin: "1M", label: "1MO", pmax: 12 },
-  "1y":    { grp: "TAHUN",  type: "cal",  unit: "year",  bin: "1M", label: "1Y",  pmax: 5 }
+  "t1":    { type: "tick", count: 1,    label: "1 Tick" },
+  "t10":   { type: "tick", count: 10,   label: "10 Tick" },
+  "t100":  { type: "tick", count: 100,  label: "100 Tick" },
+  "t1000": { type: "tick", count: 1000, label: "1000 Tick" },
+  "1s":    { type: "sec",  step: 1,     label: "1 Sec" },
+  "5s":    { type: "sec",  step: 5,     label: "5 Sec" },
+  "10s":   { type: "sec",  step: 10,    label: "10 Sec" },
+  "15s":   { type: "sec",  step: 15,    label: "15 Sec" },
+  "30s":   { type: "sec",  step: 30,    label: "30 Sec" },
+  "1m":    { type: "min",  step: 60,    bin: "1m",  label: "1M" },
+  "5m":    { type: "min",  step: 300,   bin: "5m",  label: "5M" },
+  "15m":   { type: "min",  step: 900,   bin: "15m", label: "15M" },
+  "30m":   { type: "min",  step: 1800,  bin: "30m", label: "30M" },
+  "1h":    { type: "min",  step: 3600,  bin: "1h",  label: "1H" },
+  "4h":    { type: "min",  step: 14400, bin: "4h",  label: "4H" },
+  "12h":   { type: "min",  step: 43200, bin: "12h", label: "12H" },
+  "1d":    { type: "min",  step: DAY,   bin: "1d",  label: "1D" },
+  "3d":    { type: "min",  step: 3 * DAY, bin: "3d", label: "3D" },
+  "1w":    { type: "min",  step: 7 * DAY, off: 4 * DAY, bin: "1w", label: "1W" },
+  "1mo":   { type: "cal",  unit: "month", bin: "1M", label: "1MO" },
+  "1y":    { type: "cal",  unit: "year",  bin: "1M", label: "1Y" }
 };
 
-// Konfigurasi bucket untuk data dasar (yang diambil dari exchange)
+// Konfigurasi bucket untuk data dasar (dari exchange)
 const BASE = {
   "1m":  { type: "min", step: 60 },
   "5m":  { type: "min", step: 300 },
@@ -111,7 +116,7 @@ function uniqSorted(list) {
 const binOf = (ivKey) => IV[ivKey].bin || "1m";
 
 // ─────────────────────────────────────────────────────────────
-// BUCKET WAKTU (tanpa animasi range → tidak ada efek "pusing")
+// BUCKET WAKTU
 // ─────────────────────────────────────────────────────────────
 function bucketOf(t, cfg) {
   const u = t - WIB;
@@ -122,24 +127,6 @@ function bucketOf(t, cfg) {
   }
   const off = cfg.off || 0;
   return Math.floor((u - off) / cfg.step) * cfg.step + off + WIB;
-}
-
-function nextTime(t, cfg, tickStep) {
-  if (cfg.type === "cal") {
-    const d = new Date((t - WIB) * 1000);
-    if (cfg.unit === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) / 1000 + WIB;
-    return Date.UTC(d.getUTCFullYear() + 1, 0, 1) / 1000 + WIB;
-  }
-  if (cfg.type === "tick") return t + tickStep;
-  return t + cfg.step;
-}
-
-function medianStep(cs) {
-  const diffs = [];
-  for (let i = Math.max(1, cs.length - 20); i < cs.length; i++) diffs.push(cs[i].time - cs[i - 1].time);
-  if (!diffs.length) return 1;
-  diffs.sort((a, b) => a - b);
-  return Math.max(1, diffs[Math.floor(diffs.length / 2)]);
 }
 
 function aggregate(rows, cfg) {
@@ -175,36 +162,9 @@ function aggregate(rows, cfg) {
   return out;
 }
 
-// Di bawah 1 menit: candle disambung ke close sebelumnya dan diberi body minimum
-// supaya tidak jadi garis tipis. Close tetap = harga terbaru.
-const MIN_BODY_PCT = 0.00006;
-function fixThin(cs, cfg) {
-  if ((cfg.type !== "tick" && cfg.type !== "sec") || cs.length < 2) return cs;
-  let prevDir = 1;
-  for (let i = 1; i < cs.length; i++) {
-    const k = cs[i];
-    k.open = cs[i - 1].close;
-    const minBody = Math.abs(k.close) * MIN_BODY_PCT;
-    let d = k.close - k.open;
-    if (Math.abs(d) < minBody) {
-      const dir = d > 0 ? 1 : d < 0 ? -1 : prevDir;
-      k.open = k.close - dir * minBody;
-      d = k.close - k.open;
-    }
-    prevDir = d >= 0 ? 1 : -1;
-    const hiB = Math.max(k.open, k.close), loB = Math.min(k.open, k.close);
-    if (k.high < hiB) k.high = hiB;
-    if (k.low > loB) k.low = loB;
-  }
-  return cs;
-}
-
-// Sumber data: untuk Tick/Detik gunakan sampel live per-detik, selain itu candle dasar
+// Di bawah 1 menit (Tick & Detik) harga dicetak oleh EA (d.sec); selain itu candle dasar exchange
 function srcOf(d, cfg) {
-  if ((cfg.type === "tick" || cfg.type === "sec") && d.sec.length) {
-    const t0 = d.sec[0].time;
-    return d.raw.filter(r => r.time < t0).concat(d.sec);
-  }
+  if (cfg.type === "tick" || cfg.type === "sec") return d.sec;
   return d.raw;
 }
 
@@ -249,10 +209,13 @@ function mergeCsc(f, g, b, calc) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// EA BACKTEST FORECAST
-// Setiap candle prediksi DIJAMIN bullish atau bearish (tidak pernah doji / body nol).
-// Deterministik per candle tertutup (seeded) → tidak berkedip tiap detik.
+// EA — PENCETAK HARGA DI BAWAH 1 MENIT
+// EA membaca riwayat candle 1M, lalu membuat harganya sendiri tiap detik
+// (random test mengikuti chart). Harga yang dicetak EA adalah harga candle itu.
 // ─────────────────────────────────────────────────────────────
+const EA_BODY = 0.00003;   // body minimum relatif terhadap harga (candle tidak jadi garis tipis)
+const EA_MAXROWS = 7200;
+
 function hashStr(s) {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -269,49 +232,101 @@ function rng(seed) {
   };
 }
 
-function emaOf(v, p) {
-  const k = 2 / (p + 1);
-  let e = v[0];
-  for (let i = 1; i < v.length; i++) e = v[i] * k + e * (1 - k);
-  return e;
+function gauss(r) {
+  return (r() + r() + r() + r() - 2) * 1.7320508;
 }
 
-function buildForecast(cs, cfg, count, seedKey) {
-  if (cs.length < 3 || count < 1) return [];
-  const lastBar = cs[cs.length - 1];
-  const closed = cs.length > 25 ? cs.slice(0, -1) : cs;
-  const win = closed.slice(-120);
-  const closes = win.map(c => c.close);
-  const m = Math.min(14, win.length);
-
+// Volatilitas per detik dari riwayat 1M
+function eaSigma(raw) {
+  const n = Math.min(15, raw.length);
+  if (!n) return 0;
   let sum = 0;
-  for (let i = win.length - m; i < win.length; i++) sum += win[i].high - win[i].low;
-  const atr = Math.max(sum / m, Math.abs(lastBar.close) * 0.00003);
+  for (let i = raw.length - n; i < raw.length; i++) sum += raw[i].high - raw[i].low;
+  const last = raw[raw.length - 1].close;
+  return Math.max((sum / n) * 0.05, Math.abs(last) * 0.00001);
+}
 
-  const fast = emaOf(closes, 8);
-  const slow = emaOf(closes, 21);
-  const lb = Math.min(5, closes.length - 1);
-  const mom = (closes[closes.length - 1] - closes[closes.length - 1 - lb]) / (atr * Math.max(1, lb));
-  const trend = (fast - slow) / atr;
-  const bias = 0.12 * Math.tanh(trend) + 0.08 * Math.tanh(mom * 3);
+// Riwayat: 1 candle 1M → n candle detik (jalur harga buatan EA yang menyentuh open, high, low, close candle itu)
+function eaFromBar(bar, n, seed) {
+  if (n < 1) return [];
+  const r = rng(seed);
+  const steps = n * 4;
+  const mid = (bar.high + bar.low) / 2 || bar.close;
+  let hi = bar.high, lo = bar.low;
+  const minRange = Math.abs(mid) * 0.00012;
+  if (hi - lo < minRange) {
+    const pad = (minRange - (hi - lo)) / 2;
+    hi += pad; lo -= pad;
+  }
+  const lowFirst = bar.close >= bar.open ? r() < 0.65 : r() < 0.35;
+  const a = Math.max(1, Math.floor(steps * (0.15 + 0.3 * r())));
+  const b = Math.min(steps - 1, a + Math.max(1, Math.floor(steps * (0.2 + 0.3 * r()))));
+  const keys = [[0, bar.open], [a, lowFirst ? lo : hi], [b, lowFirst ? hi : lo], [steps, bar.close]];
 
-  const seed = (hashStr(seedKey) ^ (closed[closed.length - 1].time | 0)) >>> 0;
-  const rnd = rng(seed);
-  const tickStep = medianStep(cs);
+  const path = new Array(steps + 1);
+  for (let s = 0; s < keys.length - 1; s++) {
+    const [i0, p0] = keys[s];
+    const [i1, p1] = keys[s + 1];
+    const L = Math.max(1, i1 - i0);
+    const w = [0];
+    for (let i = 1; i <= L; i++) w.push(w[i - 1] + gauss(r));
+    const amp = (hi - lo) * 0.3 / Math.sqrt(L);
+    for (let i = 0; i <= L; i++) {
+      const base = p0 + (p1 - p0) * (i / L);
+      const bridge = w[i] - (i / L) * w[L];
+      path[i0 + i] = Math.min(hi, Math.max(lo, base + amp * bridge));
+    }
+  }
+  path[0] = bar.open;
+  path[steps] = bar.close;
 
-  // Keputusan EA untuk 1 candle berikutnya: stabil selama candle terakhir belum tertutup
-  const ref = closes[closes.length - 1];
-  const dev = Math.max(-3, Math.min(3, (ref - slow) / atr));
-  const score = bias - 0.03 * dev;
-  const r1 = rnd();
-  const dir = Math.abs(score) > 0.005 ? (score > 0 ? 1 : -1) : (r1 < 0.5 ? 1 : -1);
+  // selang-seling kecil di batas detik agar body candle tidak nol
+  const mb = Math.abs(mid) * EA_BODY;
+  for (let i = 1; i < n; i++) path[4 * i] += (i % 2 ? 1 : -1) * mb * 0.5;
 
-  const open = lastBar.close;
-  const body = Math.max(atr * (0.35 + 0.5 * rnd()), Math.abs(open) * 6e-5);
-  const close = open + dir * body;
-  const high = Math.max(open, close) + atr * 0.25 * rnd();
-  const low = Math.min(open, close) - atr * 0.25 * rnd();
-  return [{ time: nextTime(lastBar.time, cfg, tickStep), open, high, low, close }];
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let h = -Infinity, l = Infinity;
+    for (let j = 0; j <= 4; j++) {
+      const v = path[4 * i + j];
+      if (v > h) h = v;
+      if (v < l) l = v;
+    }
+    out.push({ time: bar.time + i, open: path[4 * i], high: h, low: l, close: path[4 * i + 4] });
+  }
+  return out;
+}
+
+// Live: EA mencetak harga detik berikutnya (random walk yang ditarik ke harga pasar)
+function eaNext(open, target, sigma, r) {
+  let p = open, h = open, l = open;
+  for (let j = 0; j < 4; j++) {
+    p += (target - p) * 0.075 + gauss(r) * sigma * 0.5;
+    if (p > h) h = p;
+    if (p < l) l = p;
+  }
+  const mb = Math.abs(open) * EA_BODY;
+  if (Math.abs(p - open) < mb) {
+    const dir = target !== open ? Math.sign(target - open) : (r() < 0.5 ? 1 : -1);
+    p = open + dir * mb;
+    if (p > h) h = p;
+    if (p < l) l = p;
+  }
+  return { open, high: h, low: l, close: p };
+}
+
+function buildEaHistory(key, raw) {
+  const rows = [];
+  const nowT = Math.floor(Date.now() / 1000) + WIB;
+  const bars = raw.slice(-121);
+  for (let i = 0; i < bars.length; i++) {
+    const b = bars[i];
+    const forming = i === bars.length - 1 && nowT - b.time < 60;
+    const n = forming ? Math.max(0, nowT - b.time) : 60;
+    const part = eaFromBar(b, n, hashStr(key + b.time));
+    for (let j = 0; j < part.length; j++) rows.push(part[j]);
+  }
+  return rows.length > EA_MAXROWS ? rows.slice(-EA_MAXROWS) : rows;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -348,12 +363,15 @@ function Smooth({ value, render, ms }) {
 }
 
 export default function PriceChart() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [pw, setPw] = useState("");
+  const [pwErr, setPwErr] = useState(false);
+
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("csc");
   const [containerMode, setContainerMode] = useState("T");
   const [iv, setIv] = useState("5s");
   const [type, setType] = useState("candle");
-  const [forecastOn, setForecastOn] = useState(true);
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
 
@@ -367,14 +385,13 @@ export default function PriceChart() {
   const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, availText: "", isUp: true, high: 0, low: 0 });
 
   const chartRef = useRef(null);
-  const seriesRef = useRef({ candle: null, area: null, pred: null, predLine: null });
+  const seriesRef = useRef({ candle: null, area: null });
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
-  const nowLineRef = useRef(null);
 
   const lastRef = useRef(null);       // harga terakhir (pusat vertikal)
-  const lenRef = useRef(0);           // jumlah candle nyata
-  const barsRef = useRef(40);         // setengah lebar view (bar)
+  const lenRef = useRef(0);           // jumlah candle
+  const barsRef = useRef(60);         // jumlah bar yang terlihat di kiri
   const lastBarRef = useRef(null);    // {first, len, time} untuk update inkremental
   const loadedBinRef = useRef(null);  // bin data dasar yang sedang termuat
 
@@ -384,12 +401,12 @@ export default function PriceChart() {
   const ratesRef = useRef(null);
   const ivRef = useRef("5s");
   const typeRef = useRef("candle");
-  const forecastRef = useRef(true);
   const decRef = useRef(0);
 
   const refreshRef = useRef(() => {});
   const fitRef = useRef(() => {});
 
+  // raw = candle dasar dari exchange, sec = candle detik hasil EA
   const dsRef = useRef({
     gold: { raw: [], sec: [] },
     btc:  { raw: [], sec: [] },
@@ -406,15 +423,34 @@ export default function PriceChart() {
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
   const baseBin = binOf(iv);
 
-  // sinkronkan ref dengan state (dibaca oleh timer & callback)
   modeRef.current = mode;
   containerModeRef.current = containerMode;
   rateRef.current = rate;
   ratesRef.current = rates;
   ivRef.current = iv;
   typeRef.current = type;
-  forecastRef.current = forecastOn;
   decRef.current = dec;
+
+  // ───────── Password ─────────
+  useEffect(() => {
+    try { if (sessionStorage.getItem("csc_unlock") === "1") setUnlocked(true); } catch (e) {}
+  }, []);
+
+  const submitPw = async (e) => {
+    e.preventDefault();
+    try {
+      const ok = (await sha256(pw.trim().toLowerCase())) === PW_HASH;
+      if (ok) {
+        try { sessionStorage.setItem("csc_unlock", "1"); } catch (err) {}
+        setPwErr(false);
+        setUnlocked(true);
+      } else {
+        setPwErr(true);
+      }
+    } catch (err) {
+      setPwErr(true);
+    }
+  };
 
   useEffect(() => { setMarketClosed(!isXauMarketOpen()); }, []);
 
@@ -424,21 +460,9 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // Garis "SEKARANG" + label prediksi mengikuti posisi candle terakhir
-  const placeNow = useCallback(() => {
-    const el = nowLineRef.current;
-    const chart = chartRef.current;
-    if (!el || !chart) return;
-    const n = lenRef.current;
-    const x = n ? chart.timeScale().logicalToCoordinate(n - 1) : null;
-    if (x == null || !forecastRef.current) { el.style.display = "none"; return; }
-    el.style.display = "block";
-    el.style.left = x + "px";
-  }, []);
-
-  // ───────── Buat chart (sekali) ─────────
+  // ───────── Buat chart (setelah password benar) ─────────
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!unlocked || !chartContainerRef.current) return;
 
     // Harga terakhir selalu di tengah vertikal
     const centerProvider = (orig) => {
@@ -463,7 +487,7 @@ export default function PriceChart() {
         rightOffset: 0,
         fixLeftEdge: false,
         fixRightEdge: false,
-        shiftVisibleRangeOnNewBar: false, // posisi view diatur manual agar harga tetap di tengah
+        shiftVisibleRangeOnNewBar: false, // posisi view diatur manual
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -483,55 +507,32 @@ export default function PriceChart() {
       autoscaleInfoProvider: centerProvider
     });
 
-    // Candle prediksi EA: transparan + border → jelas beda dari data asli
-    const pred = chart.addCandlestickSeries({
-      upColor: "rgba(8, 153, 129, 0.28)", downColor: "rgba(242, 54, 69, 0.28)",
-      borderVisible: true, borderUpColor: "#089981", borderDownColor: "#f23645",
-      wickUpColor: "rgba(8, 153, 129, 0.75)", wickDownColor: "rgba(242, 54, 69, 0.75)",
-      priceLineVisible: false, lastValueVisible: false,
-      autoscaleInfoProvider: centerProvider
-    });
-
-    const predLine = chart.addLineSeries({
-      color: "rgba(41, 98, 255, 0.8)", lineWidth: 2, lineStyle: 2,
-      priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-      visible: false,
-      autoscaleInfoProvider: centerProvider
-    });
-
-    chart.timeScale().subscribeVisibleLogicalRangeChange(() => placeNow());
-
     chartRef.current = chart;
-    seriesRef.current = { candle, area, pred, predLine };
+    seriesRef.current = { candle, area };
+    lastBarRef.current = null;
 
     return () => {
       chart.remove();
       chartRef.current = null;
     };
-  }, [placeNow]);
+  }, [unlocked]);
 
   const applyVis = useCallback(() => {
     const s = seriesRef.current;
     if (!s.candle) return;
-    const isCandle = typeRef.current === "candle";
-    const fc = forecastRef.current;
-    s.candle.applyOptions({ visible: isCandle });
-    s.area.applyOptions({ visible: !isCandle });
-    s.pred.applyOptions({ visible: isCandle && fc });
-    s.predLine.applyOptions({ visible: !isCandle && fc });
+    s.candle.applyOptions({ visible: typeRef.current === "candle" });
+    s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Pusatkan: candle terakhir + 1 candle prediksi di kanan, harga di tengah vertikal
+  // Pusatkan tampilan: harga terakhir di tengah vertikal, mentok di kanan seperti backtest EA
   const fitView = useCallback(() => {
     const chart = chartRef.current;
     const n = lenRef.current;
     if (!chart || !n) return;
-    const bars = barsRef.current;
-    const left = Math.min(bars, Math.max(10, n));
+    const left = Math.min(barsRef.current, Math.max(10, n));
     chart.priceScale("right").applyOptions({ autoScale: true });
-    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n + 4 });
-    placeNow();
-  }, [placeNow]);
+    chart.timeScale().setVisibleLogicalRange({ from: n - 1 - left, to: n + 2 });
+  }, []);
 
   // Hitung data tampilan (mode + mata uang + kontainer + interval)
   const compute = useCallback(() => {
@@ -561,10 +562,10 @@ export default function PriceChart() {
       const m = modeMult(md, r, rt) * m40;
       rows = src.map(x => ({ time: x.time, open: x.open * m, high: x.high * m, low: x.low * m, close: x.close * m }));
     }
-    return fixThin(aggregate(rows, cfg), cfg);
+    return aggregate(rows, cfg);
   }, []);
 
-  // Render ke chart. full=true → setData penuh; full=false → update inkremental (halus, tanpa reset view)
+  // Render ke chart. full=true → setData penuh; full=false → update inkremental (halus)
   const refresh = useCallback((full) => {
     const s = seriesRef.current;
     const chart = chartRef.current;
@@ -605,16 +606,7 @@ export default function PriceChart() {
     lenRef.current = n;
     lastBarRef.current = { first: cs[0].time, len: n, time: last.time };
 
-    // Prediksi EA
-    let fc = [];
-    if (forecastRef.current) {
-      const cnt = 1;
-      fc = buildForecast(cs, cfg, cnt, modeRef.current + "|" + ivRef.current + "|" + containerModeRef.current);
-    }
-    s.pred.setData(fc);
-    s.predLine.setData(fc.length ? [{ time: last.time, value: last.close }].concat(fc.map(x => ({ time: x.time, value: x.close }))) : []);
-
-    // Candle baru muncul → geser view 1 bar supaya harga tetap di tengah (jika user tidak menggeser jauh)
+    // Candle baru muncul → geser view 1 bar supaya harga tetap pada posisi yang sama
     if (incremental && prev && n === prev.len + 1) {
       const r = chart.timeScale().getVisibleLogicalRange();
       if (r && prev.len - 1 >= r.from && prev.len - 1 <= r.to) {
@@ -629,9 +621,7 @@ export default function PriceChart() {
     const f0 = win[0].open;
     const diff = last.close - f0;
     setLegend(p => ({ ...p, val: last.close, chg: diff, pct: f0 ? (diff / f0) * 100 : 0, isUp: diff >= 0, high: hi, low: lo }));
-
-    placeNow();
-  }, [compute, placeNow]);
+  }, [compute]);
 
   refreshRef.current = refresh;
   fitRef.current = fitView;
@@ -666,7 +656,7 @@ export default function PriceChart() {
     };
   }, []);
 
-  // Resize / rotate / fullscreen → hitung ulang lebar view & pusatkan
+  // Resize / rotate → pusatkan ulang
   useEffect(() => {
     let t;
     const onResize = () => {
@@ -693,16 +683,21 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [isFull]);
 
-  // ───────── Ganti tipe chart (tanpa fade) ─────────
+  // Setelah password benar: tampilkan data yang sudah termuat
+  useEffect(() => {
+    if (!unlocked) return;
+    const t = setTimeout(() => {
+      applyVis();
+      refreshRef.current(true);
+      fitRef.current();
+    }, 60);
+    return () => clearTimeout(t);
+  }, [unlocked, applyVis]);
+
+  // ───────── Ganti tipe chart ─────────
   useEffect(() => {
     applyVis();
-  }, [type, forecastOn, applyVis]);
-
-  // ───────── Ganti toggle prediksi ─────────
-  useEffect(() => {
-    refreshRef.current(true);
-    placeNow();
-  }, [forecastOn, placeNow]);
+  }, [type, applyVis]);
 
   // ───────── Ganti mode / mata uang / kontainer / interval ─────────
   // Tanpa animasi range: fade singkat → setData → langsung pusatkan → fade in.
@@ -727,7 +722,7 @@ export default function PriceChart() {
     setFade(true);
 
     const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec";
-    const limit = sub ? 200 : 1000;
+    const limit = sub ? 130 : 1000;
 
     const fetchBinance = async (symbol) => {
       const rows = await getJson(`/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${limit}`);
@@ -755,6 +750,12 @@ export default function PriceChart() {
       ds.usd.raw = uniqSorted(res[2]).map(x => ({
         time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08
       }));
+
+      // EA membaca riwayat 1M lalu mencetak harga detik-nya sendiri
+      if (bin === "1m") {
+        ["gold", "btc", "usd"].forEach(k => { ds[k].sec = buildEaHistory(k, ds[k].raw); });
+      }
+
       loadedBinRef.current = bin;
       lastBarRef.current = null;
       refresh(true);
@@ -815,19 +816,7 @@ export default function PriceChart() {
         const hi = ac ? Math.max(ac.hi, val) : val;
         const lo = ac ? Math.min(ac.lo, val) : val;
 
-        // sampel per-detik (Tick & Detik) dengan high/low dari tiap transaksi
-        const sl = d.sec[d.sec.length - 1];
-        if (sl && sl.time === nowT) {
-          if (hi > sl.high) sl.high = hi;
-          if (lo < sl.low) sl.low = lo;
-          sl.close = val;
-        } else {
-          const o = sl ? sl.close : val;
-          d.sec.push({ time: nowT, open: o, high: Math.max(hi, o), low: Math.min(lo, o), close: val });
-          if (d.sec.length > 7200) d.sec.splice(0, 1200);
-        }
-
-        // gabung ke candle dasar
+        // candle dasar (harga pasar sebenarnya)
         const last = d.raw[d.raw.length - 1];
         if (last && bucketOf(last.time, bcfg) === nb) {
           if (hi > last.high) last.high = hi;
@@ -835,6 +824,19 @@ export default function PriceChart() {
           last.close = val;
         } else {
           d.raw.push({ time: nb, open: val, high: hi, low: lo, close: val });
+        }
+
+        // EA mencetak candle detik berikutnya
+        if (bin === "1m" && d.sec.length) {
+          const sigma = eaSigma(d.raw);
+          let t = Math.max(d.sec[d.sec.length - 1].time + 1, nowT - 119);
+          for (; t <= nowT; t++) {
+            const prevRow = d.sec[d.sec.length - 1];
+            const row = eaNext(prevRow.close, val, sigma, rng(hashStr(k) ^ t));
+            row.time = t;
+            d.sec.push(row);
+          }
+          if (d.sec.length > EA_MAXROWS) d.sec.splice(0, 1200);
         }
       });
 
@@ -849,7 +851,30 @@ export default function PriceChart() {
     };
   }, [rates, refresh]);
 
-  const ivKeys = Object.keys(IV);
+  // ───────── Layar password ─────────
+  if (!unlocked) {
+    return (
+      <section className={styles.priceSection} id="harga">
+        <div className={styles.priceCard}>
+          <div className={styles.priceHeader}>
+            <span className={styles.eyebrow}>Coconut Shell Charcoal .ID (CSC Index)</span>
+          </div>
+          <form onSubmit={submitPw} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "24px 0" }}>
+            <input
+              type="password"
+              value={pw}
+              onChange={(e) => { setPw(e.target.value); setPwErr(false); }}
+              placeholder="Password"
+              autoComplete="off"
+              style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "transparent", color: "inherit" }}
+            />
+            <button className={styles.currencyBtn} type="submit">BUKA CHART</button>
+            {pwErr && <span style={{ width: "100%", color: "#f23645", fontSize: 13 }}>Password salah.</span>}
+          </form>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.priceSection} id="harga">
@@ -892,7 +917,7 @@ export default function PriceChart() {
             <span className={styles.bigPriceUnit}> / {containerMode === "40ft" ? "25 TON (40FT)" : "TON"}</span>
           </div>
           <div className={styles.priceStats}>
-            <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} <Smooth value={legend.chg} render={v => (v >= 0 ? "+" : "") + fmt(v, dec)} /> (<Smooth value={legend.pct} render={v => (v >= 0 ? "+" : "") + fmt(v, 2) + "%"} />)</span></div>
+            <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "▲" : "▼"} <Smooth value={legend.chg} render={v => (v >= 0 ? "+" : "") + fmt(v, dec)} /> (<Smooth value={legend.pct} render={v => (v >= 0 ? "+" : "") + fmt(v, 2) + "%"} />)</span></div>
             <div className={styles.statBox}><span className={styles.statLabel}>TERTINGGI</span><span className={styles.statVal}><Smooth value={legend.high} render={v => curObj.symbol + fmt(v, dec)} /></span></div>
             <div className={styles.statBox}><span className={styles.statLabel}>TERENDAH</span><span className={styles.statVal}><Smooth value={legend.low} render={v => curObj.symbol + fmt(v, dec)} /></span></div>
           </div>
@@ -917,14 +942,6 @@ export default function PriceChart() {
 
             <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
             <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
-            <button
-              className={`${styles.currencyBtn} ${styles.smallBtn} ${forecastOn ? styles.currencyActive : ""}`}
-              onClick={() => setForecastOn(v => !v)}
-              type="button"
-              title="EA: prediksi 1 candle berikutnya (pasti naik atau turun)"
-            >
-              EA
-            </button>
           </div>
 
           <div className={styles.toolbarGroup}>
@@ -934,27 +951,23 @@ export default function PriceChart() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: timeDropOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               {timeDropOpen && (
-                <div className={styles.currencyDropdown} style={{ maxHeight: 340, overflowY: "auto" }}>
-                  {ivKeys.map((v, i) => {
-                    const showHead = i === 0 || IV[ivKeys[i - 1]].grp !== IV[v].grp;
-                    return (
-                      <Fragment key={v}>
-                        {showHead && <div className={styles.dropLabel}>{IV[v].grp}</div>}
-                        <button className={`${styles.currencyOption} ${iv === v ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setTimeDropOpen(false); }}>
-                          <span>{IV[v].label}</span>
-                        </button>
-                      </Fragment>
-                    );
-                  })}
+                <div className={`${styles.currencyDropdown}`} style={{ maxHeight: 340, overflowY: "auto" }}>
+                  <div className={styles.dropLabel}>INTERVAL (TICK, SEC & MIN)</div>
+                  {Object.keys(IV).map(v => (
+                    <button key={v} className={`${styles.currencyOption} ${iv === v ? styles.currencyActive : ""}`} onClick={() => { setIv(v); setTimeDropOpen(false); }}>
+                      <span>{IV[v].label}</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
 
-            <button className={`${styles.currencyBtn} ${styles.smallBtn}`} onClick={() => fitView()} type="button" title="Pusatkan harga (atau klik dua kali pada chart)">
-              PUSAT
-            </button>
-
-            <button type="button" className={styles.fullBtn} onClick={toggleFull} aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}>
+            <button
+              type="button"
+              className={styles.fullBtn}
+              onClick={toggleFull}
+              aria-label={isFull ? "Keluar layar penuh" : "Layar penuh"}
+            >
               {isFull ? "TUTUP" : "FULL"}
             </button>
           </div>
@@ -972,23 +985,8 @@ export default function PriceChart() {
             }}
           >
             <div ref={chartContainerRef} style={{ position: "absolute", inset: 0, zIndex: 2 }}></div>
-
-            <div
-              ref={nowLineRef}
-              style={{ position: "absolute", top: 0, bottom: 26, width: 0, borderLeft: "1px dashed #b0b4c0", zIndex: 3, pointerEvents: "none", display: "none" }}
-            >
-              <span style={{ position: "absolute", top: 6, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#2962ff", background: "rgba(41,98,255,0.08)", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap" }}>
-                EA ▸
-              </span>
-            </div>
           </div>
         </div>
-
-        {forecastOn && (
-          <div style={{ marginTop: 8, fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>
-            Candle transparan di kanan = prediksi EA untuk 1 candle berikutnya (naik/turun). Simulasi statistik, bukan jaminan atau nasihat investasi.
-          </div>
-        )}
       </div>
     </section>
   );
