@@ -24,7 +24,7 @@ async function sha256(s) {
   return Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
-// URUTAN INTERVAL (Infinite paling atas, 10Y paling bawah)
+// URUTAN INTERVAL (Infinite paling atas)
 const IV = {
   "inf":   { type: "inf",  label: "∞", bin: "1m" },
   "t1":    { type: "tick", count: 1,    label: "1 Tick" },
@@ -122,7 +122,7 @@ function bucketOf(t, cfg) {
 
 function aggregate(rows, cfg) {
   if (!rows.length) return [];
-  if (cfg.type === "inf") return rows; // Ular Infinite mengalir tanpa agregasi
+  if (cfg.type === "inf") return rows;
   if (cfg.type === "tick") {
     const out = [];
     const n = cfg.count;
@@ -199,9 +199,7 @@ function mergeCsc(f, g, b, calc) {
   return out;
 }
 
-// ─────────────────────────────────────────────────────────────
-// EA — PENCETAK HARGA DI BAWAH 1 MENIT (DETIK & TICK)
-// ─────────────────────────────────────────────────────────────
+// EA — PENCETAK HARGA DI BAWAH 1 MENIT
 const EA_BODY = 0.00003;
 const EA_MAXROWS = 7200;
 
@@ -314,7 +312,6 @@ function buildEaHistory(key, raw) {
   return rows.length > EA_MAXROWS ? rows.slice(-EA_MAXROWS) : rows;
 }
 
-// ─────────────────────────────────────────────────────────────
 function useSmooth(target, ms = 300) {
   const [v, setV] = useState(target);
   const curRef = useRef(target);
@@ -356,7 +353,7 @@ export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("csc");
   const [containerMode, setContainerMode] = useState("T");
-  const [iv, setIv] = useState("1m"); // DEFAULT 1 Menit
+  const [iv, setIv] = useState("1m");
   const [type, setType] = useState("candle");
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
@@ -479,10 +476,10 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 0,           // MENTOK KANAN TANPA RUANG KOSONG
+        rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true,       // TIDAK BISA DITARIK KE RUANG KOSONG MASA DEPAN
-        shiftVisibleRangeOnNewBar: true, // SCROLL MULUS OTOMATIS
+        fixRightEdge: true,
+        shiftVisibleRangeOnNewBar: true, 
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -524,7 +521,6 @@ export default function PriceChart() {
     const n = lenRef.current;
     if (!chart || !n) return;
     chart.priceScale("right").applyOptions({ autoScale: true });
-    // Slide / gulir dengan mulus (smooth = true) menabrak bar terakhir
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
@@ -562,7 +558,7 @@ export default function PriceChart() {
     const s = seriesRef.current;
     const chart = chartRef.current;
     if (!chart || !s.candle) return;
-    if (loadedBinRef.current !== binOf(ivRef.current)) return;
+    if (loadedBinRef.current !== binOf(ivRef.current) && ivRef.current !== "inf") return;
 
     const cs = compute();
     if (!cs.length) return;
@@ -668,7 +664,7 @@ export default function PriceChart() {
 
   useEffect(() => {
     applyVis();
-    if (!chartRef.current || loadedBinRef.current !== baseBin) return;
+    if (!chartRef.current || (loadedBinRef.current !== baseBin && iv !== "inf")) return;
     setFade(true);
     const t = setTimeout(() => {
       refresh(true);
@@ -678,7 +674,7 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
-  // ───────── Ambil Riwayat Sejauh Mungkin (Tidak Dibatasi / Progressive / Hingga Akar) ─────────
+  // ───────── Ambil Riwayat Sejauh Mungkin ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -718,7 +714,6 @@ export default function PriceChart() {
 
     const loadDataProgressive = async () => {
       try {
-        // TAHAP 1: Load instan
         const [resGold, resBtc, resUsd] = await Promise.all([
           fetchBinanceChunk("PAXGUSDT", reqBin, baseLimit),
           fetchBtcChunk(reqBin, baseLimit),
@@ -738,18 +733,17 @@ export default function PriceChart() {
             const raw = ds[k].raw;
             ds[k].sec = buildEaHistory(k, raw);
             
-            // Generate History Initial buat ular (inf mode)
             if (raw.length > 0) {
               const lastClose = raw[raw.length - 1].close;
               const sigma = eaSigma(raw) || (lastClose * 0.0001);
               const infArr = [];
               let p = lastClose;
               const r = rng(hashStr(k + "inf"));
-              for (let i = -150; i <= 0; i++) {
+              for (let i = -120; i <= 0; i++) {
                 const open = p;
-                p += gauss(r) * sigma * 0.6;
-                const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.3);
-                const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.3);
+                p += gauss(r) * sigma * 0.4;
+                const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.2);
+                const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.2);
                 infArr.push({ time: nowT + i, open, high: h, low: l, close: p });
               }
               ds[k].inf = infArr;
@@ -763,7 +757,6 @@ export default function PriceChart() {
         fitView(); 
         setFade(false);
 
-        // TAHAP 2: Tarik Terus Kebelakang TANPA BATAS WAKTU (Loop Mentok Akar)
         let endGold = resGold.end, endBtc = resBtc.end, endUsd = resUsd.end;
         const batchLimit = 1000;
 
@@ -793,7 +786,7 @@ export default function PriceChart() {
 
           const addedBars = lenRef.current - oldLen;
           if (isAtRightEdge) {
-            fitView(); // Pertahankan di paling kanan agar tidak loncat saat harga jalan
+            fitView();
           } else if (addedBars > 0 && oldRange) {
             timeScale?.setVisibleLogicalRange({
               from: oldRange.from + addedBars,
@@ -802,7 +795,7 @@ export default function PriceChart() {
           }
 
           endGold = nextGold.end; endBtc = nextBtc.end; endUsd = nextUsd.end;
-          await new Promise(r => setTimeout(r, 600)); // Delay agar browser tidak freeze
+          await new Promise(r => setTimeout(r, 600));
         }
       } catch (e) {
         if (tok !== tokenRef.current) return;
@@ -814,7 +807,7 @@ export default function PriceChart() {
     loadDataProgressive();
   }, [rates, baseBin, refresh, fitView]);
 
-  // ───────── Live: WebSocket + Timer untuk EA Detik dan Ular (INF) ─────────
+  // ───────── Live: WebSocket + Animasi Ular Sangat Halus (INF) ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
@@ -845,7 +838,6 @@ export default function PriceChart() {
 
     connectBinance();
 
-    // Timer Normal 1 Detik
     const timer = setInterval(() => {
       const pGold = livePrices.current.gold;
       const pBtc = livePrices.current.btcBn;
@@ -889,10 +881,9 @@ export default function PriceChart() {
       if (ivRef.current !== "inf") refresh(false);
     }, 1000);
 
-    // Timer Ular (Sangat Cepat - 150ms)
+    // Animasi Ular (INF) yang diperhalus menggunakan LERP (Linear Interpolation)
     const fastTimer = setInterval(() => {
       if (ivRef.current !== "inf") {
-        // Resync waktu jika bukan mode inf
         const dGold = dsRef.current.gold;
         if (dGold.inf && dGold.inf.length) lastInfTime = dGold.inf[dGold.inf.length - 1].time;
         return; 
@@ -903,7 +894,7 @@ export default function PriceChart() {
       const pUsd = (livePrices.current.eurusdt || 1.08) / 1.08;
       if (!pGold || !pBtc) return;
 
-      lastInfTime += 1; // Memaksa waktu chart jalan walau di realita hanya 150ms
+      lastInfTime += 1;
 
       [["gold", pGold], ["btc", pBtc], ["usd", pUsd]].forEach(([k, target]) => {
         const d = dsRef.current[k];
@@ -912,22 +903,20 @@ export default function PriceChart() {
         const sigma = eaSigma(d.raw) || (target * 0.0001);
         const r = rng(hashStr(k) ^ lastInfTime);
         
-        let p = prevRow.close;
-        // Ular ditarik menuju harga target (market asli)
-        p += (target - p) * 0.15 + gauss(r) * sigma * 0.9;
+        // Peredam halus (LERP 0.08 agar gerakannya sangat luwes dan tidak patah-patah)
+        let p = prevRow.close + (target - prevRow.close) * 0.08 + gauss(r) * sigma * 0.4;
         
         const open = prevRow.close;
-        const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.5);
-        const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.5);
+        const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.2);
+        const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.2);
         
         d.inf.push({ time: lastInfTime, open, high: h, low: l, close: p });
         
-        // Jaga memori agar tidak kepenuhan oleh ular
-        if (d.inf.length > 500) d.inf.shift();
+        if (d.inf.length > 300) d.inf.shift();
       });
 
       refresh(false);
-    }, 150);
+    }, 60); // 60ms setara dengan ~16 FPS untuk rendering chart yang sangat mulus cair
 
     return () => {
       disposed = true;
@@ -943,7 +932,6 @@ export default function PriceChart() {
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            {/* NAMA DIUBAH MENJADI INDEX CSCID */}
             <span className={styles.eyebrow}>Index CSCID</span>
             <span style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Coconut Shell Charcoal Indonesia
