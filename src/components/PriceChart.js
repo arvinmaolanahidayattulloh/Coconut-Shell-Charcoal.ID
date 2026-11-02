@@ -16,7 +16,7 @@ const SAR_BASE = 5000;
 const WIB = 7 * 3600;
 const DAY = 86400;
 
-// SHA-256 dari password (huruf kecil, tanpa spasi di ujung)
+// SHA-256 dari password "coconut shell charcoal"
 const PW_HASH = "113066f60804d8bc313ae94d90e236ca5e672ce32398546529e509cd5a4b2f9a";
 
 async function sha256(s) {
@@ -444,7 +444,7 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat Chart ─────────
+  // ───────── Buat Chart (Zoom Vertikal Murni Bebas) ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -460,7 +460,7 @@ export default function PriceChart() {
         secondsVisible: true,
         rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true,
+        fixRightEdge: true,       // Mentok kanan tanpa ruang kosong masa depan
         shiftVisibleRangeOnNewBar: true, 
         minBarSpacing: 0.5
       },
@@ -496,11 +496,10 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Fungsi Tombol [+] untuk memusatkan harga terbaru secara vertikal & horizontal
-  const centerLatestPrice = useCallback(() => {
+  // Tombol [+] atau double-click: Hanya menggeser chart ke ujung kanan tanpa mengubah zoom vertikal/horizontal
+  const scrollToLatest = useCallback(() => {
     const chart = chartRef.current;
     if (!chart) return;
-    chart.priceScale("right").applyOptions({ autoScale: true });
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
@@ -581,7 +580,7 @@ export default function PriceChart() {
   }, [compute]);
 
   refreshRef.current = refresh;
-  fitRef.current = centerLatestPrice;
+  fitRef.current = scrollToLatest;
 
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
@@ -975,14 +974,14 @@ export default function PriceChart() {
                 CSC
               </button>
               
-              {/* Tombol mode mata uang disembunyikan secara default, muncul jika sudah unlocked */}
+              {/* Tombol ikon mode disembunyikan secara default, terbuka jika memasukkan password: Coconut Shell Charcoal */}
               {unlocked && (
                 <>
                   <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("yuan")} title="Yuan Mode">中</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("jpy")} title="Yen Mode">💴</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("sar")} title="Riyal Mode">﷼</button>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
+                  <button type="button" className={`${styles.noMarketModeBtn || styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("btc")} title="Bitcoin Mode">⭐</button>
                 </>
               )}
@@ -1015,12 +1014,12 @@ export default function PriceChart() {
               )}
             </div>
 
-            {/* TOMBOL + UNTUK MEMBUAT HARGA REAL SELALU DI TENGAH */}
+            {/* TOMBOL + UNTUK MENGGESER CHART KE KANAN TANPA MERUBAH ZOOM */}
             <button
               type="button"
               className={`${styles.currencyBtn} ${styles.smallBtn}`}
-              onClick={centerLatestPrice}
-              title="Posisikan harga real di tengah"
+              onClick={scrollToLatest}
+              title="Geser ke candle terbaru"
               style={{ fontWeight: "bold", padding: "0 10px" }}
             >
               +
@@ -1040,7 +1039,7 @@ export default function PriceChart() {
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
           <div
             className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
-            onDoubleClick={() => centerLatestPrice()}
+            onDoubleClick={() => scrollToLatest()}
             style={{
               position: "relative", width: "100%",
               ...(isFull ? { flex: 1, minHeight: 0 } : { height: "480px" }),
@@ -1058,9 +1057,9 @@ export default function PriceChart() {
                     autoFocus
                     value={pw}
                     onChange={(e) => { setPw(e.target.value); setPwErr(false); }}
-                    placeholder="Password"
+                    placeholder="Password (Coconut Shell Charcoal)"
                     autoComplete="off"
-                    style={{ flex: "1 1 200px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "#fff", color: "#111" }}
+                    style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "#fff", color: "#111" }}
                   />
                   <button className={styles.currencyBtn} type="submit">BUKA</button>
                   <button className={styles.currencyBtn} type="button" onClick={() => setPendingMode(null)}>BATAL</button>
