@@ -1,0 +1,119 @@
+.tradeContainer {
+  max-width: 900px;
+  margin: 2rem auto;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  border-radius: 16px;
+  color: #ffffff;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.tradeTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #f8fafc;
+}
+
+.tradeSubtitle {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  margin-bottom: 1.5rem;
+}
+
+.successAlert {
+  background-color: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #34d399;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.tradeForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tabGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 0.75rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.5);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.buyActive {
+  background-color: #089981;
+  color: #ffffff;
+  border-color: #089981;
+}
+
+.sellActive {
+  background-color: #f23645;
+  color: #ffffff;
+  border-color: #f23645;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.inputGroup label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.tradeInput {
+  padding: 0.75rem 1rem;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 1rem;
+  outline: none;
+}
+
+.tradeInput:focus {
+  border-color: #3b82f6;
+}
+
+.submitBtn {
+  padding: 0.85rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.submitBtn:hover {
+  opacity: 0.9;
+}
+
+.buyBtnBg {
+  background: linear-gradient(135deg, #089981 0%, #057a66 100%);
+}
+
+.sellBtnBg {
+  background: linear-gradient(135deg, #f23645 0%, #d32f2f 100%);
+}
