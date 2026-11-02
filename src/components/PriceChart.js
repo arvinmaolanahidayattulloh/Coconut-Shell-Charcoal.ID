@@ -8,7 +8,6 @@ const OZ = 31.1034768;
 const GRAMS = 5;
 const BTC_FACTOR = 0.01; 
 
-// Konstanta Basis Masing-Masing Pilar
 const YUAN_BASE = 5000;
 const USD_BASE = 500;
 const JPY_BASE = 50000;
@@ -153,6 +152,9 @@ export default function PriceChart() {
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
   
+  // State untuk kontrol unhide tombol lewat password
+  const [unlocked, setUnlocked] = useState(false);
+  
   const [cur, setCur] = useState("IDR");
   const [rates, setRates] = useState(null);
   
@@ -276,6 +278,48 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
+  // AUTO-FOKUS & SMOOTH ZOOM DINAMIS KE KANDLE TERBARU
+  const fitView = useCallback((smooth = true) => {
+    const targetKey = mode === "csc" ? "usd" : mode;
+    const d = dsRef.current[targetKey];
+    if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
+    
+    const n = d.raw.length;
+    const ts = chartRef.current.timeScale();
+    
+    let visibleBars = 120; 
+    if (range) {
+       if (range === "1D") visibleBars = 288;
+       else if (range === "5D") visibleBars = 480;
+       else if (range === "1M") visibleBars = 720;
+       else visibleBars = n; 
+    }
+    
+    const target = { from: Math.max(0, n - visibleBars), to: n + 1 };
+    
+    if (smooth) {
+      animateRange(ts, target, animRef);
+    } else {
+      cancelAnimationFrame(animRef.current);
+      ts.setVisibleLogicalRange(target);
+    }
+  }, [mode, range]);
+
+  // Handle klik tombol CSC dengan Password Prompt
+  const handleCscClick = () => {
+    if (!unlocked) {
+      const pass = prompt("Masukan Kunci");
+      if (pass === "Coconut Shell Charcoal") {
+        setUnlocked(true);
+        setMode("csc");
+      } else if (pass !== null) {
+        alert("Kunci salah!");
+      }
+    } else {
+      setMode("csc");
+    }
+  };
+
   // INFINITE SCROLL LISTENER 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -362,32 +406,6 @@ export default function PriceChart() {
     return () => ts.unsubscribeVisibleLogicalRangeChange(onScroll);
   }, [rates, cur]);
 
-  const fitView = useCallback((smooth = false) => {
-    const targetKey = mode === "csc" ? "usd" : mode;
-    const d = dsRef.current[targetKey];
-    if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
-    
-    const n = d.raw.length;
-    const ts = chartRef.current.timeScale();
-    
-    let visibleBars = 120; 
-    if (range) {
-       if (range === "1D") visibleBars = 288;
-       else if (range === "5D") visibleBars = 480;
-       else if (range === "1M") visibleBars = 720;
-       else visibleBars = n; 
-    }
-    
-    const target = { from: Math.max(0, n - visibleBars), to: n + 1 };
-    
-    if (smooth) {
-      animateRange(ts, target, animRef);
-    } else {
-      cancelAnimationFrame(animRef.current);
-      ts.setVisibleLogicalRange(target);
-    }
-  }, [mode, range]);
-
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
     if (!isFull) {
@@ -435,7 +453,7 @@ export default function PriceChart() {
     let t;
     const onResize = () => {
       clearTimeout(t);
-      t = setTimeout(() => fitView(), 150);
+      t = setTimeout(() => fitView(true), 150);
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
@@ -446,7 +464,7 @@ export default function PriceChart() {
     };
   }, [fitView]);
 
-  // Fungsi Pembuat Data Index Hibrida (6 Instrumen: USD, Yuan, JPY, SAR, Emas, BTC)
+  // Fungsi Pembuat Data Index Hibrida
   const buildCscData = useCallback((targetRate) => {
     const dUsdProxy = dsRef.current.usd.raw; 
     const dGold = dsRef.current.gold.raw;
@@ -582,7 +600,7 @@ export default function PriceChart() {
       setFade(false);
     }, 180);
     return () => clearTimeout(t);
-  }, [mode, containerMode, rate, type, rates]);
+  }, [mode, containerMode, rate, type, rates, iv, range]);
 
   useEffect(() => {
     if (!rates) return;
@@ -625,7 +643,7 @@ export default function PriceChart() {
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
       const rows = j?.data?.ohlc || [];
-      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.high, close: +o.close }));
       all = cs.concat(all);
       left -= n;
       if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
@@ -745,7 +763,6 @@ export default function PriceChart() {
         }
       });
 
-      // Sinkronkan juga proxy ke mode fiat lainnya
       ["yuan", "jpy", "sar"].forEach(k => {
         dsRef.current[k].raw = dsRef.current.usd.raw;
       });
@@ -865,63 +882,70 @@ export default function PriceChart() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
+              {/* Tombol CSC yang Berfungsi Membuka Password */}
               <button
                 type="button"
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("csc")}
+                onClick={handleCscClick}
                 style={{ fontWeight: "bold" }}
-                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
+                title="CSC Index (Klik masukkan kunci untuk membuka chart lain)"
               >
                 CSC
               </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("usd")}
-                title="USD Mode"
-              >
-                💵
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("yuan")}
-                title="Yuan Mode"
-              >
-                中
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("jpy")}
-                title="Yen Mode"
-              >
-                💴
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("sar")}
-                title="Riyal Mode"
-              >
-                ﷼
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("gold")}
-                title="Gold Mode"
-              >
-                {marketClosed ? "🔒" : "🔐"}
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
-                onClick={() => setMode("btc")}
-                title="Bitcoin Mode"
-              >
-                ⭐
-              </button>
+
+              {/* Tombol Lainnya Disembunyikan Kecuali Sudah Terbuka (Unlocked) */}
+              {unlocked && (
+                <>
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`}
+                    onClick={() => setMode("usd")}
+                    title="USD Mode"
+                  >
+                    💵
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
+                    onClick={() => setMode("yuan")}
+                    title="Yuan Mode"
+                  >
+                    中
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`}
+                    onClick={() => setMode("jpy")}
+                    title="Yen Mode"
+                  >
+                    💴
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`}
+                    onClick={() => setMode("sar")}
+                    title="Riyal Mode"
+                  >
+                    ﷼
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
+                    onClick={() => setMode("gold")}
+                    title="Gold Mode"
+                  >
+                    {marketClosed ? "🔒" : "🔐"}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
+                    onClick={() => setMode("btc")}
+                    title="Bitcoin Mode"
+                  >
+                    ⭐
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Tombol Kontainer T & 40ft */}
