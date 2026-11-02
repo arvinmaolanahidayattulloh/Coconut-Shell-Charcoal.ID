@@ -486,7 +486,7 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 1,
+        rightOffset: 2,
         fixLeftEdge: false,
         fixRightEdge: false,
         shiftVisibleRangeOnNewBar: true, 
@@ -526,7 +526,7 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Set View ke arah paling baru secara paksa saat pertama render
+  // Set View mentok persis ke candle paling baru saat ini
   const fitView = useCallback(() => {
     const chart = chartRef.current;
     const n = lenRef.current;
@@ -536,10 +536,10 @@ export default function PriceChart() {
     const w = chartContainerRef.current ? chartContainerRef.current.clientWidth : 600;
     const visibleBars = Math.max(30, Math.min(150, Math.floor(w / 10)));
     
-    // Paksa mentok di kanan
+    // Paksa mentok di kanan menyentuh bar terakhir (n - 1)
     chart.timeScale().setVisibleLogicalRange({ 
-      from: Math.max(0, n - visibleBars), 
-      to: n - 1 
+      from: Math.max(0, n - 1 - visibleBars), 
+      to: n - 1 + 2
     });
   }, []);
 
@@ -587,7 +587,6 @@ export default function PriceChart() {
     const last = cs[n - 1];
     const prev = lastBarRef.current;
     
-    // Karena sistem menggunakan progressive load yg merubah panjang array dari depan, kita pastikan incremental di cek aman
     const incremental = !full && prev && cs[0].time === prev.first &&
       ((n === prev.len && last.time === prev.time) || (n === prev.len + 1 && cs[n - 2].time === prev.time));
 
@@ -694,14 +693,14 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
-  // ───────── Ambil riwayat secara PROGRESSIVE & BACKGROUND ─────────
+  // ───────── Ambil riwayat tanpa batas 1 tahun (Hingga Puluhan Tahun / Sampai ke Akar) ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
     const tok = tokenRef.current;
     
-    // Ambil data dalam bucket '1d' walau user buka '1M' atau '1w' agar limit deep history tercapai.
-    const reqBin = ["1w", "1M"].includes(baseBin) ? "1d" : baseBin;
+    // Gunakan interval asli (misal 1M / 1w / 1d) langsung ke exchange API agar histori puluhan tahun terjangkau instan
+    const reqBin = baseBin;
     
     setFade(true);
 
@@ -709,9 +708,8 @@ export default function PriceChart() {
     const baseLimit = sub ? 130 : 1000;
     
     const isDeep = ["1d", "3d", "1w", "1M"].includes(baseBin);
-    const deepLimit = isDeep ? 30000 : baseLimit; 
+    const maxFetchLimit = isDeep ? 50000 : baseLimit; 
 
-    // Helper fetch 1 chunk saja
     const fetchBinanceChunk = async (symbol, bin, limit, endTime) => {
       let url = `/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${limit}`;
       if (endTime) url += `&endTime=${endTime}`;
@@ -740,7 +738,7 @@ export default function PriceChart() {
 
     const loadDataProgressive = async () => {
       try {
-        // TAHAP 1: Ambil data paling baru (1000 candle) secepat mungkin agar chart langsung tampil.
+        // TAHAP 1: Ambil data terbaru dulu agar chart langsung muncul tanpa lag
         const [resGold, resBtc, resUsd] = await Promise.all([
           fetchBinanceChunk("PAXGUSDT", reqBin, baseLimit),
           fetchBtcChunk(reqBin, baseLimit),
@@ -761,19 +759,19 @@ export default function PriceChart() {
         loadedBinRef.current = baseBin;
         lastBarRef.current = null;
         refresh(true);
-        fitView(); // Jamin layar mentok ke kanan (terbaru) saat pertama kali buka
+        fitView(); // Geser mentok di candle/harga terbaru
         setFade(false);
 
-        // TAHAP 2: Jika interval harian, tarik sisa historinya perlahan ke belakang layar (Background)
+        // TAHAP 2: Jika mode harian/mingguan/bulanan, teruskan penarikan data ke masa lalu hingga akar sejarah exchange
         if (!isDeep) return;
 
         let endGold = resGold.end, endBtc = resBtc.end, endUsd = resUsd.end;
         let loadedCount = baseLimit;
 
-        while (loadedCount < deepLimit) {
+        while (loadedCount < maxFetchLimit) {
           if (tok !== tokenRef.current) return;
 
-          const batchLimit = Math.min(1000, deepLimit - loadedCount);
+          const batchLimit = Math.min(1000, maxFetchLimit - loadedCount);
           
           const [nextGold, nextBtc, nextUsd] = await Promise.all([
             endGold ? fetchBinanceChunk("PAXGUSDT", reqBin, batchLimit, endGold) : { data: [], end: null },
@@ -789,22 +787,18 @@ export default function PriceChart() {
           const oldLen = lenRef.current;
           const isAtRightEdge = oldRange && (oldRange.to >= oldLen - 2);
 
-          // Pasang data masa lalu ke bagian awal array (unshift/concat)
+          // Sambungkan data historis paling lama ke awal deret
           ds.gold.raw = nextGold.data.concat(ds.gold.raw);
           ds.btc.raw = nextBtc.data.concat(ds.btc.raw);
           const usdMapped = nextUsd.data.map(x => ({ ...x, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 }));
           ds.usd.raw = usdMapped.concat(ds.usd.raw);
 
-          // Perbarui render chart tanpa mereset waktu
           refresh(false);
 
-          // Kembalikan posisi penglihatan layar agar tidak loncat akibat candle lama yang masuk
           const addedBars = lenRef.current - oldLen;
           if (isAtRightEdge) {
-            // Jika user sedang melihat candle terakhir, biarkan mentok kanan.
-            timeScale?.scrollToPosition(0, false);
+            fitView(); // Pertahankan mentok kanan saat data baru tersambung
           } else if (addedBars > 0 && oldRange) {
-            // Jika user sedang scroll ke masa lalu, sesuaikan pergeseran range indeks
             timeScale?.setVisibleLogicalRange({
               from: oldRange.from + addedBars,
               to: oldRange.to + addedBars
@@ -814,8 +808,7 @@ export default function PriceChart() {
           endGold = nextGold.end; endBtc = nextBtc.end; endUsd = nextUsd.end;
           loadedCount += batchLimit;
 
-          // Istirahatkan Main Thread sejenak agar UI tetap halus
-          await new Promise(r => setTimeout(r, 400));
+          await new Promise(r => setTimeout(r, 300));
         }
       } catch (e) {
         if (tok !== tokenRef.current) return;
@@ -963,6 +956,7 @@ export default function PriceChart() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
+              {/* TOMBOL CSC BERSIH TANPA ICON LOCK */}
               <button 
                 type="button" 
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`} 
@@ -973,10 +967,10 @@ export default function PriceChart() {
                 style={{ fontWeight: "bold" }} 
                 title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
               >
-                CSC {!unlocked && "🔒"}
+                CSC
               </button>
               
-              {/* TOMBOL LAIN HANYA MUNCUL JIKA UNLOCKED */}
+              {/* TOMBOL MATA UANG TERBUKA JIKA UNLOCKED */}
               {unlocked && (
                 <>
                   <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
