@@ -486,10 +486,10 @@ export default function PriceChart() {
         borderColor: "#e0e3eb",
         timeVisible: true,
         secondsVisible: true,
-        rightOffset: 1,         // Jarak minimum ke ujung kanan agar terasa sangat mentok
+        rightOffset: 1,
         fixLeftEdge: false,
         fixRightEdge: false,
-        shiftVisibleRangeOnNewBar: true, // Chart selalu bergeser otomatis saat ada bar baru
+        shiftVisibleRangeOnNewBar: true, 
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -526,19 +526,17 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Memaksa posisi chart selalu mentok ke harga terbaru
+  // Set View ke arah paling baru secara paksa saat pertama render
   const fitView = useCallback(() => {
     const chart = chartRef.current;
     const n = lenRef.current;
     if (!chart || !n) return;
     
     chart.priceScale("right").applyOptions({ autoScale: true });
-    
-    // Hitung jumlah bar yang ideal untuk ditampilkan di layar agar tidak terlalu rapat/jauh
     const w = chartContainerRef.current ? chartContainerRef.current.clientWidth : 600;
     const visibleBars = Math.max(30, Math.min(150, Math.floor(w / 10)));
     
-    // Set view tepat menyentuh bar terakhir (n - 1) di ujung kanan
+    // Paksa mentok di kanan
     chart.timeScale().setVisibleLogicalRange({ 
       from: Math.max(0, n - visibleBars), 
       to: n - 1 
@@ -588,6 +586,8 @@ export default function PriceChart() {
     const n = cs.length;
     const last = cs[n - 1];
     const prev = lastBarRef.current;
+    
+    // Karena sistem menggunakan progressive load yg merubah panjang array dari depan, kita pastikan incremental di cek aman
     const incremental = !full && prev && cs[0].time === prev.first &&
       ((n === prev.len && last.time === prev.time) || (n === prev.len + 1 && cs[n - 2].time === prev.time));
 
@@ -694,14 +694,13 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
-  // ───────── Ambil riwayat dengan Paginasi Otomatis (Deep History) ─────────
+  // ───────── Ambil riwayat secara PROGRESSIVE & BACKGROUND ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
     const tok = tokenRef.current;
     
-    // Jika user request 1w, 1M, atau 1y, kita ambil data 1d lalu biarkan sistem meng-aggregate nya.
-    // Ini mengizinkan riwayat ditarik sejauh mungkin (sampai ke akar) karena API seringkali membatasi interval 1w/1m.
+    // Ambil data dalam bucket '1d' walau user buka '1M' atau '1w' agar limit deep history tercapai.
     const reqBin = ["1w", "1M"].includes(baseBin) ? "1d" : baseBin;
     
     setFade(true);
@@ -709,83 +708,123 @@ export default function PriceChart() {
     const sub = IV[ivRef.current].type === "tick" || IV[ivRef.current].type === "sec";
     const baseLimit = sub ? 130 : 1000;
     
-    // Batas loop paginasi. Untuk 1d ke atas kita buka limit sampai 30000 bar (~82 tahun).
     const isDeep = ["1d", "3d", "1w", "1M"].includes(baseBin);
     const deepLimit = isDeep ? 30000 : baseLimit; 
 
-    const fetchBinance = async (symbol) => {
-      let rows = [];
-      let end = undefined;
-      
-      while (rows.length < deepLimit) {
-        const batchLimit = Math.min(1000, deepLimit - rows.length);
-        let url = `/api/v3/klines?symbol=${symbol}&interval=${reqBin}&limit=${batchLimit}`;
-        if (end) url += `&endTime=${end}`;
-        
-        const res = await getJson(url);
-        if (!res || res.length === 0) break;
-        
-        const mapped = res.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
-        rows = mapped.concat(rows); 
-        
-        if (res.length < batchLimit) break;
-        end = res[0][0] - 1; 
-      }
-      return rows;
+    // Helper fetch 1 chunk saja
+    const fetchBinanceChunk = async (symbol, bin, limit, endTime) => {
+      let url = `/api/v3/klines?symbol=${symbol}&interval=${bin}&limit=${limit}`;
+      if (endTime) url += `&endTime=${endTime}`;
+      const res = await getJson(url);
+      if (!res || !res.length) return { data: [], end: null };
+      const data = res.map(r => ({ time: Math.floor(r[0] / 1000) + WIB, open: +r[1], high: +r[2], low: +r[3], close: +r[4] }));
+      return { data, end: res[0][0] - 1 };
     };
 
-    const fetchBitstamp = async (step) => {
-      let rows = [];
-      let end = undefined;
-      
-      while (rows.length < deepLimit) {
-        const batchLimit = Math.min(1000, deepLimit - rows.length);
-        let url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${batchLimit}`;
-        if (end) url += `&end=${end}`;
-        
+    const fetchBtcChunk = async (bin, limit, endTime) => {
+      const step = BS_STEP[bin];
+      if (!step) return fetchBinanceChunk("BTCUSDT", bin, limit, endTime);
+      let url = `https://www.bitstamp.net/api/v2/ohlc/btcusd/?step=${step}&limit=${limit}`;
+      if (endTime) url += `&end=${endTime}`;
+      try {
         const r = await fetch(url);
         const j = await r.json();
         const batch = j?.data?.ohlc || [];
-        if (!batch.length) break;
-        
-        const mapped = batch.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
-        rows = mapped.concat(rows);
-        
-        if (batch.length < batchLimit) break;
-        end = Number(batch[0].timestamp) - 1;
+        if (!batch.length) return { data: [], end: null };
+        const data = batch.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
+        return { data, end: Number(batch[0].timestamp) - 1 };
+      } catch (e) {
+        return fetchBinanceChunk("BTCUSDT", bin, limit, endTime);
       }
-      if (!rows.length) throw new Error("empty");
-      return rows;
     };
 
-    const bsStep = BS_STEP[reqBin];
-    const btcP = bsStep
-      ? fetchBitstamp(bsStep).catch(() => fetchBinance("BTCUSDT"))
-      : fetchBinance("BTCUSDT");
+    const loadDataProgressive = async () => {
+      try {
+        // TAHAP 1: Ambil data paling baru (1000 candle) secepat mungkin agar chart langsung tampil.
+        const [resGold, resBtc, resUsd] = await Promise.all([
+          fetchBinanceChunk("PAXGUSDT", reqBin, baseLimit),
+          fetchBtcChunk(reqBin, baseLimit),
+          fetchBinanceChunk("EURUSDT", reqBin, baseLimit)
+        ]);
 
-    Promise.all([fetchBinance("PAXGUSDT"), btcP, fetchBinance("EURUSDT")]).then(res => {
-      if (tok !== tokenRef.current) return;
-      const ds = dsRef.current;
-      ds.gold.raw = uniqSorted(res[0]);
-      ds.btc.raw = uniqSorted(res[1]);
-      ds.usd.raw = uniqSorted(res[2]).map(x => ({
-        time: x.time, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08
-      }));
+        if (tok !== tokenRef.current) return;
 
-      if (baseBin === "1m") {
-        ["gold", "btc", "usd"].forEach(k => { ds[k].sec = buildEaHistory(k, ds[k].raw); });
+        const ds = dsRef.current;
+        ds.gold.raw = resGold.data;
+        ds.btc.raw = resBtc.data;
+        ds.usd.raw = resUsd.data.map(x => ({ ...x, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 }));
+
+        if (baseBin === "1m") {
+          ["gold", "btc", "usd"].forEach(k => { ds[k].sec = buildEaHistory(k, ds[k].raw); });
+        }
+
+        loadedBinRef.current = baseBin;
+        lastBarRef.current = null;
+        refresh(true);
+        fitView(); // Jamin layar mentok ke kanan (terbaru) saat pertama kali buka
+        setFade(false);
+
+        // TAHAP 2: Jika interval harian, tarik sisa historinya perlahan ke belakang layar (Background)
+        if (!isDeep) return;
+
+        let endGold = resGold.end, endBtc = resBtc.end, endUsd = resUsd.end;
+        let loadedCount = baseLimit;
+
+        while (loadedCount < deepLimit) {
+          if (tok !== tokenRef.current) return;
+
+          const batchLimit = Math.min(1000, deepLimit - loadedCount);
+          
+          const [nextGold, nextBtc, nextUsd] = await Promise.all([
+            endGold ? fetchBinanceChunk("PAXGUSDT", reqBin, batchLimit, endGold) : { data: [], end: null },
+            endBtc ? fetchBtcChunk(reqBin, batchLimit, endBtc) : { data: [], end: null },
+            endUsd ? fetchBinanceChunk("EURUSDT", reqBin, batchLimit, endUsd) : { data: [], end: null }
+          ]);
+
+          if (tok !== tokenRef.current) return;
+          if (!nextGold.data.length && !nextBtc.data.length && !nextUsd.data.length) break;
+
+          const timeScale = chartRef.current?.timeScale();
+          const oldRange = timeScale?.getVisibleLogicalRange();
+          const oldLen = lenRef.current;
+          const isAtRightEdge = oldRange && (oldRange.to >= oldLen - 2);
+
+          // Pasang data masa lalu ke bagian awal array (unshift/concat)
+          ds.gold.raw = nextGold.data.concat(ds.gold.raw);
+          ds.btc.raw = nextBtc.data.concat(ds.btc.raw);
+          const usdMapped = nextUsd.data.map(x => ({ ...x, open: x.open / 1.08, high: x.high / 1.08, low: x.low / 1.08, close: x.close / 1.08 }));
+          ds.usd.raw = usdMapped.concat(ds.usd.raw);
+
+          // Perbarui render chart tanpa mereset waktu
+          refresh(false);
+
+          // Kembalikan posisi penglihatan layar agar tidak loncat akibat candle lama yang masuk
+          const addedBars = lenRef.current - oldLen;
+          if (isAtRightEdge) {
+            // Jika user sedang melihat candle terakhir, biarkan mentok kanan.
+            timeScale?.scrollToPosition(0, false);
+          } else if (addedBars > 0 && oldRange) {
+            // Jika user sedang scroll ke masa lalu, sesuaikan pergeseran range indeks
+            timeScale?.setVisibleLogicalRange({
+              from: oldRange.from + addedBars,
+              to: oldRange.to + addedBars
+            });
+          }
+
+          endGold = nextGold.end; endBtc = nextBtc.end; endUsd = nextUsd.end;
+          loadedCount += batchLimit;
+
+          // Istirahatkan Main Thread sejenak agar UI tetap halus
+          await new Promise(r => setTimeout(r, 400));
+        }
+      } catch (e) {
+        if (tok !== tokenRef.current) return;
+        setFade(false);
+        setStatus(s => ({ ...s, error: "Gagal memuat riwayat harga. Coba ganti interval atau muat ulang." }));
       }
+    };
 
-      loadedBinRef.current = baseBin;
-      lastBarRef.current = null;
-      refresh(true);
-      fitView();
-      setFade(false);
-    }).catch(() => {
-      if (tok !== tokenRef.current) return;
-      setFade(false);
-      setStatus(s => ({ ...s, error: "Gagal memuat riwayat harga. Coba ganti interval atau muat ulang." }));
-    });
+    loadDataProgressive();
   }, [rates, baseBin, refresh, fitView]);
 
   // ───────── Live: WebSocket + update tiap detik ─────────
@@ -934,7 +973,7 @@ export default function PriceChart() {
                 style={{ fontWeight: "bold" }} 
                 title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
               >
-                CSC
+                CSC {!unlocked && "🔒"}
               </button>
               
               {/* TOMBOL LAIN HANYA MUNCUL JIKA UNLOCKED */}
