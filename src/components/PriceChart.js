@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
 import styles from "./PriceChart.module.css";
+// ... impor bawaan lainnya ...
+import Trade from "./Trade";
+import Invest from "./Invest";
+
 
 const OZ = 31.1034768;
 const GRAMS = 5;
