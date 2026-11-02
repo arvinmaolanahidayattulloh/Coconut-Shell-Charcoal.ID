@@ -7,10 +7,10 @@ import styles from "./PriceChart.module.css";
 const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
-const BTC_FACTOR = 0.00909; 
+const BTC_FACTOR = 0.001; 
 
 // Tambahan Konstanta Baru
-const YUAN_BASE = 4750;
+const YUAN_BASE = 5000;
 const USD_BASE = 500;
 const JPY_BASE = 100;
 const SAR_BASE = 2.5;
