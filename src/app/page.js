@@ -9,8 +9,6 @@ import Products from "@/components/Products";
 import WhyUs from "@/components/WhyUs";
 import CTA from "@/components/CTA";
 import PriceChart from "@/components/PriceChart";
-import Trade from "@/components/Trade";
-import Invest from "@/components/Invest";
 import Footer from "@/components/Footer";
 import AdBanner from "@/components/AdBanner";
 import { LeftPanel, RightPanel } from "@/components/SidePanels";
