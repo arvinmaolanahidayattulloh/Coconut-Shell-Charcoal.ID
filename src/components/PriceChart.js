@@ -22,16 +22,17 @@ const IV = {
   "3d":  { step: 259200, bin: "3d",  label: "3D" }
 };
 
+// Menambahkan jumlah muat default (count) menjadi sangat besar agar riwayat jauh ke belakang
 const RANGES = {
-  "1D":  { iv: "5m",  count: 288, label: "1D" },
-  "5D":  { iv: "15m", count: 480, label: "5D" },
-  "1M":  { iv: "1h",  count: 720, label: "1M" },
-  "3M":  { iv: "4h",  count: 540, label: "3M" },
-  "6M":  { iv: "12h", count: 360, label: "6M" },
-  "YTD": { iv: "1d",  count: 0,   label: "YTD" },
-  "1Y":  { iv: "1d",  count: 365, label: "1Y" },
-  "5Y":  { iv: "3d",  count: 609, label: "5Y" },
-  "10Y": { iv: "3d",  count: 1217, label: "10Y" }
+  "1D":  { iv: "5m",  count: 2000, label: "1D" }, // Sebelumnya 288
+  "5D":  { iv: "15m", count: 3000, label: "5D" },
+  "1M":  { iv: "1h",  count: 4000, label: "1M" },
+  "3M":  { iv: "4h",  count: 5000, label: "3M" },
+  "6M":  { iv: "12h", count: 5000, label: "6M" },
+  "YTD": { iv: "1d",  count: 0,    label: "YTD" },
+  "1Y":  { iv: "1d",  count: 2000, label: "1Y" },
+  "5Y":  { iv: "3d",  count: 3000, label: "5Y" },
+  "10Y": { iv: "3d",  count: 5000, label: "10Y" }
 };
 
 const HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
@@ -58,17 +59,14 @@ function ytdDays() {
   return Math.max(2, Math.ceil((n.getTime() - Date.UTC(n.getUTCFullYear(), 0, 1)) / 86400000) + 1);
 }
 
-// Diperbarui agar pasar tidak lagi terbaca tutup di Senin pagi
 function isXauMarketOpen() {
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
   
-  if (day === 6) return false; // Sabtu (sepanjang hari UTC) tutup
-  if (day === 0) return false; // Minggu (sepanjang hari UTC) tutup
-  if (day === 5 && hour >= 22) return false; // Jumat setelah 22:00 UTC tutup
-  // Senin (day === 1) otomatis buka
-  
+  if (day === 6) return false; 
+  if (day === 0) return false; 
+  if (day === 5 && hour >= 22) return false; 
   return true;
 }
 
@@ -92,7 +90,6 @@ function uniqSorted(list) {
   return out.sort((a, b) => a.time - b.time);
 }
 
-// Animasi halus untuk pergeseran/zoom chart (ease-out)
 function animateRange(ts, to, animRef, ms = 420) {
   cancelAnimationFrame(animRef.current);
   const from = ts.getVisibleLogicalRange();
@@ -110,7 +107,6 @@ function animateRange(ts, to, animRef, ms = 420) {
   animRef.current = requestAnimationFrame(step);
 }
 
-// Angka berubah halus (count up/down). Lompatan besar (ganti mata uang) langsung tanpa animasi.
 function useSmooth(target, ms = 400) {
   const [v, setV] = useState(target);
   const curRef = useRef(target);
@@ -165,7 +161,7 @@ export default function PriceChart() {
   const seriesRef = useRef({ candle: null, area: null });
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
-  const lastRef = useRef(null);   // harga terakhir (sudah dikali kurs) untuk memusatkan chart
+  const lastRef = useRef(null);   
   const animRef = useRef(0);
   const fitRef = useRef(() => {});
   const applyRef = useRef(() => {});
@@ -198,11 +194,9 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // Chart dibuat SEKALI (tidak dibuat ulang saat ganti interval) supaya perubahan terasa halus
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Harga terakhir selalu di tengah sumbu harga
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -253,7 +247,6 @@ export default function PriceChart() {
     };
   }, []);
 
-  // Tampilan jam hanya untuk interval di bawah 1 hari
   useEffect(() => {
     if (!chartRef.current) return;
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
@@ -264,17 +257,28 @@ export default function PriceChart() {
     if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
-    const target = range ? { from: -0.5, to: n + 1 } : { from: Math.max(0, n - 100), to: n + 1 };
+    
+    // Default rentang yang terlihat awal saat load (fokus ke ujung kanan harga terbaru)
+    // Jika tidak memilih range khusus, tampilkan 100 candle terbaru, sisanya tersembunyi bisa di-scroll ke kiri
+    let visibleBars = 100; 
+    if (range) {
+       // Menyesuaikan berapa candle yang dilihat berdasarkan tombol range yang diklik
+       if (range === "1D") visibleBars = 288;
+       else if (range === "5D") visibleBars = 480;
+       else if (range === "1M") visibleBars = 720;
+       else visibleBars = n; 
+    }
+    
+    const target = { from: Math.max(0, n - visibleBars), to: n + 1 };
+    
     if (smooth) {
       animateRange(ts, target, animRef);
     } else {
       cancelAnimationFrame(animRef.current);
-      if (range) ts.fitContent();
-      else ts.setVisibleLogicalRange(target);
+      ts.setVisibleLogicalRange(target);
     }
   }, [mode, range]);
 
-  // Tombol FULL: pakai Fullscreen API bila ada (desktop/Android), fallback CSS fixed (iPhone)
   const toggleFull = useCallback(async () => {
     const el = cardRef.current;
     if (!isFull) {
@@ -292,7 +296,6 @@ export default function PriceChart() {
     }
   }, [isFull]);
 
-  // Sinkron state saat keluar fullscreen lewat Esc / gesture browser
   useEffect(() => {
     const onFsChange = () => {
       if (!document.fullscreenElement && !document.webkitFullscreenElement) setIsFull(false);
@@ -305,7 +308,6 @@ export default function PriceChart() {
     };
   }, []);
 
-  // Mode layar penuh: kunci scroll, Esc (fallback), dan sesuaikan chart
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") setIsFull(false); };
     if (isFull) {
@@ -320,7 +322,6 @@ export default function PriceChart() {
     };
   }, [isFull, fitView]);
 
-  // Ukuran ulang saat jendela diubah, F11, atau HP diputar
   useEffect(() => {
     let t;
     const onResize = () => {
@@ -359,8 +360,14 @@ export default function PriceChart() {
     if (!d || !d.raw.length) return;
 
     const m = d.mult() * rate;
-    const f = d.raw[0].open * m;
-    const last = d.raw[d.raw.length - 1].close;
+    
+    // Perhitungan perubahan berdasarkan jarak pandang yang logis
+    const n = d.raw.length;
+    let lookback = 100; 
+    if (range) lookback = Math.min(n, RANGES[range]?.count || n);
+    
+    const f = d.raw[Math.max(0, n - lookback)].open * m;
+    const last = d.raw[n - 1].close;
     const l = last * m;
     
     const highs = d.raw.map(x => x.high * m);
@@ -374,9 +381,8 @@ export default function PriceChart() {
       val: l, chg: diff, pct: pct, isUp: diff >= 0,
       high: Math.max(...highs), low: Math.min(...lows)
     }));
-  }, [mode, rate]);
+  }, [mode, rate, range]);
 
-  // Ref selalu menunjuk fungsi/nilai terbaru (dipakai efek & timer tanpa membuat ulang koneksi)
   fitRef.current = fitView;
   applyRef.current = applyData;
   legendRef.current = updateLegend;
@@ -384,8 +390,6 @@ export default function PriceChart() {
   rateRef.current = rate;
   ivRef.current = iv;
 
-  // Ganti Currency / Candle / Area / Mode: fade halus, data diterapkan ulang,
-  // lalu chart bergeser mulus ke harga sekarang (di tengah)
   useEffect(() => {
     const applyVis = () => {
       if (!seriesRef.current.candle) return;
@@ -405,13 +409,15 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, rate, type]);
 
+  // Load Data dengan default fetch yang sangat besar untuk riwayat berlimpah
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
     const currentToken = tokenRef.current;
     setFade(true);
     
-    const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : 300);
+    // Menarik jumlah candle default yang besar (minimal 2500) meskipun tidak ada tombol range ditekan
+    const count = range === "YTD" ? ytdDays() : (range ? RANGES[range]?.count : 2500); 
     const binanceIv = IV[iv]?.bin || "1m";
     
     dsRef.current.gold.raw = [];
@@ -460,7 +466,7 @@ export default function PriceChart() {
       dsRef.current.btc.raw = res[1];
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-      const sinceNote = (d) => (d.raw.length && d.raw.length < count - 2) ? `RIWAYAT SEJAK ${dateFmt.format(new Date(d.raw[0].time * 1000)).toUpperCase()}` : "";
+      const sinceNote = (d) => (d.raw.length > 0) ? `RIWAYAT SEJAK ${dateFmt.format(new Date(d.raw[0].time * 1000)).toUpperCase()}` : "";
       
       setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[modeRef.current]) }));
       applyRef.current();
@@ -598,7 +604,6 @@ export default function PriceChart() {
 
         {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
         
-        {/* translate="no" dan notranslate agar Google Translate tidak merusak/membekukan angka harga */}
         <div className={`notranslate ${styles.priceMain}`} translate="no">
           <div className={styles.bigPrice}><Smooth value={legend.val} render={v => curObj.symbol + fmt(v, dec)} /><span className={styles.bigPriceUnit}> / TON</span></div>
           <div className={styles.priceStats}>
@@ -608,7 +613,6 @@ export default function PriceChart() {
           </div>
         </div>
         
-        {/* TOOLBAR (di luar chart) */}
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
             <div className={styles.modeSwitch}>
@@ -633,7 +637,6 @@ export default function PriceChart() {
           </div>
 
           <div className={styles.toolbarGroup}>
-            {/* DROPDOWN WAKTU (hanya menampilkan nilai, misalnya 1M) */}
             <div className={styles.currencySelector}>
               <button className={`${styles.currencyBtn} ${styles.smallBtn}`} onClick={() => setTimeDropOpen(!timeDropOpen)} type="button">
                 {range ? range : IV[iv]?.label}
@@ -658,7 +661,6 @@ export default function PriceChart() {
               )}
             </div>
 
-            {/* TOMBOL FULL TAB */}
             <button
               type="button"
               className={styles.fullBtn}
@@ -676,8 +678,6 @@ export default function PriceChart() {
         </div>
 
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
-
-          {/* CHART */}
           <div className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`} style={isFull
             ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
             : { position: 'relative', width: '100%', height: '480px' }}>
@@ -706,6 +706,11 @@ export default function PriceChart() {
               </div>
             </div>
           )}
+          
+          {/* Label untuk menunjukkan data tersedia sampai seberapa jauh di belakang */}
+          <div style={{ textAlign: 'left', marginTop: '8px', fontSize: '11px', color: '#9ca3af', display: 'flex', justifyContent: 'flex-start' }}>
+             {legend.availText}
+          </div>
 
         </div>
       </div>
