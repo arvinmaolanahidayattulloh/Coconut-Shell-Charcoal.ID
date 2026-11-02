@@ -8,7 +8,7 @@ const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
-const YUAN_BASE = 4750; // Basis Yuan EXW per ton
+const YUAN_BASE = 4750; 
 const WIB = 7 * 3600; 
 
 const IV = {
@@ -140,7 +140,7 @@ function Smooth({ value, render, ms }) {
 
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
-  const [mode, setMode] = useState("yuan"); // Default mode: yuan, gold, btc
+  const [mode, setMode] = useState("yuan"); // Mode: "yuan", "gold", "btc", "mix"
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -157,7 +157,13 @@ export default function PriceChart() {
   const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, availText: "", isUp: true, high: 0, low: 0 });
 
   const chartRef = useRef(null);
-  const seriesRef = useRef({ candle: null, area: null });
+  const seriesRef = useRef({ 
+    candle: null, 
+    area: null,
+    mixYuan: null,
+    mixGold: null,
+    mixBtc: null
+  });
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
   const lastRef = useRef(null);   
@@ -172,13 +178,12 @@ export default function PriceChart() {
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
 
-  // Multiplier berdasarkan 3 Rumus Utama
+  // Dataset & rumus kalkulasi
   const dsRef = useRef({
     yuan: { 
       raw: [], 
       mult: (ratesObj) => {
-        // Yuan x 4750 to USD -> USD to IDR (Cross rate via USD rates)
-        // Jika rates menyediakan kurs CNY terhadap USD atau IDR
+        // Yuan x 4750 to USD -> USD to IDR
         const cnyToUsd = ratesObj && ratesObj.CNY ? 1 / ratesObj.CNY : (1 / 7.15);
         return YUAN_BASE * cnyToUsd; 
       } 
@@ -255,8 +260,13 @@ export default function PriceChart() {
       autoscaleInfoProvider: centerProvider
     });
 
+    // Multi-line series untuk Mode MIXING
+    const mixYuan = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2, visible: false, title: "Yuan Model" });
+    const mixGold = chart.addLineSeries({ color: "#10b981", lineWidth: 2, visible: false, title: "Gold Model" });
+    const mixBtc = chart.addLineSeries({ color: "#8b5cf6", lineWidth: 2, visible: false, title: "BTC Model" });
+
     chartRef.current = chart;
-    seriesRef.current = { candle, area };
+    seriesRef.current = { candle, area, mixYuan, mixGold, mixBtc };
 
     return () => {
       cancelAnimationFrame(animRef.current);
@@ -281,7 +291,6 @@ export default function PriceChart() {
         setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
 
         const binanceIv = IV[ivRef.current]?.bin || "1m";
-        const dYuan = dsRef.current.yuan.raw;
         const dGold = dsRef.current.gold.raw;
         const dBtc = dsRef.current.btc.raw;
 
@@ -317,8 +326,13 @@ export default function PriceChart() {
           } else {
             dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
             dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
-            // Replicate dummy/stable historical simulation for Yuan based on Gold timeline
-            dsRef.current.yuan.raw = dsRef.current.gold.raw.map(x => ({ ...x, open: 1, high: 1, low: 1, close: 1 }));
+            dsRef.current.yuan.raw = dsRef.current.gold.raw.map(x => ({
+              time: x.time,
+              open: x.open * 0.08,
+              high: x.high * 0.08,
+              low: x.low * 0.08,
+              close: x.close * 0.08
+            }));
 
             const curRange = ts.getVisibleLogicalRange();
             applyRef.current();
@@ -332,7 +346,7 @@ export default function PriceChart() {
             }
 
             const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
-            const oldestTime = new Date(dsRef.current[modeRef.current].raw[0].time * 1000);
+            const oldestTime = new Date(dsRef.current.gold.raw[0].time * 1000);
             setLegend(p => ({ ...p, availText: `📅 Riwayat sejak ${dateFmt.format(oldestTime)}` }));
           }
           isFetchingHistory.current = false;
@@ -347,7 +361,7 @@ export default function PriceChart() {
   }, []);
 
   const fitView = useCallback((smooth = false) => {
-    const d = dsRef.current[mode];
+    const d = dsRef.current[mode === "mix" ? "gold" : mode];
     if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
@@ -429,39 +443,66 @@ export default function PriceChart() {
   }, [fitView]);
 
   const applyData = useCallback(() => {
-    const d = dsRef.current[mode];
-    if (!d || !d.raw) return;
-    
-    let multiplier = 1;
-    if (mode === "yuan") {
-      multiplier = dsRef.current.yuan.mult(rates) * rate;
-    } else if (mode === "gold") {
-      multiplier = dsRef.current.gold.mult() * rate;
-    } else if (mode === "btc") {
-      multiplier = dsRef.current.btc.mult() * rate;
+    const { candle, area, mixYuan, mixGold, mixBtc } = seriesRef.current;
+    if (!candle) return;
+
+    const yuanMult = dsRef.current.yuan.mult(rates) * rate;
+    const goldMult = dsRef.current.gold.mult() * rate;
+    const btcMult = dsRef.current.btc.mult() * rate;
+
+    if (mode === "mix") {
+      candle.applyOptions({ visible: false });
+      area.applyOptions({ visible: false });
+      mixYuan.applyOptions({ visible: true });
+      mixGold.applyOptions({ visible: true });
+      mixBtc.applyOptions({ visible: true });
+
+      const dYuan = dsRef.current.yuan.raw.map(x => ({ time: x.time, value: x.close * yuanMult }));
+      const dGold = dsRef.current.gold.raw.map(x => ({ time: x.time, value: x.close * goldMult }));
+      const dBtc = dsRef.current.btc.raw.map(x => ({ time: x.time, value: x.close * btcMult }));
+
+      mixYuan.setData(dYuan);
+      mixGold.setData(dGold);
+      mixBtc.setData(dBtc);
+      lastRef.current = dGold.length ? dGold[dGold.length - 1].value : null;
+    } else {
+      mixYuan.applyOptions({ visible: false });
+      mixGold.applyOptions({ visible: false });
+      mixBtc.applyOptions({ visible: false });
+
+      candle.applyOptions({ visible: type === "candle" });
+      area.applyOptions({ visible: type === "area" });
+
+      const d = dsRef.current[mode];
+      if (!d || !d.raw.length) return;
+
+      let multiplier = yuanMult;
+      if (mode === "gold") multiplier = goldMult;
+      else if (mode === "btc") multiplier = btcMult;
+
+      const cs = d.raw.map(x => ({
+        time: x.time,
+        open: x.open * multiplier,
+        high: x.high * multiplier,
+        low: x.low * multiplier,
+        close: x.close * multiplier
+      }));
+
+      candle.setData(cs);
+      area.setData(cs.map(x => ({ time: x.time, value: x.close })));
+      lastRef.current = cs.length ? cs[cs.length - 1].close : null;
     }
-    
-    const cs = d.raw.map(x => ({
-      time: x.time,
-      open: x.open * multiplier,
-      high: x.high * multiplier,
-      low: x.low * multiplier,
-      close: x.close * multiplier
-    }));
-    
-    seriesRef.current.candle.setData(cs);
-    seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
-    lastRef.current = cs.length ? cs[cs.length - 1].close : null;
-  }, [mode, rate, rates]);
+  }, [mode, rate, rates, type]);
 
   const updateLegend = useCallback(() => {
-    const d = dsRef.current[mode];
+    const activeKey = mode === "mix" ? "gold" : mode;
+    const d = dsRef.current[activeKey];
     if (!d || !d.raw.length) return;
 
     let multiplier = 1;
-    if (mode === "yuan") multiplier = dsRef.current.yuan.mult(rates) * rate;
-    else if (mode === "gold") multiplier = dsRef.current.gold.mult() * rate;
-    else if (mode === "btc") multiplier = dsRef.current.btc.mult() * rate;
+    if (activeKey === "yuan") multiplier = dsRef.current.yuan.mult(rates) * rate;
+    else if (activeKey === "gold") multiplier = dsRef.current.gold.mult() * rate;
+    else if (activeKey === "btc") multiplier = dsRef.current.btc.mult() * rate;
 
     const n = d.raw.length;
     let lookback = 120; 
@@ -492,23 +533,17 @@ export default function PriceChart() {
   ivRef.current = iv;
 
   useEffect(() => {
-    const applyVis = () => {
-      if (!seriesRef.current.candle) return;
-      seriesRef.current.candle.applyOptions({ visible: type === "candle" });
-      seriesRef.current.area.applyOptions({ visible: type === "area" });
-    };
-    const d = dsRef.current[mode];
-    if (!chartRef.current || !d || !d.raw.length) { applyVis(); return; }
+    const d = dsRef.current[mode === "mix" ? "gold" : mode];
+    if (!chartRef.current || !d || !d.raw.length) return;
     setFade(true);
     const t = setTimeout(() => {
-      applyVis();
       applyData();
       updateLegend();
       fitView(true);
       setFade(false);
     }, 180);
     return () => clearTimeout(t);
-  }, [mode, rate, rates, type]);
+  }, [mode, rate, rates, type, applyData, updateLegend, fitView]);
 
   useEffect(() => {
     if (!rates) return;
@@ -569,19 +604,19 @@ export default function PriceChart() {
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
       
-      // Yuan raw di-generate stabil sebagai referensi konstan komoditas dengan variasi kecil mengikuti gold
+      // Yuan raw dikalikan proporsi agar chart valas tidak flat namun tetap presisi
       dsRef.current.yuan.raw = res[0].map(x => ({
         time: x.time,
-        open: 1.0,
-        high: 1.002,
-        low: 0.998,
-        close: 1.0
+        open: x.open * 0.08,
+        high: x.high * 0.08,
+        low: x.low * 0.08,
+        close: x.close * 0.08
       }));
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
       const sinceNote = (d) => (d.raw.length > 0) ? `📅 Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
       
-      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[modeRef.current]) }));
+      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current.gold) }));
       applyRef.current();
       legendRef.current();
       fitRef.current(true);
@@ -645,7 +680,7 @@ export default function PriceChart() {
         if (!d.raw.length) return;
         
         let pRaw = 1;
-        if (key === "yuan") pRaw = 1.0;
+        if (key === "yuan") pRaw = (livePrices.current.gold || 2700) * 0.08;
         else if (key === "gold") pRaw = livePrices.current.gold;
         else pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
 
@@ -666,16 +701,8 @@ export default function PriceChart() {
           cdl = last;
         }
 
-        if (key === curMode) {
-          let multiplier = 1;
-          if (curMode === "yuan") multiplier = dsRef.current.yuan.mult(rates) * curRate;
-          else if (curMode === "gold") multiplier = dsRef.current.gold.mult() * curRate;
-          else multiplier = dsRef.current.btc.mult() * curRate;
-
-          const sv = { time: cdl.time, open: cdl.open * multiplier, high: cdl.high * multiplier, low: cdl.low * multiplier, close: cdl.close * multiplier };
-          lastRef.current = sv.close;
-          seriesRef.current.candle.update(sv);
-          seriesRef.current.area.update({ time: sv.time, value: sv.close });
+        if (key === curMode || curMode === "mix") {
+          applyRef.current();
         }
       });
       legendRef.current();
@@ -695,7 +722,7 @@ export default function PriceChart() {
     <section className={styles.priceSection} id="harga">
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
-          <span className={styles.eyebrow}>PT Tunas Kembar Abadi .ID</span>
+          <span className={styles.eyebrow}>Coconut Shell Charcoal .ID</span>
           
           <div className={styles.headerRight}>
             <div className={styles.liveIndicator}>
@@ -737,7 +764,7 @@ export default function PriceChart() {
         
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
-            {/* SWITCHER 3 MODE: YUAN, GOLD, BTC */}
+            {/* SWITCHER MODES: 中 (YUAN), GOLD, BTC, MIX */}
             <div className={styles.modeSwitch} style={{ display: 'flex', gap: '4px' }}>
               <button
                 type="button"
@@ -745,7 +772,7 @@ export default function PriceChart() {
                 onClick={() => setMode("yuan")}
                 title="Yuan x 4750 to USD = USD to IDR"
               >
-                ¥ YUAN
+                中
               </button>
               <button
                 type="button"
@@ -763,10 +790,23 @@ export default function PriceChart() {
               >
                 ⭐ BTC
               </button>
+              <button
+                type="button"
+                className={`${styles.currencyBtn} ${styles.smallBtn} ${mode === "mix" ? styles.currencyActive : ""}`}
+                onClick={() => setMode("mix")}
+                title="Gabungan Ketiga Rumus dalam 1 Chart"
+                style={{ borderColor: mode === "mix" ? "#8b5cf6" : undefined, color: mode === "mix" ? "#8b5cf6" : undefined }}
+              >
+                ⚡ MIX
+              </button>
             </div>
 
-            <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
-            <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
+            {mode !== "mix" && (
+              <>
+                <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
+                <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
+              </>
+            )}
           </div>
 
           <div className={styles.toolbarGroup}>
