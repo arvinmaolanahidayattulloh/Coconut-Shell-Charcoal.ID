@@ -1,19 +1,18 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAccount } from '../Account'; // Memanggil context akun
+import { useAccount } from './Account'; 
 import styles from './Trade.module.css';
 
 export default function Trade() {
-  const { user, login } = useAccount(); // Mengambil data user dan fungsi login
+  const { user, login } = useAccount(); 
   const [amount, setAmount] = useState('');
-  const [tradeType, setTradeType] = useState('buy'); // buy, sell, sellAll
+  const [tradeType, setTradeType] = useState('buy'); 
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleTradeSubmit = (e) => {
     e.preventDefault();
     
-    // Keamanan tambahan: Cegah eksekusi jika belum login
     if (!user) return;
     
     if (tradeType === 'sellAll') {
@@ -77,13 +76,12 @@ export default function Trade() {
               placeholder={tradeType === 'sellAll' ? "Seluruh Saldo Aset" : "Contoh: 10"}
               value={tradeType === 'sellAll' ? 'MAKSIMAL (SELL ALL)' : amount}
               onChange={(e) => setAmount(e.target.value)}
-              disabled={tradeType === 'sellAll' || !user} // Input dikunci jika belum login
+              disabled={tradeType === 'sellAll' || !user} 
               className={styles.tradeInput}
             />
           </div>
 
           {!user ? (
-            // Tombol login muncul jika user belum masuk
             <button 
               type="button" 
               onClick={login} 
@@ -93,7 +91,6 @@ export default function Trade() {
               LOGIN UNTUK TRADING
             </button>
           ) : (
-            // Tombol eksekusi normal jika user sudah masuk
             <button type="submit" className={`${styles.submitBtn} ${tradeType === 'buy' ? styles.buyBtnBg : styles.sellBtnBg}`}>
               Eksekusi {tradeType === 'sellAll' ? 'SELL ALL' : tradeType.toUpperCase()}
             </button>
