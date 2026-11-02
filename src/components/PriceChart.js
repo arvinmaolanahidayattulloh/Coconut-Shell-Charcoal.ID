@@ -67,9 +67,7 @@ function isXauMarketOpen() {
   const now = new Date();
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
-  if (day === 6) return false; 
-  if (day === 0) return false; 
-  if (day === 5 && hour >= 22) return false; 
+  if (day === 6 || day === 0 || (day === 5 && hour >= 22)) return false;
   return true;
 }
 
@@ -93,8 +91,7 @@ function uniqSorted(list) {
   return out.sort((a, b) => a.time - b.time);
 }
 
-// Fungsi Animasi Zoom/Pan yang halus dan stabil menempatkan harga di tengah
-function animateRange(ts, to, animRef, ms = 300) {
+function animateRange(ts, to, animRef, ms = 250) {
   cancelAnimationFrame(animRef.current);
   const from = ts.getVisibleLogicalRange();
   if (!from) { ts.setVisibleLogicalRange(to); return; }
@@ -152,7 +149,6 @@ export default function PriceChart() {
   const [type, setType] = useState("candle");
   const [isFull, setIsFull] = useState(false);
   const [fade, setFade] = useState(false);
-  
   const [unlocked, setUnlocked] = useState(false);
   
   const [cur, setCur] = useState("IDR");
@@ -210,8 +206,7 @@ export default function PriceChart() {
   const dec = cur === "IDR" || cur === "JPY" ? 0 : 2;
 
   useEffect(() => {
-    const open = isXauMarketOpen();
-    setMarketClosed(!open);
+    setMarketClosed(!isXauMarketOpen());
   }, []);
 
   useEffect(() => {
@@ -242,7 +237,7 @@ export default function PriceChart() {
         borderColor: "#e0e3eb", 
         timeVisible: IV[ivRef.current]?.step < 86400, 
         secondsVisible: false, 
-        rightOffset: 6, // Memberikan ruang pas di sebelah kanan agar candle terbaru ada di tengah-kanan yang nyaman
+        rightOffset: 6,
         fixLeftEdge: false,
         fixRightEdge: false 
       },
@@ -278,7 +273,7 @@ export default function PriceChart() {
     chartRef.current.applyOptions({ timeScale: { timeVisible: IV[iv]?.step < 86400 } });
   }, [iv]);
 
-  // FUNGSI AUTO FOKUS & ZOOM STANDAR YANG NYAMAN (Pusatkan kursor/tampilan di candle terbaru)
+  // FUNGSI STABILISASI ZOOM & POSISI TAMPILAN TENGAH (Mencegah efek puyeng saat ganti state/rotasi)
   const fitView = useCallback((smooth = true) => {
     const targetKey = mode === "csc" ? "usd" : mode;
     const d = dsRef.current[targetKey];
@@ -287,13 +282,13 @@ export default function PriceChart() {
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
     
-    // Zoom standar dengan rentang pas (misal menampilkan 80 bar terakhir agar tidak terlalu jauh/kecil)
-    let visibleBars = 80; 
-    if (range === "1D") visibleBars = 60;
-    else if (range === "5D") visibleBars = 90;
-    else if (range === "1M") visibleBars = 100;
+    // Zoom normal stabil (menampilkan ~70 bar terakhir agar pas di layar HP/Desktop)
+    let visibleBars = 70; 
+    if (range === "1D") visibleBars = 50;
+    else if (range === "5D") visibleBars = 80;
+    else if (range === "1M") visibleBars = 90;
     
-    const target = { from: Math.max(0, n - visibleBars), to: n + 6 };
+    const target = { from: Math.max(0, n - visibleBars), to: n + 5 };
     
     if (smooth) {
       animateRange(ts, target, animRef);
@@ -431,25 +426,17 @@ export default function PriceChart() {
     };
   }, []);
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") setIsFull(false); };
-    if (isFull) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", onKey);
-    }
-    const t = setTimeout(() => fitView(true), 150);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-      clearTimeout(t);
-    };
-  }, [isFull, fitView]);
-
+  // Penanganan Event Resize & Rotasi Layar (Tilt View) agar kembali proporsional
   useEffect(() => {
     let t;
     const onResize = () => {
       clearTimeout(t);
-      t = setTimeout(() => fitView(true), 150);
+      t = setTimeout(() => {
+        if (chartRef.current) {
+          chartRef.current.timeScale().fitContent();
+          fitView(true);
+        }
+      }, 100);
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
@@ -575,7 +562,6 @@ export default function PriceChart() {
   rateRef.current = rate;
   ivRef.current = iv;
 
-  // Efek transisi yang langsung memicu auto-fokus stabil saat mode/interval/kontainer/currency diubah
   useEffect(() => {
     const applyVis = () => {
       if (!seriesRef.current.candle) return;
@@ -592,9 +578,9 @@ export default function PriceChart() {
       applyVis();
       applyData();
       updateLegend();
-      fitView(true); // Auto fokus langsung aktif secara smooth
+      fitView(true);
       setFade(false);
-    }, 150);
+    }, 100);
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, type, rates, iv, range, cur, fitView, applyData, updateLegend]);
 
@@ -639,7 +625,7 @@ export default function PriceChart() {
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
       const rows = j?.data?.ohlc || [];
-      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.high, close: +o.close }));
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
       all = cs.concat(all);
       left -= n;
       if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
@@ -680,7 +666,7 @@ export default function PriceChart() {
       legendRef.current();
       fitRef.current(true);
       setFade(false);
-      setTimeout(() => { if (currentToken === tokenRef.current) fitRef.current(true); }, 250);
+      setTimeout(() => { if (currentToken === tokenRef.current) fitRef.current(true); }, 200);
     }).catch(e => {
       if (currentToken !== tokenRef.current) return;
       setFade(false);
@@ -890,75 +876,19 @@ export default function PriceChart() {
 
               {unlocked && (
                 <>
-                  <button
-                    type="button"
-                    className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`}
-                    onClick={() => setMode("usd")}
-                    title="USD Mode"
-                  >
-                    💵
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
-                    onClick={() => setMode("yuan")}
-                    title="Yuan Mode"
-                  >
-                    中
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`}
-                    onClick={() => setMode("jpy")}
-                    title="Yen Mode"
-                  >
-                    💴
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`}
-                    onClick={() => setMode("sar")}
-                    title="Riyal Mode"
-                  >
-                    ﷼
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
-                    onClick={() => setMode("gold")}
-                    title="Gold Mode"
-                  >
-                    {marketClosed ? "🔒" : "🔐"}
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
-                    onClick={() => setMode("btc")}
-                    title="Bitcoin Mode"
-                  >
-                    ⭐
-                  </button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => setMode("usd")}>💵</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => setMode("yuan")}>中</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => setMode("jpy")}>💴</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => setMode("sar")}>﷼</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => setMode("gold")}>{marketClosed ? "🔒" : "🔐"}</button>
+                  <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => setMode("btc")}>⭐</button>
                 </>
               )}
             </div>
 
             <div className={styles.modeSwitch} style={{ marginLeft: "8px" }}>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${containerMode === "T" ? styles.modeBtnActive : ""}`}
-                onClick={() => setContainerMode("T")}
-                title="Harga Per Ton (1 Ton)"
-              >
-                T
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeBtn} ${containerMode === "40ft" ? styles.modeBtnActive : ""}`}
-                onClick={() => setContainerMode("40ft")}
-                title="Harga Total Kontainer 40ft (x25 Ton)"
-              >
-                40ft
-              </button>
+              <button type="button" className={`${styles.modeBtn} ${containerMode === "T" ? styles.modeBtnActive : ""}`} onClick={() => setContainerMode("T")}>T</button>
+              <button type="button" className={`${styles.modeBtn} ${containerMode === "40ft" ? styles.modeBtnActive : ""}`} onClick={() => setContainerMode("40ft")}>40ft</button>
             </div>
 
             <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
