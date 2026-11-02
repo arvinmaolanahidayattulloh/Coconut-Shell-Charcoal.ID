@@ -9,8 +9,9 @@ const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.01; 
 
-// Konstanta Basis (Tanpa USD_BASE)
+// Konstanta Basis Lengkap dengan USD_BASE
 const YUAN_BASE = 5000;
+const USD_BASE = 1000;
 const JPY_BASE = 100;
 const SAR_BASE = 5;
 
@@ -146,6 +147,7 @@ function Smooth({ value, render, ms }) {
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
   const [mode, setMode] = useState("csc"); 
+  const [containerMode, setContainerMode] = useState("T"); // "T" atau "40ft"
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -172,6 +174,7 @@ export default function PriceChart() {
   const legendRef = useRef(() => {});
   
   const modeRef = useRef("csc");
+  const containerModeRef = useRef("T");
   const rateRef = useRef(1);
   const ivRef = useRef("1m");
   
@@ -429,7 +432,7 @@ export default function PriceChart() {
     };
   }, [fitView]);
 
-  // Fungsi Pembuat Data Index Hibrida (5 Instrumen digabung & dibagi 5)
+  // Fungsi Pembuat Data Index Hibrida (6 Instrumen: USD, Yuan, JPY, SAR, Emas, BTC)
   const buildCscData = useCallback((targetRate) => {
     const dForexProxy = dsRef.current.yuan.raw; 
     const dGold = dsRef.current.gold.raw;
@@ -441,15 +444,12 @@ export default function PriceChart() {
     const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
     const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
 
-    // 1. Nilai Yuan
+    // 6 Pilar Lengkap
+    const mUsd = USD_BASE * targetRate;
     const mYuan = YUAN_BASE * cnyToUsd * targetRate;
-    // 2. Nilai JPY
     const mJpy = JPY_BASE * jpyToUsd * targetRate;
-    // 3. Nilai SAR
     const mSar = SAR_BASE * sarToUsd * targetRate;
-    // 4. Nilai Emas
     const mGold = dsRef.current.gold.mult(rates, targetRate);
-    // 5. Nilai BTC
     const mBtc = dsRef.current.btc.mult(rates, targetRate);
 
     const map = {};
@@ -467,28 +467,32 @@ export default function PriceChart() {
       
       if (!lastF || !lastG || !lastB) return null;
 
-      // Kalkulasi Gabungan 5 Pilar dibagi 5
+      // Kalkulasi Gabungan 6 Pilar dibagi 6
       const calcVal = (fVal, gVal, bVal) => {
+        const usdPart = fVal * mUsd;
         const yuanPart = fVal * mYuan;
         const jpyPart = fVal * mJpy;
         const sarPart = fVal * mSar;
         const goldPart = gVal * mGold;
         const btcPart = bVal * mBtc;
-        return (yuanPart + jpyPart + sarPart + goldPart + btcPart) / 5;
+        return (usdPart + yuanPart + jpyPart + sarPart + goldPart + btcPart) / 6;
       };
+
+      const multiplier = containerModeRef.current === "40ft" ? 25 : 1;
 
       return {
         time: t,
-        open: calcVal(lastF.open, lastG.open, lastB.open),
-        high: calcVal(lastF.high, lastG.high, lastB.high),
-        low: calcVal(lastF.low, lastG.low, lastB.low),
-        close: calcVal(lastF.close, lastG.close, lastB.close),
+        open: calcVal(lastF.open, lastG.open, lastB.open) * multiplier,
+        high: calcVal(lastF.high, lastG.high, lastB.high) * multiplier,
+        low: calcVal(lastF.low, lastG.low, lastB.low) * multiplier,
+        close: calcVal(lastF.close, lastG.close, lastB.close) * multiplier,
       };
     }).filter(Boolean);
-  }, [rates]);
+  }, [rates, containerMode]);
 
   const applyData = useCallback(() => {
     let cs = [];
+    const multiplier = containerMode === "40ft" ? 25 : 1;
 
     if (mode === "csc") {
       cs = buildCscData(rate);
@@ -496,7 +500,7 @@ export default function PriceChart() {
     } else {
       const d = dsRef.current[mode];
       if (!d || !d.raw) return;
-      const m = d.mult(rates, rate);
+      const m = d.mult(rates, rate) * multiplier;
       cs = d.raw.map(x => ({
         time: x.time, open: x.open * m, high: x.high * m, low: x.low * m, close: x.close * m
       }));
@@ -507,7 +511,7 @@ export default function PriceChart() {
       seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
       lastRef.current = cs[cs.length - 1].close;
     }
-  }, [mode, rate, rates, buildCscData]);
+  }, [mode, rate, rates, containerMode, buildCscData]);
 
   const updateLegend = useCallback(() => {
     const isCsc = mode === "csc";
@@ -518,7 +522,8 @@ export default function PriceChart() {
     let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
     
-    const m = isCsc ? 1 : d.mult(rates, rate);
+    const multiplier = containerMode === "40ft" ? 25 : 1;
+    const m = isCsc ? 1 : (d.mult(rates, rate) * multiplier);
     
     const f = d.raw[Math.max(0, n - lookback)].open * m;
     const last = d.raw[n - 1].close;
@@ -535,12 +540,13 @@ export default function PriceChart() {
       val: l, chg: diff, pct: pct, isUp: diff >= 0,
       high: Math.max(...highs), low: Math.min(...lows)
     }));
-  }, [mode, rate, range, rates]);
+  }, [mode, rate, range, rates, containerMode]);
 
   fitRef.current = fitView;
   applyRef.current = applyData;
   legendRef.current = updateLegend;
   modeRef.current = mode;
+  containerModeRef.current = containerMode;
   rateRef.current = rate;
   ivRef.current = iv;
 
@@ -564,7 +570,7 @@ export default function PriceChart() {
       setFade(false);
     }, 180);
     return () => clearTimeout(t);
-  }, [mode, rate, type, rates]);
+  }, [mode, containerMode, rate, type, rates]);
 
   useEffect(() => {
     if (!rates) return;
@@ -604,7 +610,7 @@ export default function PriceChart() {
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
       const rows = j?.data?.ohlc || [];
-      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.high, close: +o.close }));
+      const cs = rows.map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
       all = cs.concat(all);
       left -= n;
       if (left > 0 && rows.length) return fetchBitstampPage(interval, left, +rows[0].timestamp - 1, all);
@@ -692,8 +698,10 @@ export default function PriceChart() {
 
     const timer = setInterval(() => {
       const curMode = modeRef.current;
+      const curContainer = containerModeRef.current;
       const curRate = rateRef.current;
       const step = IV[ivRef.current].step;
+      const multiplier = curContainer === "40ft" ? 25 : 1;
       
       ["gold", "btc", "yuan"].forEach(key => {
         const d = dsRef.current[key];
@@ -728,6 +736,7 @@ export default function PriceChart() {
           const jpyToUsd = rates && rates.JPY ? (1 / rates.JPY) : 0.0067;
           const sarToUsd = rates && rates.SAR ? (1 / rates.SAR) : 0.2666;
 
+          const mUsd = USD_BASE * curRate;
           const mYuan = YUAN_BASE * cnyToUsd * curRate;
           const mJpy = JPY_BASE * jpyToUsd * curRate;
           const mSar = SAR_BASE * sarToUsd * curRate;
@@ -735,7 +744,7 @@ export default function PriceChart() {
           const mB = dsRef.current.btc.mult(rates, curRate);
 
           const calcLive = (f, g, b) => {
-             return (f*mYuan + f*mJpy + f*mSar + g*mG + b*mB) / 5;
+             return ((f*mUsd + f*mYuan + f*mJpy + f*mSar + g*mG + b*mB) / 6) * multiplier;
           };
 
           const sv = {
@@ -759,7 +768,7 @@ export default function PriceChart() {
         } else {
           const d = dsRef.current[curMode];
           const last = d.raw[d.raw.length - 1];
-          const m = d.mult(rates, curRate);
+          const m = d.mult(rates, curRate) * multiplier;
           const sv = { time: last.time, open: last.open * m, high: last.high * m, low: last.low * m, close: last.close * m };
           
           lastRef.current = sv.close;
@@ -817,7 +826,10 @@ export default function PriceChart() {
         {status.error && <div style={{ marginBottom: 10, padding: '10px 12px', border: '1px solid #f23645', borderRadius: 4, color: '#f23645', fontSize: 13 }}>{status.error}</div>}
         
         <div className={`notranslate ${styles.priceMain}`} translate="no">
-          <div className={styles.bigPrice}><Smooth value={legend.val} render={v => curObj.symbol + fmt(v, dec)} /><span className={styles.bigPriceUnit}> / TON</span></div>
+          <div className={styles.bigPrice}>
+            <Smooth value={legend.val} render={v => curObj.symbol + fmt(v, dec)} />
+            <span className={styles.bigPriceUnit}> / {containerMode === "40ft" ? "25 TON (40FT)" : "TON"}</span>
+          </div>
           <div className={styles.priceStats}>
             <div className={styles.statBox}><span className={styles.statLabel}>PERUBAHAN</span><span className={`${styles.statVal} ${legend.isUp ? styles.up : styles.down}`}>{legend.isUp ? "\u25B2" : "\u25BC"} <Smooth value={legend.chg} render={v => (v >= 0 ? "+" : "") + fmt(v, dec)} /> (<Smooth value={legend.pct} render={v => (v >= 0 ? "+" : "") + fmt(v, 2) + "%"} />)</span></div>
             <div className={styles.statBox}><span className={styles.statLabel}>TERTINGGI</span><span className={styles.statVal}><Smooth value={legend.high} render={v => curObj.symbol + fmt(v, dec)} /></span></div>
@@ -833,7 +845,7 @@ export default function PriceChart() {
                 className={`${styles.modeBtn} ${mode === "csc" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("csc")}
                 style={{ fontWeight: "bold" }}
-                title="5 Market Index (Yuan, Yen, Riyal, XAU, BTC)"
+                title="6 Market Index (USD, Yuan, Yen, Riyal, XAU, BTC)"
               >
                 CSC
               </button>
@@ -857,6 +869,26 @@ export default function PriceChart() {
                 onClick={() => setMode("btc")}
               >
                 ⭐
+              </button>
+            </div>
+
+            {/* Tombol Kontainer T & 40ft */}
+            <div className={styles.modeSwitch} style={{ marginLeft: "8px" }}>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${containerMode === "T" ? styles.modeBtnActive : ""}`}
+                onClick={() => setContainerMode("T")}
+                title="Harga Per Ton (1 Ton)"
+              >
+                T
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${containerMode === "40ft" ? styles.modeBtnActive : ""}`}
+                onClick={() => setContainerMode("40ft")}
+                title="Harga Total Kontainer 40ft (x25 Ton)"
+              >
+                40ft
               </button>
             </div>
 
