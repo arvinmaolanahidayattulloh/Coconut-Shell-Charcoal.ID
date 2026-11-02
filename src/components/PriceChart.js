@@ -453,10 +453,11 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat chart ─────────
+  // ───────── Buat chart (Harga selalu di tengah vertikal & Bebas Zoom) ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    // Menjaga agar harga terakhir/tengah selalu di tengah layar secara vertikal
     const centerProvider = (orig) => {
       const res = orig();
       const last = lastRef.current;
@@ -478,8 +479,8 @@ export default function PriceChart() {
         secondsVisible: true,
         rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true,
-        shiftVisibleRangeOnNewBar: true, 
+        fixRightEdge: false,       // BEBAS ZOOM (Tidak dipatok ketat, user bisa zoom in/out leluasa)
+        shiftVisibleRangeOnNewBar: false, 
         minBarSpacing: 0.5
       },
       crosshair: { mode: 0 },
@@ -521,7 +522,11 @@ export default function PriceChart() {
     const n = lenRef.current;
     if (!chart || !n) return;
     chart.priceScale("right").applyOptions({ autoScale: true });
-    chart.timeScale().scrollToPosition(0, true);
+    // Tampilkan 60 bar terakhir secara default saat pertama load tanpa membatasi tingkat zoom user selanjutnya
+    chart.timeScale().setVisibleLogicalRange({
+      from: Math.max(0, n - 60),
+      to: n + 1
+    });
   }, []);
 
   const compute = useCallback(() => {
@@ -674,7 +679,7 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitView]);
 
-  // ───────── Ambil Riwayat Sejauh Mungkin ─────────
+  // ───────── Ambil Riwayat Sampai Akar ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -780,14 +785,11 @@ export default function PriceChart() {
           const timeScale = chartRef.current?.timeScale();
           const oldRange = timeScale?.getVisibleLogicalRange();
           const oldLen = lenRef.current;
-          const isAtRightEdge = oldRange && (oldRange.to >= oldLen - 2);
 
           refresh(false);
 
           const addedBars = lenRef.current - oldLen;
-          if (isAtRightEdge) {
-            fitView();
-          } else if (addedBars > 0 && oldRange) {
+          if (addedBars > 0 && oldRange) {
             timeScale?.setVisibleLogicalRange({
               from: oldRange.from + addedBars,
               to: oldRange.to + addedBars
@@ -807,7 +809,7 @@ export default function PriceChart() {
     loadDataProgressive();
   }, [rates, baseBin, refresh, fitView]);
 
-  // ───────── Live: WebSocket + Animasi Ular Sangat Halus (INF) ─────────
+  // ───────── Live: WebSocket + Animasi Ular & Interval Sangat Halus LERP ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
@@ -838,6 +840,7 @@ export default function PriceChart() {
 
     connectBinance();
 
+    // Timer Normal per Detik (Semua interval diperhalus dengan LERP di dalam pembaharuan data)
     const timer = setInterval(() => {
       const pGold = livePrices.current.gold;
       const pBtc = livePrices.current.btcBn;
@@ -858,9 +861,12 @@ export default function PriceChart() {
 
         const last = d.raw[d.raw.length - 1];
         if (last && bucketOf(last.time, bcfg) === nb) {
+          // LERP halus pada update harga candle terakhir agar pergerakan tidak patah-patah
+          last.close = last.close + (val - last.close) * 0.25;
           if (hi > last.high) last.high = hi;
           if (lo < last.low) last.low = lo;
-          last.close = val;
+          if (last.close > last.high) last.high = last.close;
+          if (last.close < last.low) last.low = last.close;
         } else {
           d.raw.push({ time: nb, open: val, high: hi, low: lo, close: val });
         }
@@ -881,7 +887,7 @@ export default function PriceChart() {
       if (ivRef.current !== "inf") refresh(false);
     }, 1000);
 
-    // Animasi Ular (INF) yang diperhalus menggunakan LERP (Linear Interpolation)
+    // Animasi Ular (INF) dengan peredam halus (LERP 0.08)
     const fastTimer = setInterval(() => {
       if (ivRef.current !== "inf") {
         const dGold = dsRef.current.gold;
@@ -903,7 +909,6 @@ export default function PriceChart() {
         const sigma = eaSigma(d.raw) || (target * 0.0001);
         const r = rng(hashStr(k) ^ lastInfTime);
         
-        // Peredam halus (LERP 0.08 agar gerakannya sangat luwes dan tidak patah-patah)
         let p = prevRow.close + (target - prevRow.close) * 0.08 + gauss(r) * sigma * 0.4;
         
         const open = prevRow.close;
@@ -916,7 +921,7 @@ export default function PriceChart() {
       });
 
       refresh(false);
-    }, 60); // 60ms setara dengan ~16 FPS untuk rendering chart yang sangat mulus cair
+    }, 60);
 
     return () => {
       disposed = true;
