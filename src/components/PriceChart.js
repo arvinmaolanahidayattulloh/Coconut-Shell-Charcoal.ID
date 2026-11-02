@@ -8,7 +8,7 @@ const OZ = 31.1034768;
 const GRAMS = 5;
 const MARKUP = 1.125;
 const BTC_FACTOR = 0.00909; 
-const YUAN_BASE = 4750; // 4.750 CNY absolut untuk arang natural EXW
+const YUAN_BASE = 4750; // 4.750 CNY absolut untuk harga arang
 const WIB = 7 * 3600; 
 
 const IV = {
@@ -140,7 +140,7 @@ function Smooth({ value, render, ms }) {
 
 export default function PriceChart() {
   const [marketClosed, setMarketClosed] = useState(false);
-  const [mode, setMode] = useState("yuan"); // Mode: "yuan", "gold", "btc", "mix"
+  const [mode, setMode] = useState("yuan"); // Default mode diatur ke yuan
   const [iv, setIv] = useState("1m");       
   const [range, setRange] = useState(null);
   const [type, setType] = useState("candle");
@@ -157,13 +157,7 @@ export default function PriceChart() {
   const [legend, setLegend] = useState({ val: 0, chg: 0, pct: 0, availText: "", isUp: true, high: 0, low: 0 });
 
   const chartRef = useRef(null);
-  const seriesRef = useRef({ 
-    candle: null, 
-    area: null,
-    mixYuan: null,
-    mixGold: null,
-    mixBtc: null
-  });
+  const seriesRef = useRef({ candle: null, area: null });
   const chartContainerRef = useRef(null);
   const cardRef = useRef(null);
   const lastRef = useRef(null);   
@@ -178,30 +172,17 @@ export default function PriceChart() {
   const isFetchingHistory = useRef(false);
   const noMoreHistory = useRef(false);
 
-  // Menerapkan 3 Rumus Kalkulasi Harga Arang (Coconut Shell Charcoal Pricing Formula)
+  // Menambahkan objek data "yuan" dengan rumus: 4750 CNY -> USD -> Mata uang tujuan
   const dsRef = useRef({
     yuan: { 
       raw: [], 
       mult: (ratesObj) => {
-        // Rumus 1: Yuan x 4750 to USD -> USD to IDR
         const cnyToUsd = ratesObj && ratesObj.CNY ? (1 / ratesObj.CNY) : 0.150125;
-        return YUAN_BASE * cnyToUsd; // Menghasilkan USD per ton
+        return YUAN_BASE * cnyToUsd; 
       } 
     },
-    gold: { 
-      raw: [], 
-      mult: () => {
-        // Rumus 2: XAUUSD (per oz) / OZ * GRAMS * MARKUP -> setara USD per ton arang
-        return GRAMS * MARKUP / OZ;
-      } 
-    },
-    btc:  { 
-      raw: [], 
-      mult: () => {
-        // Rumus 3: BTC * 0.00909 -> setara USD per ton arang
-        return BTC_FACTOR;
-      } 
-    }
+    gold: { raw: [], mult: () => GRAMS * MARKUP / OZ },
+    btc:  { raw: [], mult: () => BTC_FACTOR }
   });
 
   const tokenRef = useRef(0);
@@ -266,13 +247,8 @@ export default function PriceChart() {
       autoscaleInfoProvider: centerProvider
     });
 
-    // Multi-line series untuk Mode MIX (Perbandingan 3 Rumus Arang)
-    const mixYuan = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2, visible: false, title: "Yuan Model" });
-    const mixGold = chart.addLineSeries({ color: "#10b981", lineWidth: 2, visible: false, title: "Gold Model" });
-    const mixBtc = chart.addLineSeries({ color: "#8b5cf6", lineWidth: 2, visible: false, title: "BTC Model" });
-
     chartRef.current = chart;
-    seriesRef.current = { candle, area, mixYuan, mixGold, mixBtc };
+    seriesRef.current = { candle, area };
 
     return () => {
       cancelAnimationFrame(animRef.current);
@@ -294,6 +270,7 @@ export default function PriceChart() {
     const onScroll = (logicalRange) => {
       if (logicalRange && logicalRange.from < 50 && !isFetchingHistory.current && !noMoreHistory.current) {
         isFetchingHistory.current = true;
+        
         setLegend(p => ({ ...p, availText: "⏳ Memuat riwayat..." }));
 
         const binanceIv = IV[ivRef.current]?.bin || "1m";
@@ -305,7 +282,8 @@ export default function PriceChart() {
           return;
         }
 
-        const oldestTimeRef = (dGold[0].time - WIB) * 1000 - 1;
+        const oldestGold = (dGold[0].time - WIB) * 1000 - 1;
+        const oldestBtc = dBtc[0].time - WIB - 1;
 
         const fetchOldBinance = async (sym, end) => {
           const r = await getJson(`/api/v3/klines?symbol=${sym}&interval=${binanceIv}&limit=1000&endTime=${end}`);
@@ -320,33 +298,26 @@ export default function PriceChart() {
           return (j?.data?.ohlc || []).map(o => ({ time: +o.timestamp + WIB, open: +o.open, high: +o.high, low: +o.low, close: +o.close }));
         };
 
-        const pGold = fetchOldBinance("PAXGUSDT", oldestTimeRef);
+        const pGold = fetchOldBinance("PAXGUSDT", oldestGold);
         const pBtc = livePrices.current.btcSrc === "Bitstamp" 
-          ? fetchOldBitstamp(oldestTimeRef).catch(() => fetchOldBinance("BTCUSDT", oldestTimeRef)) 
-          : fetchOldBinance("BTCUSDT", oldestTimeRef);
+          ? fetchOldBitstamp(oldestBtc).catch(() => fetchOldBinance("BTCUSDT", oldestGold)) 
+          : fetchOldBinance("BTCUSDT", oldestGold);
 
         Promise.all([pGold, pBtc]).then(([oldGold, oldBtc]) => {
           if (!oldGold.length && !oldBtc.length) {
             noMoreHistory.current = true;
-            setLegend(p => ({ ...p, availText: "⚠️ Seluruh riwayat telah dimuat hingga batas maksimal" }));
+            setLegend(p => ({ ...p, availText: "⚠️ Semua riwayat telah dimuat hingga batas maksimal bursa" }));
           } else {
             dsRef.current.gold.raw = uniqSorted([...oldGold, ...dGold]);
             dsRef.current.btc.raw = uniqSorted([...oldBtc, ...dBtc]);
             
-            // Konversi historical data gold menjadi skala acuan untuk formula Yuan arang
+            // Sinkronisasi data historis yuan dengan gold
             const goldBaseVal = dsRef.current.gold.raw.length ? dsRef.current.gold.raw[0].close : 2700;
             const targetYuanUsd = YUAN_BASE * (rates && rates.CNY ? (1 / rates.CNY) : 0.150125);
-
             dsRef.current.yuan.raw = dsRef.current.gold.raw.map(x => {
               const ratio = goldBaseVal ? (x.close / goldBaseVal) : 1;
               const val = targetYuanUsd * (0.95 + ratio * 0.05);
-              return {
-                time: x.time,
-                open: val * 0.99,
-                high: val * 1.01,
-                low: val * 0.98,
-                close: val
-              };
+              return { time: x.time, open: val * 0.99, high: val * 1.01, low: val * 0.98, close: val };
             });
 
             const curRange = ts.getVisibleLogicalRange();
@@ -376,7 +347,7 @@ export default function PriceChart() {
   }, [rates]);
 
   const fitView = useCallback((smooth = false) => {
-    const d = dsRef.current[mode === "mix" ? "yuan" : mode];
+    const d = dsRef.current[mode];
     if (!d || !d.raw || !d.raw.length || !chartRef.current) return;
     const n = d.raw.length;
     const ts = chartRef.current.timeScale();
@@ -458,79 +429,38 @@ export default function PriceChart() {
   }, [fitView]);
 
   const applyData = useCallback(() => {
-    const { candle, area, mixYuan, mixGold, mixBtc } = seriesRef.current;
-    if (!candle) return;
-
-    // Nilai perkalian murni berdasarkan rumus arang dikali kurs mata uang tujuan
-    const yuanUsd = dsRef.current.yuan.mult(rates);
-    const goldUsdFn = dsRef.current.gold.mult();
-    const btcUsdFn = dsRef.current.btc.mult();
-
-    if (mode === "mix") {
-      candle.applyOptions({ visible: false });
-      area.applyOptions({ visible: false });
-      mixYuan.applyOptions({ visible: true });
-      mixGold.applyOptions({ visible: true });
-      mixBtc.applyOptions({ visible: true });
-
-      const dYuan = dsRef.current.yuan.raw.map(x => ({ time: x.time, value: x.close * yuanUsd * rate }));
-      const dGold = dsRef.current.gold.raw.map(x => ({ time: x.time, value: x.close * goldUsdFn * rate }));
-      const dBtc = dsRef.current.btc.raw.map(x => ({ time: x.time, value: x.close * btcUsdFn * rate }));
-
-      mixYuan.setData(dYuan);
-      mixGold.setData(dGold);
-      mixBtc.setData(dBtc);
-      lastRef.current = dYuan.length ? dYuan[dYuan.length - 1].value : null;
-    } else {
-      mixYuan.applyOptions({ visible: false });
-      mixGold.applyOptions({ visible: false });
-      mixBtc.applyOptions({ visible: false });
-
-      candle.applyOptions({ visible: type === "candle" });
-      area.applyOptions({ visible: type === "area" });
-
-      const d = dsRef.current[mode];
-      if (!d || !d.raw.length) return;
-
-      let baseMultiplier = yuanUsd;
-      if (mode === "gold") baseMultiplier = goldUsdFn;
-      else if (mode === "btc") baseMultiplier = btcUsdFn;
-
-      const multiplier = baseMultiplier * rate;
-
-      const cs = d.raw.map(x => ({
-        time: x.time,
-        open: x.open * multiplier,
-        high: x.high * multiplier,
-        low: x.low * multiplier,
-        close: x.close * multiplier
-      }));
-
-      candle.setData(cs);
-      area.setData(cs.map(x => ({ time: x.time, value: x.close })));
-      lastRef.current = cs.length ? cs[cs.length - 1].close : null;
-    }
-  }, [mode, rate, rates, type]);
+    const d = dsRef.current[mode];
+    if (!d || !d.raw) return;
+    const m = (mode === "yuan" ? d.mult(rates) : d.mult()) * rate;
+    
+    const cs = d.raw.map(x => ({
+      time: x.time,
+      open: x.open * m,
+      high: x.high * m,
+      low: x.low * m,
+      close: x.close * m
+    }));
+    
+    seriesRef.current.candle.setData(cs);
+    seriesRef.current.area.setData(cs.map(x => ({ time: x.time, value: x.close })));
+    lastRef.current = cs.length ? cs[cs.length - 1].close : null;
+  }, [mode, rate, rates]);
 
   const updateLegend = useCallback(() => {
-    const activeKey = mode === "mix" ? "yuan" : mode;
-    const d = dsRef.current[activeKey];
+    const d = dsRef.current[mode];
     if (!d || !d.raw.length) return;
 
-    let baseMultiplier = dsRef.current.yuan.mult(rates);
-    if (activeKey === "gold") baseMultiplier = dsRef.current.gold.mult();
-    else if (activeKey === "btc") baseMultiplier = dsRef.current.btc.mult();
-
-    const multiplier = baseMultiplier * rate;
+    const m = (mode === "yuan" ? d.mult(rates) : d.mult()) * rate;
     const n = d.raw.length;
     let lookback = 120; 
     if (range) lookback = Math.min(n, RANGES[range]?.count || n);
     
-    const f = d.raw[Math.max(0, n - lookback)].open * multiplier;
-    const l = d.raw[n - 1].close * multiplier;
+    const f = d.raw[Math.max(0, n - lookback)].open * m;
+    const last = d.raw[n - 1].close;
+    const l = last * m;
     
-    const highs = d.raw.map(x => x.high * multiplier);
-    const lows = d.raw.map(x => x.low * multiplier);
+    const highs = d.raw.map(x => x.high * m);
+    const lows = d.raw.map(x => x.low * m);
 
     const diff = l - f;
     const pct = f ? (diff / f) * 100 : 0;
@@ -540,7 +470,7 @@ export default function PriceChart() {
       val: l, chg: diff, pct: pct, isUp: diff >= 0,
       high: Math.max(...highs), low: Math.min(...lows)
     }));
-  }, [mode, rate, rates, range]);
+  }, [mode, rate, range, rates]);
 
   fitRef.current = fitView;
   applyRef.current = applyData;
@@ -550,17 +480,23 @@ export default function PriceChart() {
   ivRef.current = iv;
 
   useEffect(() => {
-    const d = dsRef.current[mode === "mix" ? "yuan" : mode];
-    if (!chartRef.current || !d || !d.raw.length) return;
+    const applyVis = () => {
+      if (!seriesRef.current.candle) return;
+      seriesRef.current.candle.applyOptions({ visible: type === "candle" });
+      seriesRef.current.area.applyOptions({ visible: type === "area" });
+    };
+    const d = dsRef.current[mode];
+    if (!chartRef.current || !d || !d.raw.length) { applyVis(); return; }
     setFade(true);
     const t = setTimeout(() => {
+      applyVis();
       applyData();
       updateLegend();
       fitView(true);
       setFade(false);
     }, 180);
     return () => clearTimeout(t);
-  }, [mode, rate, rates, type, applyData, updateLegend, fitView]);
+  }, [mode, rate, type, rates]);
 
   useEffect(() => {
     if (!rates) return;
@@ -620,26 +556,19 @@ export default function PriceChart() {
       
       dsRef.current.gold.raw = res[0];
       dsRef.current.btc.raw = res[1];
-      
+
       const goldBaseVal = res[0].length ? res[0][0].close : 2700;
       const targetYuanUsd = YUAN_BASE * (rates && rates.CNY ? (1 / rates.CNY) : 0.150125);
-
       dsRef.current.yuan.raw = res[0].map(x => {
         const ratio = goldBaseVal ? (x.close / goldBaseVal) : 1;
         const val = targetYuanUsd * (0.95 + ratio * 0.05);
-        return {
-          time: x.time,
-          open: val * 0.99,
-          high: val * 1.01,
-          low: val * 0.98,
-          close: val
-        };
+        return { time: x.time, open: val * 0.99, high: val * 1.01, low: val * 0.98, close: val };
       });
 
       const dateFmt = new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
       const sinceNote = (d) => (d.raw.length > 0) ? `📅 Riwayat sejak ${dateFmt.format(new Date(d.raw[0].time * 1000))}` : "";
       
-      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current.gold) }));
+      setLegend(p => ({ ...p, availText: sinceNote(dsRef.current[modeRef.current]) }));
       applyRef.current();
       legendRef.current();
       fitRef.current(true);
@@ -695,21 +624,17 @@ export default function PriceChart() {
 
     const timer = setInterval(() => {
       const curMode = modeRef.current;
+      const curRate = rateRef.current;
       const step = IV[ivRef.current].step;
 
-      ["yuan", "gold", "btc"].forEach(key => {
+      ["gold", "btc", "yuan"].forEach(key => {
         const d = dsRef.current[key];
-        if (!d.raw.length) return;
-        
         let pRaw = 1;
-        const goldVal = livePrices.current.gold || 2700;
-        const targetYuanUsd = YUAN_BASE * (rates && rates.CNY ? (1 / rates.CNY) : 0.150125);
-
-        if (key === "yuan") pRaw = targetYuanUsd;
-        else if (key === "gold") pRaw = goldVal;
-        else pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
-
-        if (pRaw == null) return;
+        if (key === "gold") pRaw = livePrices.current.gold;
+        else if (key === "btc") pRaw = (livePrices.current.btcSrc === "Bitstamp" && livePrices.current.btcBs != null ? livePrices.current.btcBs : livePrices.current.btcBn);
+        else pRaw = YUAN_BASE * (rates && rates.CNY ? (1 / rates.CNY) : 0.150125);
+        
+        if (pRaw == null || !d.raw.length) return;
         
         const last = d.raw[d.raw.length - 1];
         const nowT = Math.floor(Date.now() / 1000) + WIB;
@@ -726,8 +651,12 @@ export default function PriceChart() {
           cdl = last;
         }
 
-        if (key === curMode || curMode === "mix") {
-          applyRef.current();
+        if (key === curMode) {
+          const m = (key === "yuan" ? d.mult(rates) : d.mult()) * curRate;
+          const sv = { time: cdl.time, open: cdl.open * m, high: cdl.high * m, low: cdl.low * m, close: cdl.close * m };
+          lastRef.current = sv.close;
+          seriesRef.current.candle.update(sv);
+          seriesRef.current.area.update({ time: sv.time, value: sv.close });
         }
       });
       legendRef.current();
@@ -789,48 +718,33 @@ export default function PriceChart() {
         
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
-            <div className={styles.modeSwitch} style={{ display: 'flex', gap: '4px' }}>
+            <div className={styles.modeSwitch}>
               <button
                 type="button"
-                className={`${styles.currencyBtn} ${styles.smallBtn} ${mode === "yuan" ? styles.currencyActive : ""}`}
+                className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("yuan")}
-                title="Yuan x 4750 to USD = USD to IDR"
+                title="Yuan Mode (4750 CNY)"
               >
                 中
               </button>
               <button
                 type="button"
-                className={`${styles.currencyBtn} ${styles.smallBtn} ${mode === "gold" ? styles.currencyActive : ""}`}
+                className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("gold")}
-                title="XAUUSD: TO x 5 x 1.125 = USD to IDR"
               >
-                🪙 GOLD
+                {marketClosed ? "🔒" : "🔐"}
               </button>
               <button
                 type="button"
-                className={`${styles.currencyBtn} ${styles.smallBtn} ${mode === "btc" ? styles.currencyActive : ""}`}
+                className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`}
                 onClick={() => setMode("btc")}
-                title="BTC 0.00909 USD to IDR"
               >
-                ⭐ BTC
-              </button>
-              <button
-                type="button"
-                className={`${styles.currencyBtn} ${styles.smallBtn} ${mode === "mix" ? styles.currencyActive : ""}`}
-                onClick={() => setMode("mix")}
-                title="Gabungan Ketiga Rumus dalam 1 Chart"
-                style={{ borderColor: mode === "mix" ? "#8b5cf6" : undefined, color: mode === "mix" ? "#8b5cf6" : undefined }}
-              >
-                ⚡ MIX
+                ⭐
               </button>
             </div>
 
-            {mode !== "mix" && (
-              <>
-                <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
-                <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
-              </>
-            )}
+            <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "candle" ? styles.currencyActive : ""}`} onClick={() => setType("candle")} type="button">CANDLE</button>
+            <button className={`${styles.currencyBtn} ${styles.smallBtn} ${type === "area" ? styles.currencyActive : ""}`} onClick={() => setType("area")} type="button">AREA</button>
           </div>
 
           <div className={styles.toolbarGroup}>
@@ -879,8 +793,30 @@ export default function PriceChart() {
             ? { position: 'relative', width: '100%', flex: 1, minHeight: 0 }
             : { position: 'relative', width: '100%', height: '480px' }}>
 
+            {marketClosed && mode === "gold" && (
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 5, pointerEvents: 'none', opacity: 0.12
+              }}>
+                <span style={{ fontSize: '140px' }}>🔐</span>
+              </div>
+            )}
+
             <div ref={chartContainerRef} style={{ position: 'absolute', inset: 0, zIndex: 2 }}></div>
           </div>
+
+          {marketClosed && mode === "gold" && (
+            <div style={{
+              marginTop: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca',
+              borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              color: '#991b1b', fontSize: '13px', fontWeight: '500', flexShrink: 0
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>⚠️</span>
+                <span><strong>Pasar sedang tutup.</strong> Perdagangan libur dan akan buka kembali pada hari Senin pukul 22:00 UTC.</span>
+              </div>
+            </div>
+          )}
           
           {legend.availText && (
             <div style={{
