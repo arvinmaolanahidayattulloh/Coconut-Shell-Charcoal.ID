@@ -1130,3 +1130,51 @@ export default function PriceChart() {
     </section>
   );
 }
+        <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
+          <div
+            className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
+            onDoubleClick={() => centerOnPrice()}
+            style={{
+              position: "relative", width: "100%",
+              ...(isFull ? { flex: 1, minHeight: 0 } : { height: "480px" }),
+              opacity: fade ? 0 : 1,
+              transition: "opacity 0.14s ease"
+            }}
+          >
+            <div ref={chartContainerRef} style={{ position: "absolute", inset: 0, zIndex: 2 }}></div>
+
+            {pendingMode && (
+              <div style={{ position: "absolute", inset: 0, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.88)" }}>
+                <form onSubmit={submitPw} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center", maxWidth: 360, padding: 16 }}>
+                  <input
+                    type="password"
+                    autoFocus
+                    value={pw}
+                    onChange={(e) => { setPw(e.target.value); setPwErr(false); }}
+                    placeholder="Sandi"
+                    autoComplete="off"
+                    style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "#fff", color: "#111" }}
+                  />
+                  <button className={styles.currencyBtn} type="submit">BUKA</button>
+                  <button className={styles.currencyBtn} type="button" onClick={() => setPendingMode(null)}>BATAL</button>
+                  {pwErr && <span style={{ width: "100%", textAlign: "center", color: "#f23645", fontSize: 13 }}>Password salah.</span>}
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* --- PENAMBAHAN URUTAN PEMANGGILAN DI PALING BAWAH --- */}
+      <div style={{ marginTop: "2rem" }}>
+        {/* 1. Chart (Sudah ada di dalam struktur Card di atas) */}
+        
+        {/* 2. Trade */}
+        <Trade />
+
+        {/* 3. Invest */}
+        <Invest />
+      </div>
+    </section>
+  );
+}
