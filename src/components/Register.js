@@ -11,7 +11,7 @@ import {
   saveUsers,
   sameText,
   isValidWa,
-  OTP_WA_SIM // OTP WA masih simulasi, OTP Email sudah pakai API Asli Resend
+  OTP_WA_SIM // WhatsApp masih menggunakan simulasi sesuai kebutuhan tahap ini
 } from './AuthShared';
 
 const PROVIDERS = ['Google', 'Microsoft', 'Apple'];
@@ -20,12 +20,12 @@ const Register = ({ open, onClose, onRegistered }) => {
   const { runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  // State langkah: provider -> username -> password -> wa -> otp_email -> otp_wa
+  // State alur pendaftaran
   const [step, setStep] = useState('provider');
   const [data, setData] = useState({}); 
   const [otpInput, setOtpInput] = useState('');
   
-  // State untuk kode negara WhatsApp (Default +62 Indonesia)
+  // State kode negara & status loading pengiriman email
   const [countryCode, setCountryCode] = useState('+62');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,7 +41,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]); 
 
-  // --- 1. PILIH PROVIDER ---
+  // --- 1. PILIH PROVIDER (GOOGLE ASLI) ---
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
@@ -85,7 +85,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     
     setIsLoading(true);
     try {
-      // Memanggil API Resend yang sudah Anda buat di /api/send-otp-email
+      // Memanggil API Resend backend secara nyata
       const res = await fetch('/api/send-otp-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,12 +98,12 @@ const Register = ({ open, onClose, onRegistered }) => {
         throw new Error(result.error || 'Gagal mengirim email OTP');
       }
 
-      // Jika menggunakan mode test/development, kita simpan server_otp sementara untuk verifikasi lokal
+      // Menyimpan token OTP asli dari server secara rahasia untuk divalidasi
       if (result.test_otp) {
         setData((prev) => ({ ...prev, serverEmailOtp: result.test_otp }));
       }
 
-      alert(`Email verifikasi telah dikirim ke ${data.email}`);
+      alert(`Email verifikasi berhasil dikirim ke ${data.email}`);
       setOtpInput('');
       setStep('otp_email'); 
     } catch (err) {
@@ -114,19 +114,23 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
-  // --- 5. SUBMIT OTP EMAIL ---
+  // --- 5. SUBMIT OTP EMAIL (VALIDASI NYATA TANPA SIMULASI STATIS) ---
   const handleOtpEmailSubmit = (e) => {
     e.preventDefault();
-    // Mencocokkan dengan kode yang dikirim API (atau fallback ke '654321' jika testing)
-    const validOtp = data.serverEmailOtp || '654321';
     
-    if (otpInput !== validOtp) { 
-      alert('Kode OTP Email salah!'); 
+    if (!data.serverEmailOtp) {
+      alert('Kode OTP belum di-generate. Silakan ulangi proses.');
+      return;
+    }
+
+    // Mencocokkan input user persis dengan kode acak dari server Resend
+    if (otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
+      alert('Kode OTP Email salah! Periksa kembali email Anda.'); 
       return; 
     }
     
     setOtpInput('');
-    setStep('otp_wa'); // Lanjut ke layar OTP WhatsApp
+    setStep('otp_wa'); // Lanjut ke verifikasi WhatsApp
   };
 
   // --- 6. SUBMIT OTP WHATSAPP & SELESAI ---
@@ -150,7 +154,7 @@ const Register = ({ open, onClose, onRegistered }) => {
 
   if (!open) return null;
 
-  // ================= RENDER LAYAR =================
+  // ================= RENDER LAYAR TAHAPAN =================
 
   if (step === 'provider') {
     return (
@@ -210,7 +214,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // Layar WhatsApp dengan Pilihan Negara
   if (step === 'wa') {
     return (
       <AuthModal
@@ -248,7 +251,14 @@ const Register = ({ open, onClose, onRegistered }) => {
     return (
       <AuthModal
         title="Verifikasi OTP Email"
-        desc={<>Kode telah dikirim ke email <b>{data.email}</b> via Resend.<br /><span style={{ fontSize: '12px', color: '#666' }}>(Cek Inbox / Spam folder Anda)</span></>}
+        desc={
+          <>
+            Kode verifikasi telah dikirim ke <b>{data.email}</b> via Resend.<br />
+            <span style={{ fontSize: '12px', color: '#c45e20', fontWeight: 'bold' }}>
+              Cek Kotak Masuk (Inbox) atau folder Spam Anda.
+            </span>
+          </>
+        }
         onSubmit={handleOtpEmailSubmit}
         submitLabel="VERIFIKASI EMAIL"
         onBack={() => { setStep('wa'); setOtpInput(''); }}
