@@ -8,7 +8,7 @@ import {
   useProviderAuth,
   loadUsers,
   saveUsers
-} from './AuthShared'; // sameText dihapus, kita pakai JS Native agar lebih akurat
+} from './AuthShared';
 
 const PROVIDERS = ['Google', 'Microsoft', 'Apple'];
 
@@ -50,15 +50,16 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('provider');
   };
 
-  // --- 1. PILIH PLATFORM & CEK EMAIL ---
+  // --- 1. PILIH PLATFORM & TANGKAP FOTO PROFIL ASLI ---
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
       const account = await runProvider(providerName);
       const userEmail = account?.email || '';
+      
       if (!userEmail) throw new Error('Email akun tidak ditemukan.');
 
-      // CEK KETAT EMAIL: Apakah email sudah terdaftar?
+      // Cek apakah email sudah terdaftar
       const existingUsers = loadUsers() || [];
       const isEmailTaken = existingUsers.some(
         (u) => u.email?.toLowerCase() === userEmail.toLowerCase()
@@ -66,11 +67,22 @@ const Register = ({ open, onClose, onRegistered }) => {
 
       if (isEmailTaken) {
         alert(`Akun dengan email ${userEmail} sudah terdaftar! Silakan langsung Masuk.`);
-        onRegistered({ email: userEmail, username: userEmail.split('@')[0] });
+        // Jika sudah terdaftar, langsung kirim data lengkap ke fungsi auto-login
+        onRegistered({ 
+          email: userEmail, 
+          username: account.name || userEmail.split('@')[0],
+          picture: account.picture || ''
+        });
         return;
       }
 
-      setData({ provider: providerName, email: userEmail });
+      // SIMPAN FOTO DAN NAMA ASLI KE STATE
+      setData({ 
+        provider: providerName, 
+        email: userEmail,
+        googleName: account.name || '',
+        googlePicture: account.picture || ''
+      });
       
       setIsLoading(true);
       const res = await fetch('/api/send-otp-email', {
@@ -113,7 +125,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     const inputUser = values.username?.trim();
     if (!inputUser) return;
 
-    // Cek apakah username sudah ada (mengabaikan huruf besar/kecil)
     const existingUsers = loadUsers() || [];
     const isUsernameTaken = existingUsers.some(
       (u) => u.username?.toLowerCase() === inputUser.toLowerCase()
@@ -121,7 +132,7 @@ const Register = ({ open, onClose, onRegistered }) => {
 
     if (isUsernameTaken) {
       alert('Username ini sudah dipakai oleh orang lain. Silakan pilih username yang berbeda!');
-      return; // Berhenti di sini, tidak lanjut ke password
+      return; 
     }
 
     setData((prev) => ({ ...prev, username: inputUser }));
@@ -145,13 +156,12 @@ const Register = ({ open, onClose, onRegistered }) => {
     
     const fullWaNumber = `${countryCode}${cleanNumber}`;
 
-    // Cek apakah nomor WA sudah pernah didaftarkan
     const existingUsers = loadUsers() || [];
     const isWaTaken = existingUsers.some((u) => u.whatsapp === fullWaNumber);
 
     if (isWaTaken) {
       alert('Nomor WhatsApp ini sudah terdaftar pada akun lain. Gunakan nomor yang berbeda!');
-      return; // Berhenti di sini
+      return; 
     }
 
     setData((prev) => ({ ...prev, whatsapp: fullWaNumber }));
@@ -194,13 +204,20 @@ const Register = ({ open, onClose, onRegistered }) => {
       username: data.username,
       password: data.password, 
       whatsapp: data.whatsapp,
+      picture: data.googlePicture // Simpan fotonya ke database lokal jika diperlukan
     };
 
     const users = loadUsers() || [];
     users.push(newUser);
     saveUsers(users);
     
-    onRegistered(newUser); 
+    // Meneruskan data, termasuk foto asli, untuk Auto-Login
+    onRegistered({
+      email: data.email,
+      username: data.username, // Username yang diketik user
+      name: data.googleName,   // Nama asli dari akun Google
+      picture: data.googlePicture // Foto asli dari akun Google
+    }); 
   };
 
   if (!open) return null;
@@ -209,14 +226,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     <div className={styles.modalBackdrop} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
         
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '24px',
-          padding: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-          width: '100%',
-          boxSizing: 'border-box'
-        }}>
+        <div style={{ background: '#ffffff', borderRadius: '24px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', width: '100%', boxSizing: 'border-box' }}>
           
           {step === 'terms' && (
             <form onSubmit={handleProceedTerms}>
@@ -227,19 +237,11 @@ const Register = ({ open, onClose, onRegistered }) => {
 
               <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`} style={{ margin: '16px 0' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={isAgreed} 
-                    onChange={(e) => setIsAgreed(e.target.checked)} 
-                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#c45e20' }}
-                  />
+                  <input type="checkbox" checked={isAgreed} onChange={(e) => setIsAgreed(e.target.checked)} style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#c45e20' }} />
                   Saya Menyetujui Syarat dan Ketentuan
                 </label>
               </div>
-
-              <button type="submit" style={{ width: '100%', padding: '12px', background: '#c45e20', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', marginTop: '12px' }}>
-                LANJUT
-              </button>
+              <button type="submit" style={{ width: '100%', padding: '12px', background: '#c45e20', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', marginTop: '12px' }}>LANJUT</button>
             </form>
           )}
 
@@ -249,13 +251,7 @@ const Register = ({ open, onClose, onRegistered }) => {
               <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280', lineHeight: '1.4' }}>Pilih platform untuk memulai verifikasi email</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {PROVIDERS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => handleSelectProvider(p)}
-                    disabled={busyProvider !== null || isLoading}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', color: '#111827' }}
-                  >
+                  <button key={p} type="button" onClick={() => handleSelectProvider(p)} disabled={busyProvider !== null || isLoading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', color: '#111827' }}>
                     <ProviderIcon name={p} size={22} />
                     <span>{busyProvider === p || isLoading ? 'Memeriksa...' : `Daftar dengan ${p}`}</span>
                   </button>
@@ -285,7 +281,7 @@ const Register = ({ open, onClose, onRegistered }) => {
           {step === 'password' && (
             <form onSubmit={handlePasswordSubmit}>
               <h3 style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: '700', color: '#111827' }}>Buat Password</h3>
-              <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280', lineHeight: '1.4' }}>Buat password untuk akun Anda (min. 6 karakter).</p>
+              <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280', lineHeight: '1.4' }}>Buat password untuk akun (min. 6 karakter).</p>
               <input type="password" placeholder="Masukkan Password" {...bind('password', { minLength: 6 })} required style={{ padding: '12px', width: '100%', border: '1px solid #e5e7eb', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', boxSizing: 'border-box' }} />
               <button type="submit" style={{ width: '100%', padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>LANJUT</button>
             </form>
