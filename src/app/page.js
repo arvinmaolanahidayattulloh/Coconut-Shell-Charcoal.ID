@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { AccountProvider } from "@/components/Account";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Partners from "@/components/Partners";
@@ -48,60 +50,63 @@ export default function Home() {
   }, []);
 
   return (
-    <>
-      <Header />
+    // Membungkus seluruh aplikasi dengan Provider Google & Account
+    <GoogleOAuthProvider clientId="GANTI_DENGAN_CLIENT_ID_GOOGLE_ANDA">
+      <AccountProvider>
+        <Header />
 
-      <div className="pageFlexLayout">
-        <div className="mainLayoutContainer">
-          <main>
-            <div className="sectionWrapper">
-              <LeftPanel section="beranda" />
-              <Hero />
-              <RightPanel section="beranda" />
-            </div>
+        <div className="pageFlexLayout">
+          <div className="mainLayoutContainer">
+            <main>
+              <div className="sectionWrapper">
+                <LeftPanel section="beranda" />
+                <Hero />
+                <RightPanel section="beranda" />
+              </div>
 
-            <Partners />
+              <Partners />
 
-            <AdBanner slot="1001" format="horizontal" className="adSection" />
+              <AdBanner slot="1001" format="horizontal" className="adSection" />
 
-            <div className="sectionWrapper">
-              <LeftPanel section="tentang" />
-              <About />
-              <RightPanel section="tentang" />
-            </div>
+              <div className="sectionWrapper">
+                <LeftPanel section="tentang" />
+                <About />
+                <RightPanel section="tentang" />
+              </div>
 
-            <div className="sectionWrapper">
-              <LeftPanel section="produk" />
-              <Products />
-              <RightPanel section="produk" />
-            </div>
+              <div className="sectionWrapper">
+                <LeftPanel section="produk" />
+                <Products />
+                <RightPanel section="produk" />
+              </div>
 
-            <AdBanner slot="1002" format="horizontal" className="adSection" />
+              <AdBanner slot="1002" format="horizontal" className="adSection" />
 
-            <div className="sectionWrapper">
-              <LeftPanel section="keunggulan" />
-              <WhyUs />
-              <RightPanel section="keunggulan" />
-            </div>
+              <div className="sectionWrapper">
+                <LeftPanel section="keunggulan" />
+                <WhyUs />
+                <RightPanel section="keunggulan" />
+              </div>
 
-            <CTA />
+              <CTA />
 
-            <PriceChart />
-            
-            <Trade />
-            
-            <Invest />
+              <PriceChart />
+              
+              <Trade />
+              
+              <Invest />
 
-            <AdBanner slot="1003" format="horizontal" className="adSection" />
+              <AdBanner slot="1003" format="horizontal" className="adSection" />
 
-            <div className="sectionWrapper">
-              <LeftPanel section="kontak" />
-              <Footer />
-              <RightPanel section="kontak" />
-            </div>
-          </main>
+              <div className="sectionWrapper">
+                <LeftPanel section="kontak" />
+                <Footer />
+                <RightPanel section="kontak" />
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
-    </>
+      </AccountProvider>
+    </GoogleOAuthProvider>
   );
 }
