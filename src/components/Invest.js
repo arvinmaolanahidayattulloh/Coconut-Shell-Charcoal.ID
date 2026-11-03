@@ -61,6 +61,9 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       case 'profil':
         alert(user ? `Profil: ${user.name} (${user.email})` : "Silakan login terlebih dahulu.");
         break;
+      case 'trade':
+        setShowPasswordModal(true); // Membuka modal password terminal dari Menu
+        break;
       case 'portofolio':
         alert(invested ? `Portofolio: ${invData.ton} Ton Komoditas Arang.` : "Portofolio kosong.");
         break;
@@ -124,10 +127,16 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                 <div style={{
                   position: 'absolute', top: '42px', right: '0', background: '#ffffff',
                   border: '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                  zIndex: 50, minWidth: '160px', padding: '6px'
+                  zIndex: 50, minWidth: '180px', padding: '6px'
                 }}>
                   <button onClick={() => handleMenuClick('beranda')} style={menuItemStyle}>Beranda</button>
                   <button onClick={() => handleMenuClick('profil')} style={menuItemStyle}>Profil</button>
+                  
+                  {/* TOMBOL TRADE SEKARANG ADA DI URUTAN KE-3 MENU */}
+                  <button onClick={() => handleMenuClick('trade')} style={{ ...menuItemStyle, color: '#c45e20', fontWeight: '700' }}>
+                    MT5 Terminal Trade 🔐
+                  </button>
+
                   <button onClick={() => handleMenuClick('portofolio')} style={menuItemStyle}>Portofolio</button>
                   <button onClick={() => handleMenuClick('riwayat')} style={menuItemStyle}>Riwayat</button>
                   <button onClick={() => handleMenuClick('pengaturan')} style={menuItemStyle}>Pengaturan</button>
@@ -151,34 +160,10 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                   <>
                     <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#c45e20', marginBottom: '4px' }}>Investasi CSCID</h2>
                     
-                    <div className={styles.userInfo} style={{ marginTop: '12px' }}>
+                    <div className={styles.userInfo} style={{ marginTop: '12px', marginBottom: '24px' }}>
                       <img src={user.picture || 'https://via.placeholder.com/40'} alt="Profile" className={styles.avatar} />
                       <span>Halo, <strong>{user.name}</strong></span>
                       <button onClick={handleLogout} className={styles.logoutBtn}>KELUAR</button>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '10px', margin: '20px 0', width: '100%', flexWrap: 'wrap' }}>
-                      <button 
-                        onClick={() => setActiveTab('invest')}
-                        style={{
-                          flex: 1, padding: '10px', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer',
-                          background: activeTab === 'invest' ? '#c45e20' : '#f3f4f6',
-                          color: activeTab === 'invest' ? '#fff' : '#4b5563', border: 'none', transition: '0.2s'
-                        }}
-                      >
-                        Menu Investasi
-                      </button>
-
-                      <button 
-                        onClick={() => setShowPasswordModal(true)}
-                        style={{
-                          flex: 1, padding: '10px', fontWeight: 'bold', borderRadius: '10px', cursor: 'pointer',
-                          background: activeTab === 'trade' ? '#c45e20' : '#f3f4f6',
-                          color: activeTab === 'trade' ? '#fff' : '#4b5563', border: 'none', transition: '0.2s'
-                        }}
-                      >
-                        MT5 Terminal Trade 🔐
-                      </button>
                     </div>
 
                     {invested ? (
