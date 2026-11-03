@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { useAccount } from "@/components/Account";
-import { usePrice } from "@/components/PriceContext"; // Sesuaikan path jika berbeda
 import styles from "./Trade.module.css";
 
-export default function Trade() {
+// Terima livePrice langsung dari props (dari page.js)
+export default function Trade({ livePrice }) {
   const { user } = useAccount();
-  const { livePrice } = usePrice();
   
   // State Trading Core
   const [balance, setBalance] = useState(10000.00); // Saldo awal $10,000
@@ -16,7 +15,7 @@ export default function Trade() {
   const [positions, setPositions] = useState([]);
   const [notification, setNotification] = useState(null);
 
-  // Harga Market Real-time
+  // Harga Market Real-time (menggunakan livePrice dari chart)
   const currentMarketPrice = livePrice || 1250.50;
   const spread = 0.50;
   const askPrice = currentMarketPrice + (spread / 2);
