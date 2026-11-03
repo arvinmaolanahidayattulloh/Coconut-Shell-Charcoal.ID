@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
-import { usePrice } from "@/context/PriceContext"; // <-- Integrasi Context harga live
+import { usePrice } from "@/context/PriceContext"; // <-- Integrasi Context
 import styles from "./PriceChart.module.css";
 // ... impor bawaan lainnya ...
 
@@ -342,14 +342,13 @@ const makeCenterProvider = (followRef, spanRatioRef, lastRef) => (orig) => {
   const res = orig();
   const last = lastRef.current;
   if (!followRef.current || !spanRatioRef.current || !last) return res;
-  // x0.7 karena scaleMargins top/bottom 0.15 menyisakan 70% tinggi
   const half = (Math.abs(last) * spanRatioRef.current * 0.7) / 2;
   return { priceRange: { minValue: last - half, maxValue: last + half }, margins: res ? res.margins : undefined };
 };
 // [/PATCH:CENTER-PRICE]
 
 export default function PriceChart() {
-  const { setLivePrice } = usePrice(); // <-- Mengambil fungsi setLivePrice dari context
+  const { setLivePrice } = usePrice(); // <-- Mengambil fungsi dari PriceContext
 
   const [unlocked, setUnlocked] = useState(false);
   const [pw, setPw] = useState("");
@@ -394,10 +393,8 @@ export default function PriceChart() {
   const refreshRef = useRef(() => {});
   const fitRef = useRef(() => {});
 
-  // [PATCH:CENTER-PRICE] state mode "ikuti harga di tengah"
-  const followRef = useRef(false);      // aktif setelah tombol + ditekan
-  const spanRatioRef = useRef(null);    // lebar zoom vertikal, relatif terhadap harga terakhir
-  // [/PATCH:CENTER-PRICE]
+  const followRef = useRef(false);
+  const spanRatioRef = useRef(null);
 
   const dsRef = useRef({
     gold: { raw: [], sec: [], inf: [] },
@@ -464,7 +461,7 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
-  // ───────── Buat Chart (Zoom Vertikal Murni Bebas) ─────────
+  // ───────── Buat Chart ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -480,7 +477,7 @@ export default function PriceChart() {
         secondsVisible: true,
         rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true,       // Mentok kanan tanpa ruang kosong masa depan
+        fixRightEdge: true,
         shiftVisibleRangeOnNewBar: true,
         minBarSpacing: 0.5
       },
@@ -488,7 +485,6 @@ export default function PriceChart() {
       localization: { priceFormatter: p => fmt(p, decRef.current) }
     });
 
-    // [PATCH:CENTER-PRICE] provider autoscale dipasang di kedua series
     const provider = makeCenterProvider(followRef, spanRatioRef, lastRef);
 
     const candle = chart.addCandlestickSeries({
@@ -503,7 +499,6 @@ export default function PriceChart() {
       visible: false,
       autoscaleInfoProvider: provider
     });
-    // [/PATCH:CENTER-PRICE]
 
     chartRef.current = chart;
     seriesRef.current = { candle, area };
@@ -522,14 +517,12 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
-  // Dipakai resize/fit: hanya menggeser chart ke ujung kanan tanpa mengubah zoom
   const scrollToLatest = useCallback(() => {
     const chart = chartRef.current;
     if (!chart) return;
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
-  // [PATCH:CENTER-PRICE] tombol +: geser ke candle terbaru + harga di tengah, zoom tidak berubah
   const centerOnPrice = useCallback(() => {
     const chart = chartRef.current;
     const s = typeRef.current === "area" ? seriesRef.current.area : seriesRef.current.candle;
@@ -543,18 +536,15 @@ export default function PriceChart() {
       followRef.current = true;
     }
     chart.priceScale("right").applyOptions({ autoScale: true });
-    // paksa hitung ulang autoscale
     seriesRef.current.candle.applyOptions({});
     seriesRef.current.area.applyOptions({});
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
-  // reset mode ikuti saat interval berganti (rentang candle berubah)
   useEffect(() => {
     followRef.current = false;
     if (chartRef.current) chartRef.current.priceScale("right").applyOptions({ autoScale: true });
   }, [iv]);
-  // [/PATCH:CENTER-PRICE]
 
   const compute = useCallback(() => {
     const cfg = IV[ivRef.current];
@@ -608,9 +598,7 @@ export default function PriceChart() {
       chart.applyOptions({ timeScale: { timeVisible: sub, secondsVisible: cfg.type === "inf" || cfg.type === "tick" || cfg.type === "sec" } });
     }
 
-    // [PATCH:CENTER-PRICE] lastRef diperbarui SEBELUM update series agar provider memakai harga terbaru
     lastRef.current = last.close;
-    // [/PATCH:CENTER-PRICE]
 
     if (incremental) {
       if (n === prev.len + 1) {
@@ -635,7 +623,7 @@ export default function PriceChart() {
     
     setLegend(p => ({ ...p, val: last.close, chg: diff, pct: f0 ? (diff / f0) * 100 : 0, isUp: diff >= 0, high: hi, low: lo }));
     
-    // Kirim harga live terbaru ke Trade component via context
+    // <-- Kirim Harga Terbaru ke Context (Akan diterima Trade.js)
     if (setLivePrice && last.close) {
       setLivePrice(last.close);
     }
