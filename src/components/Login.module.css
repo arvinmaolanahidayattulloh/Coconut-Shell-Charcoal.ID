@@ -37,7 +37,7 @@
   max-width: 150px;
   height: auto;
   object-fit: contain;
-  background: transparent; /* Memastikan tanpa background */
+  background: transparent;
   mix-blend-mode: normal;
 }
 
@@ -111,6 +111,38 @@
 .linkBtn:hover {
   color: #c45e20;
   text-decoration: underline;
+}
+
+/* Latar belakang modal gelap transparan untuk klik luar tertutup */
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+/* Animasi Getar dan Berubah Merah untuk Syarat & Ketentuan */
+.shakeRed {
+  animation: shake 0.4s ease-in-out;
+  color: #dc2626 !important;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.termsWrapper {
+  margin: 10px 0;
+  transition: color 0.2s ease;
 }
 
 /* Modal Sosial & Lainnya */
