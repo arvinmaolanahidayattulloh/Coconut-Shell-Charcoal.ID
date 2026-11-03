@@ -8,7 +8,7 @@ import styles from "./PriceChart.module.css";
 
 const OZ = 31.1034768;
 const GRAMS = 5;
-const BTC_FACTOR = 0.01;
+const BTC_FACTOR = 0.005;
 
 const YUAN_BASE = 5000;
 const USD_BASE = 500;
