@@ -2,16 +2,20 @@
 
 import { useState } from "react";
 import { useAccount } from "@/components/Account";
+import { usePrice } from "@/context/PriceContext";
 import styles from "./Trade.module.css";
 
 export default function Trade() {
   const { user } = useAccount();
+  const { livePrice } = usePrice();
   const [amount, setAmount] = useState(1);
   const [activeTab, setActiveTab] = useState("market");
   const [positions, setPositions] = useState([]);
   const [notification, setNotification] = useState(null);
 
-  const currentMarketPrice = 1250.50; 
+  // Dynamic MT5 pricing based on live chart price
+  const askPrice = livePrice + 0.20;
+  const bidPrice = livePrice - 0.20;
 
   const handleAmountChange = (e) => {
     let val = parseInt(e.target.value) || 0;
@@ -26,16 +30,18 @@ export default function Trade() {
       return;
     }
 
+    const executedPrice = type === "BUY" ? askPrice : bidPrice;
+
     const newPosition = {
       id: Date.now(),
       type: type,
       amount: amount,
-      price: currentMarketPrice,
+      price: executedPrice,
       time: new Date().toLocaleTimeString(),
     };
 
     setPositions([newPosition, ...positions]);
-    setNotification(`Berhasil Eksekusi ${type} ${amount} TON di harga $${currentMarketPrice}`);
+    setNotification(`Berhasil Eksekusi ${type} ${amount} TON di harga $${executedPrice.toFixed(2)}`);
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -45,12 +51,12 @@ export default function Trade() {
         
         <div className={styles.tradeHeader}>
           <div>
-            <h2 className={styles.tradeTitle}>MT5 TERMINAL // CHARCOAL X</h2>
-            <p className={styles.tradeSubtitle}>Pair: TON / USD | Live Execution</p>
+            <h2 className={styles.tradeTitle}>MT5 TERMINAL // CSC INDEX</h2>
+            <p className={styles.tradeSubtitle}>Pair: CSC / USD | Live Market Feed</p>
           </div>
           <div>
             <span className={styles.askBadge}>
-              ASK: ${currentMarketPrice}
+              LIVE: ${livePrice.toFixed(2)}
             </span>
           </div>
         </div>
@@ -94,7 +100,7 @@ export default function Trade() {
                 className={styles.sellBtn}
               >
                 <span className={styles.btnSubText}>Sell (Jual)</span>
-                <span className={styles.btnPriceText}>${(currentMarketPrice - 0.20).toFixed(2)}</span>
+                <span className={styles.btnPriceText}>${bidPrice.toFixed(2)}</span>
               </button>
 
               <button 
@@ -102,7 +108,7 @@ export default function Trade() {
                 className={styles.buyBtn}
               >
                 <span className={styles.btnSubText}>Buy (Beli)</span>
-                <span className={styles.btnPriceText}>${(currentMarketPrice + 0.20).toFixed(2)}</span>
+                <span className={styles.btnPriceText}>${askPrice.toFixed(2)}</span>
               </button>
             </div>
 
@@ -141,7 +147,7 @@ export default function Trade() {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ color: '#9ca3af', fontSize: '0.65rem' }}>Harga Beli (Open):</div>
-                      <div style={{ color: '#34d399', fontWeight: 'bold' }}>${pos.price}</div>
+                      <div style={{ color: '#34d399', fontWeight: 'bold' }}>${pos.price.toFixed(2)}</div>
                     </div>
                   </div>
                 ))
