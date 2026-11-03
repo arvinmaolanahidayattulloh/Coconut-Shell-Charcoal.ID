@@ -78,28 +78,32 @@ const Login = () => {
 
   return (
     <div className={styles.loginContainer}>
+      {/* Judul Baru */}
+      <h2 className={styles.cardTitle}>Investasi CSCID</h2>
+
       <span className={styles.subtitle}>
         Amankan alokasi kuota komoditas ekspor Anda sekarang.
       </span>
 
-      {/* Bagian Tengah: Gambar NephiPhelia.png */}
+      {/* Gambar di Tengah (Tanpa Background) */}
       <div className={styles.imageWrapper}>
         <img 
           src="/NephiPhelia.png" 
-          alt="NephiPhelia Illustration" 
+          alt="NephiPhelia" 
           className={styles.centerImage}
         />
       </div>
 
-      {/* Baris Tombol: Masuk & Daftar (Diletakkan berdampingan / di kanan) */}
+      {/* Baris Tombol: Daftar di Kiri, Masuk di Kanan */}
       <div className={styles.authButtonsRow}>
-        <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
         <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
+        <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
       </div>
 
+      {/* Baris Tautan: Lupa Akun di Kiri, Reset Password di Kanan */}
       <div className={styles.linksRow}>
-        <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
         <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
+        <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
       </div>
 
       {authMode === 'login_username' && (
