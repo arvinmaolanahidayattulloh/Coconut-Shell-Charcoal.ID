@@ -1,21 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "@/components/Account"; // Menyesuaikan dengan sistem akun Anda
+import { useAccount } from "@/components/Account";
+import styles from "./Trade.module.css";
 
 export default function Trade() {
-  const { user } = useAccount(); // Mengambil data user yang sedang login
+  const { user } = useAccount();
   const [amount, setAmount] = useState(1);
-  const [activeTab, setActiveTab] = useState("market"); // market / positions
+  const [activeTab, setActiveTab] = useState("market");
   const [positions, setPositions] = useState([]);
   const [notification, setNotification] = useState(null);
 
-  // Simulasi harga pasar terkini untuk komoditas arang / TON
   const currentMarketPrice = 1250.50; 
 
   const handleAmountChange = (e) => {
     let val = parseInt(e.target.value) || 0;
-    if (val > 100) val = 100; // Maksimal 100 TON
+    if (val > 100) val = 100;
     if (val < 1) val = 1;
     setAmount(val);
   };
@@ -28,7 +28,7 @@ export default function Trade() {
 
     const newPosition = {
       id: Date.now(),
-      type: type, // "BUY" atau "SELL"
+      type: type,
       amount: amount,
       price: currentMarketPrice,
       time: new Date().toLocaleTimeString(),
@@ -40,42 +40,38 @@ export default function Trade() {
   };
 
   return (
-    <section id="trade" className="py-12 bg-gray-950 text-white px-4 md:px-8 border-t border-gray-800">
-      <div className="max-w-4xl mx-auto bg-gray-900 rounded-xl border border-gray-800 shadow-2xl overflow-hidden">
+    <section id="trade" className={styles.tradeSection}>
+      <div className={styles.tradeContainer}>
         
-        {/* Header MT5 Style */}
-        <div className="bg-gray-800 px-4 py-3 flex justify-between items-center border-b border-gray-700">
+        <div className={styles.tradeHeader}>
           <div>
-            <h2 className="font-bold text-lg tracking-wider text-amber-500">MT5 TERMINAL // CHARCOAL X</h2>
-            <p className="text-xs text-gray-400">Pair: TON / USD | Live Execution</p>
+            <h2 className={styles.tradeTitle}>MT5 TERMINAL // CHARCOAL X</h2>
+            <p className={styles.tradeSubtitle}>Pair: TON / USD | Live Execution</p>
           </div>
-          <div className="text-right">
-            <span className="text-xs bg-emerald-900/60 text-emerald-400 px-2 py-1 rounded font-mono border border-emerald-700">
+          <div>
+            <span className={styles.askBadge}>
               ASK: ${currentMarketPrice}
             </span>
           </div>
         </div>
 
-        {/* Notifikasi Transaksi */}
         {notification && (
-          <div className="bg-emerald-600 text-white text-xs px-4 py-2 text-center font-medium animate-pulse">
+          <div className={styles.notificationBanner}>
             {notification}
           </div>
         )}
 
-        <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className={styles.tradeGrid}>
           
-          {/* Panel Kontrol Order (Kiri) */}
-          <div className="md:col-span-1 space-y-4 bg-gray-950 p-4 rounded-lg border border-gray-800">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Order Panel</h3>
+          <div className={styles.controlPanel}>
+            <h3 className={styles.panelTitle}>Order Panel</h3>
             
-            {/* Input Volume */}
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Volume (TON) - Maks 100</label>
-              <div className="flex items-center space-x-2">
+              <label className={styles.label}>Volume (TON) - Maks 100</label>
+              <div className={styles.amountBox}>
                 <button 
                   onClick={() => setAmount(Math.max(1, amount - 1))}
-                  className="bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded text-sm font-bold"
+                  className={styles.amountBtn}
                 >-</button>
                 <input 
                   type="number" 
@@ -83,71 +79,69 @@ export default function Trade() {
                   max="100" 
                   value={amount} 
                   onChange={handleAmountChange}
-                  className="w-full bg-gray-900 border border-gray-700 text-center rounded py-1 text-white font-mono"
+                  className={styles.amountInput}
                 />
                 <button 
                   onClick={() => setAmount(Math.min(100, amount + 1))}
-                  className="bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded text-sm font-bold"
+                  className={styles.amountBtn}
                 >+</button>
               </div>
             </div>
 
-            {/* Tombol Jual & Beli ala MT5 */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className={styles.actionButtons}>
               <button 
                 onClick={() => executeOrder("SELL")}
-                className="bg-rose-600 hover:bg-rose-700 transition active:scale-95 text-white py-3 rounded font-bold flex flex-col items-center shadow-lg"
+                className={styles.sellBtn}
               >
-                <span className="text-xs uppercase tracking-wide opacity-80">Sell (Jual)</span>
-                <span className="text-sm font-mono">${(currentMarketPrice - 0.20).toFixed(2)}</span>
+                <span className={styles.btnSubText}>Sell (Jual)</span>
+                <span className={styles.btnPriceText}>${(currentMarketPrice - 0.20).toFixed(2)}</span>
               </button>
 
               <button 
                 onClick={() => executeOrder("BUY")}
-                className="bg-blue-600 hover:bg-blue-700 transition active:scale-95 text-white py-3 rounded font-bold flex flex-col items-center shadow-lg"
+                className={styles.buyBtn}
               >
-                <span className="text-xs uppercase tracking-wide opacity-80">Buy (Beli)</span>
-                <span className="text-sm font-mono">${(currentMarketPrice + 0.20).toFixed(2)}</span>
+                <span className={styles.btnSubText}>Buy (Beli)</span>
+                <span className={styles.btnPriceText}>${(currentMarketPrice + 0.20).toFixed(2)}</span>
               </button>
             </div>
 
             {!user && (
-              <p className="text-xs text-amber-400/90 text-center pt-2">
+              <p className={styles.warningText}>
                 * Anda harus login Google terlebih dahulu untuk mengeksekusi order.
               </p>
             )}
           </div>
 
-          {/* Panel Informasi Posisi / History Open Price (Kanan) */}
-          <div className="md:col-span-2 bg-gray-950 p-4 rounded-lg border border-gray-800 flex flex-col">
-            <div className="flex border-b border-gray-800 pb-2 mb-3">
+          <div className={styles.infoPanel}>
+            <div className={styles.tabHeader}>
               <button 
                 onClick={() => setActiveTab("market")}
-                className={`text-xs font-bold px-3 py-1 rounded mr-2 ${activeTab === 'market' ? 'bg-gray-800 text-amber-400' : 'text-gray-400'}`}
+                className={styles.tabActive}
               >
                 Posisi Aktif ({positions.length})
               </button>
             </div>
 
-            <div className="flex-grow overflow-y-auto max-h-60 space-y-2">
+            <div className={styles.positionsList}>
               {positions.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-500 py-10 text-xs">
+                <div className={styles.emptyState}>
                   <p>Belum ada posisi terbuka.</p>
                   <p>Lakukan Buy atau Sell untuk melihat harga eksekusi.</p>
                 </div>
               ) : (
                 positions.map((pos) => (
-                  <div key={pos.id} className="bg-gray-900 border border-gray-800 p-3 rounded flex justify-between items-center text-xs font-mono">
+                  <div key={pos.id} className={styles.positionItem}>
                     <div>
-                      <span className={`font-bold px-1.5 py-0.5 rounded mr-2 ${pos.type === 'BUY' ? 'bg-blue-900 text-blue-300' : 'bg-rose-900 text-rose-300'}`}>
+                      <span className={pos.type === 'BUY' ? styles.badgeBuy : styles.badgeSell}>
                         {pos.type}
                       </span>
-                      <span className="text-gray-300">{pos.amount} TON</span>
-                      <span className="text-gray-500 ml-2">({pos.time})</span>
+                      <span style={{ color: '#d1d5db' }}>{pos.amount} TON</span>
+                      <span style={{ color: '#6b7280', marginLeft: '0.5rem' }}>({pos.time})</span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-gray-400 text-[10px]">Harga Beli (Open):</div>
-                      <div className="text-emerald-400 font-bold">${pos.price}</div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: '#9ca3af', fontSize: '0.65rem' }}>Harga Beli (Open):</div>
+                      <div style={{ color: '#34d399', fontWeight: 'bold' }}>${pos.price}</div>
                     </div>
                   </div>
                 ))
