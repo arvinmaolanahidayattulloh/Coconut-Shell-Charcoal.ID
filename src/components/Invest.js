@@ -104,14 +104,15 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
 
         {/* Konten Utama */}
         <div style={{ filter: showPasswordModal ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
-          <span className={styles.eyebrow}>Investasi</span>
-
+          
           <div className={styles.actionWrapper}>
             {!user ? (
               <Login />
             ) : (
               <div className={styles.userDashboard}>
-                <div className={styles.userInfo}>
+                <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#c45e20', marginBottom: '4px' }}>Investasi CSCID</h2>
+                
+                <div className={styles.userInfo} style={{ marginTop: '12px' }}>
                   <img src={user.picture || 'https://via.placeholder.com/40'} alt="Profile" className={styles.avatar} />
                   <span>Halo, <strong>{user.name}</strong></span>
                   <button onClick={handleLogout} className={styles.logoutBtn}>KELUAR</button>
