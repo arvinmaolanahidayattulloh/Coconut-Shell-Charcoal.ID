@@ -2,37 +2,47 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { whatsapp } = await request.json();
+    const { phone } = await request.json();
 
-    // 1. Generate 6 Angka Acak
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    if (!phone) {
+      return NextResponse.json({ success: false, message: 'Nomor WhatsApp tidak boleh kosong' }, { status: 400 });
+    }
 
-    // TODO: Simpan 'otp' ini ke Database berdasarkan 'whatsapp'
+    // Pastikan nomor bersih dari karakter non-digit
+    let formattedPhone = phone.toString().replace(/\D/g, '');
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '62' + formattedPhone.slice(1);
+    }
 
-    // 2. Kirim pesan ke API Fonnte
-    const fonnteToken = process.env.FONNTE_TOKEN; // Token dari dashboard fonnte.com
-    
+    const otpWa = Math.floor(100000 + Math.random() * 900000).toString();
+
     const response = await fetch('https://api.fonnte.com/send', {
       method: 'POST',
       headers: {
-        'Authorization': fonnteToken,
+        'Authorization': process.env.WA_API_TOKEN,
+        'Content-Type': 'application/json',
       },
-      body: new URLSearchParams({
-        target: whatsapp,
-        message: `*PT TUNAS KEMBAR ABADI*\n\nKode OTP WhatsApp Anda adalah: *${otp}*\n\nBerlaku selama 5 menit. JANGAN BERIKAN kode ini kepada siapa pun.`,
-        countryCode: '62', 
+      body: JSON.stringify({
+        target: formattedPhone,
+        message: `*PT Tunas Kembar Abadi*\n\nHalo,\nKode verifikasi (OTP) WhatsApp Anda adalah: *${otpWa}*\n\nBerlaku selama 5 menit. Jangan bagikan kode ini kepada siapa pun.\n\n_CostumerService@coconutshellcharcoal.id_`,
       }),
     });
 
-    const data = await response.json();
+    const result = await response.json();
 
-    if (data.status) {
-      return NextResponse.json({ success: true, message: 'OTP WA terkirim', test_otp: otp }, { status: 200 });
-    } else {
-      throw new Error(data.reason || 'Gagal dari gateway WA');
+    // Tangkap pesan error spesifik dari Fonnte
+    if (!response.ok || !result.status) {
+      const errorMessage = result.reason || result.message || 'Gagal mengirim pesan via Fonnte';
+      return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
     }
-  } catch (error) {
-    console.error('Error send WA:', error);
-    return NextResponse.json({ success: false, message: 'Gagal mengirim WA' }, { status: 500 });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'OTP WhatsApp berhasil dikirim',
+      test_otp_wa: otpWa 
+    }, { status: 200 });
+
+  } catch (err) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
