@@ -39,14 +39,11 @@ const Login = () => {
     setBusyProvider(providerName);
     try {
       const account = await runProvider(providerName);
-      
-      // Update global state login manual
       loginGoogle({ 
         name: account?.name || `User ${providerName}`, 
         email: account?.email || '',
         picture: account?.picture || ''
       });
-      
       closeAll();
     } catch (err) {
       console.error(`[LOGIN-SOCIAL] ${providerName}:`, err);
@@ -85,6 +82,16 @@ const Login = () => {
         Amankan alokasi kuota komoditas ekspor Anda sekarang.
       </span>
 
+      {/* Bagian Tengah: Gambar NephiPhelia.png */}
+      <div className={styles.imageWrapper}>
+        <img 
+          src="/NephiPhelia.png" 
+          alt="NephiPhelia Illustration" 
+          className={styles.centerImage}
+        />
+      </div>
+
+      {/* Baris Tombol: Masuk & Daftar (Diletakkan berdampingan / di kanan) */}
       <div className={styles.authButtonsRow}>
         <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
         <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
