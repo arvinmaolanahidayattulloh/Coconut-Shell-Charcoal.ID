@@ -13,22 +13,15 @@ import {
   sameText,
 } from './AuthShared';
 
-// ============================================================
-// Login.jsx — titik masuk utama
-// ============================================================
-
 const Login = () => {
-  // Tambahkan loginMicrosoft & loginApple jika Anda membutuhkannya nanti
   const { loginGoogle, runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
-
   const [authMode, setAuthMode] = useState(null);
 
   const openMode = (mode) => { reset(); setAuthMode(mode); };
   const closeAll = () => openMode(null);
   const goLogin = () => openMode('login_username');
 
-  // [LOGIN-START] MASUK USERNAME & PASSWORD
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     const found = loadUsers().find(
@@ -41,19 +34,17 @@ const Login = () => {
       alert('Username atau Password salah!');
     }
   };
-  // [LOGIN-END]
 
-  // [LOGIN-SOCIAL-START] Masuk dengan provider & passkey
   const handleLoginProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
-      // 1. Ambil data dari provider
       const account = await runProvider(providerName);
       
-      // 2. MANUAL LOGIN: Ubah state global (karena runProvider sekarang tidak trigger auto-login)
+      // Update global state login manual
       loginGoogle({ 
         name: account?.name || `User ${providerName}`, 
-        email: account?.email || '' 
+        email: account?.email || '',
+        picture: account?.picture || ''
       });
       
       closeAll();
@@ -87,7 +78,6 @@ const Login = () => {
       setBusyProvider(null);
     }
   };
-  // [LOGIN-SOCIAL-END]
 
   return (
     <div className={styles.loginContainer}>
@@ -105,7 +95,6 @@ const Login = () => {
         <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
       </div>
 
-      {/* MODAL MASUK */}
       {authMode === 'login_username' && (
         <AuthModal
           title="Masuk Akun"
@@ -145,10 +134,8 @@ const Login = () => {
         </AuthModal>
       )}
 
-      {/* DAFTAR */}
       <Register open={authMode === 'register'} onClose={closeAll} onRegistered={goLogin} />
 
-      {/* LUPA AKUN & RESET PASSWORD */}
       <Recovery
         mode={authMode === 'forgot' ? 'forgot' : authMode === 'reset' ? 'reset' : null}
         onClose={closeAll}
