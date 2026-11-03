@@ -18,7 +18,7 @@ const Register = ({ open, onClose, onRegistered }) => {
   const { runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  const [step, setStep] = useState('provider');
+  const [step, setStep] = useState('terms_agreement'); // Langkah awal: Setuju Syarat & Ketentuan
   const [data, setData] = useState({}); 
   const [otpInput, setOtpInput] = useState('');
   
@@ -33,7 +33,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     if (open) { 
       reset(); 
       setData({}); 
-      setStep('provider'); 
+      setStep('terms_agreement'); // Mulai dari setuju syarat
       setOtpInput(''); 
       setCountryCode('+62');
       setIsLoading(false);
@@ -41,6 +41,17 @@ const Register = ({ open, onClose, onRegistered }) => {
       setShakeError(false);
     }
   }, [open]); 
+
+  // --- 0. VALIDASI CHECKBOX S&K SEBELUM LANJUT KE PILIH PLATFORM ---
+  const handleProceedToProvider = (e) => {
+    e.preventDefault();
+    if (!isAgreed) {
+      setShakeError(true);
+      setTimeout(() => setShakeError(false), 600);
+      return;
+    }
+    setStep('provider');
+  };
 
   // --- 1. PILIH PROVIDER & CEK APAKAH SUDAH TERDAFTAR ---
   const handleSelectProvider = async (providerName) => {
@@ -50,18 +61,15 @@ const Register = ({ open, onClose, onRegistered }) => {
       const userEmail = account?.email || '';
       if (!userEmail) throw new Error('Email akun tidak ditemukan.');
 
-      // CEK APAKAH EMAIL SUDAH TERDAFTAR SEBELUMNYA
       const existingUsers = loadUsers();
       const isAlreadyRegistered = existingUsers.some((u) => sameText(u.email, userEmail));
 
       if (isAlreadyRegistered) {
         alert(`Akun dengan email ${userEmail} sudah terdaftar! Silakan langsung Masuk.`);
-        // Langsung selesaikan register dan arahkan ke auto-login / tutup modal
         onRegistered({ email: userEmail, username: userEmail.split('@')[0] });
         return;
       }
 
-      // Jika belum terdaftar, lanjut kirim OTP Email via Resend
       setData({ provider: providerName, email: userEmail });
       
       setIsLoading(true);
@@ -89,7 +97,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
-  // --- 2. SUBMIT OTP EMAIL & LANJUT BUAT USERNAME ---
   const handleOtpEmailSubmit = (e) => {
     e.preventDefault();
     if (!data.serverEmailOtp || otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
@@ -100,7 +107,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('username'); 
   };
 
-  // --- 3. SUBMIT USERNAME ---
   const handleUsernameSubmit = (e) => {
     e.preventDefault();
     if (loadUsers().some((u) => sameText(u.username, values.username))) {
@@ -111,26 +117,17 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('password'); 
   };
 
-  // --- 4. SUBMIT PASSWORD ---
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setData((prev) => ({ ...prev, password: values.password }));
     setStep('wa'); 
   };
 
-  // --- 5. SUBMIT WHATSAPP & KIRIM OTP WA VIA FONNTE ---
   const handleWaSubmit = async (e) => {
     e.preventDefault();
     const cleanNumber = values.whatsapp.replace(/^0+/, '');
     if (cleanNumber.length < 8) { alert('Nomor WhatsApp tidak valid.'); return; }
     
-    // Validasi S&K sebelum kirim OTP WhatsApp
-    if (!isAgreed) {
-      setShakeError(true);
-      setTimeout(() => setShakeError(false), 600);
-      return;
-    }
-
     const fullWaNumber = `${countryCode}${cleanNumber}`;
     setData((prev) => ({ ...prev, whatsapp: fullWaNumber }));
     
@@ -159,7 +156,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
-  // --- 6. SUBMIT OTP WHATSAPP & AUTO LOGIN SELESAI ---
   const handleOtpWaSubmit = (e) => {
     e.preventDefault();
     if (!data.serverWaOtp || otpInput.trim() !== data.serverWaOtp.toString().trim()) { 
@@ -185,15 +181,46 @@ const Register = ({ open, onClose, onRegistered }) => {
   if (!open) return null;
 
   return (
+    /* Latar belakang popup blur (klik luar area untuk menutup) */
     <div className={styles.modalBackdrop} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
         
-        {step === 'provider' && (
-          <div className={styles.card}>
-            <h4 className={styles.title}>Daftar Akun</h4>
-            <p className={styles.desc}>Pilih platform untuk memulai verifikasi email</p>
+        {/* LANGKAH 0: SETUJU SYARAT & KETENTUAN DI AWAL */}
+        {step === 'terms_agreement' && (
+          <div className={styles.card} style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#111827' }}>Persetujuan</h4>
+            <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280' }}>Anda harus menyetujui syarat & ketentuan sebelum mendaftar.</p>
 
-            <div className={styles.providerStack}>
+            <form onSubmit={handleProceedToProvider}>
+              <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`} style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={isAgreed} 
+                    onChange={(e) => setIsAgreed(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  Saya Menyetujui Syarat dan Ketentuan
+                </label>
+              </div>
+
+              <button 
+                type="submit" 
+                style={{ width: '100%', padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                LANJUT
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* LANGKAH 1: PILIH PLATFORM */}
+        {step === 'provider' && (
+          <div className={styles.card} style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <h4 className={styles.title} style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: '#111827' }}>Daftar Akun</h4>
+            <p className={styles.desc} style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280' }}>Pilih platform untuk memulai verifikasi email</p>
+
+            <div className={styles.providerStack} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {PROVIDERS.map((p) => (
                 <button
                   key={p}
@@ -201,6 +228,7 @@ const Register = ({ open, onClose, onRegistered }) => {
                   onClick={() => handleSelectProvider(p)}
                   disabled={busyProvider !== null || isLoading}
                   className={styles.providerBtn}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                   <ProviderIcon name={p} size={22} />
                   <span>{busyProvider === p || isLoading ? 'Memeriksa...' : `Daftar dengan ${p}`}</span>
@@ -210,6 +238,7 @@ const Register = ({ open, onClose, onRegistered }) => {
           </div>
         )}
 
+        {/* LANGKAH 2: OTP EMAIL */}
         {step === 'otp_email' && (
           <AuthModal
             title="Verifikasi OTP Email"
@@ -232,6 +261,7 @@ const Register = ({ open, onClose, onRegistered }) => {
           </AuthModal>
         )}
 
+        {/* LANGKAH 3: USERNAME */}
         {step === 'username' && (
           <AuthModal
             title="Buat Username"
@@ -244,6 +274,7 @@ const Register = ({ open, onClose, onRegistered }) => {
           </AuthModal>
         )}
 
+        {/* LANGKAH 4: PASSWORD */}
         {step === 'password' && (
           <AuthModal
             title="Buat Password"
@@ -256,6 +287,7 @@ const Register = ({ open, onClose, onRegistered }) => {
           </AuthModal>
         )}
 
+        {/* LANGKAH 5: WHATSAPP */}
         {step === 'wa' && (
           <AuthModal
             title="Nomor WhatsApp"
@@ -264,7 +296,7 @@ const Register = ({ open, onClose, onRegistered }) => {
             submitLabel={isLoading ? "MENGIRIM WA OTP..." : "KIRIM OTP WHATSAPP"}
             hideBackBtn={true}
           >
-            <div style={{ display: 'flex', gap: '8px', width: '100%', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
               <select 
                 value={countryCode} 
                 onChange={(e) => setCountryCode(e.target.value)}
@@ -283,21 +315,10 @@ const Register = ({ open, onClose, onRegistered }) => {
                 style={{ flex: 1, padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
               />
             </div>
-
-            <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
-                <input 
-                  type="checkbox" 
-                  checked={isAgreed} 
-                  onChange={(e) => setIsAgreed(e.target.checked)} 
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                />
-                Saya Menyetujui Syarat dan Ketentuan
-              </label>
-            </div>
           </AuthModal>
         )}
 
+        {/* LANGKAH 6: OTP WA */}
         {step === 'otp_wa' && (
           <AuthModal
             title="Verifikasi OTP WhatsApp"
@@ -325,4 +346,4 @@ const Register = ({ open, onClose, onRegistered }) => {
   );
 };
 
-exports default Register;
+export default Register;
