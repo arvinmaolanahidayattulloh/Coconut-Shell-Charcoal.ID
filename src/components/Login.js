@@ -4,6 +4,52 @@ import React, { useState } from 'react';
 import { useAccount } from './Account';
 import styles from './Login.module.css';
 
+// [ICONS-START] Logo penyedia auth (SVG inline, tanpa dependensi)
+const ProviderIcon = ({ name, size = 20 }) => {
+  const common = { width: size, height: size, className: styles.providerIcon, 'aria-hidden': true };
+
+  if (name === 'Google') {
+    return (
+      <svg {...common} viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+      </svg>
+    );
+  }
+
+  if (name === 'Microsoft') {
+    return (
+      <svg {...common} viewBox="0 0 21 21">
+        <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+        <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+        <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+        <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+      </svg>
+    );
+  }
+
+  if (name === 'Apple') {
+    return (
+      <svg {...common} viewBox="0 0 24 24" fill="#000000">
+        <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
+      </svg>
+    );
+  }
+
+  // Passkey
+  return (
+    <svg {...common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="15" r="4" />
+      <path d="M11 12l9-9" />
+      <path d="M16 7l3 3" />
+      <path d="M14 9l2 2" />
+    </svg>
+  );
+};
+// [ICONS-END]
+
 const Login = () => {
   const { loginGoogle, loginMicrosoft, loginApple } = useAccount();
   const [authMode, setAuthMode] = useState(null); // 'login_username', 'reg_provider', 'reg_form', 'reg_wa', 'otp_wa', 'reset_password', 'forgot_username', 'otp_email', 'new_password'
@@ -11,6 +57,7 @@ const Login = () => {
   // [STATE-START] Form State
   const [authInput, setAuthInput] = useState({ username: '', password: '', whatsapp: '', email: '', otp: '' });
   const [tempData, setTempData] = useState({});
+  const [busyProvider, setBusyProvider] = useState(null); // nama provider yang sedang diproses
   // [STATE-END]
 
   // [LOGIN-START] 1. KLIK MASUK
@@ -33,19 +80,46 @@ const Login = () => {
   };
   // [LOGIN-END]
 
-  // [LOGIN-SOCIAL-START] login provider & passkey (maintenance: edit di sini saja)
+  // [PROVIDER-HELPER-START] pemanggil provider terpusat (maintenance: perbaiki integrasi provider di sini saja)
   const providerLoginMap = {
     Microsoft: loginMicrosoft,
     Google: loginGoogle,
     Apple: loginApple,
   };
 
-  const handleLoginProvider = async (providerName) => {
+  const runProvider = async (providerName) => {
+    const fn = providerLoginMap[providerName];
+    if (typeof fn !== 'function') {
+      throw new Error(`Fungsi login${providerName} tidak ditemukan di useAccount()`);
+    }
     try {
-      await providerLoginMap[providerName]();
+      const res = await fn();
+      if (res && typeof res === 'object') return res;
+      return { name: `${providerName} User`, email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id` };
+    } catch (err) {
+      // Fungsi di Account kemungkinan butuh argumen profil (seperti pemanggilan di handleLoginSubmit)
+      if (err instanceof TypeError) {
+        console.warn(`[PROVIDER] ${providerName} dipanggil tanpa argumen gagal, coba dengan profil:`, err);
+        const profile = { name: `${providerName} User`, email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id` };
+        await fn(profile);
+        return profile;
+      }
+      throw err;
+    }
+  };
+  // [PROVIDER-HELPER-END]
+
+  // [LOGIN-SOCIAL-START] login provider & passkey
+  const handleLoginProvider = async (providerName) => {
+    setBusyProvider(providerName);
+    try {
+      await runProvider(providerName);
       setAuthMode(null);
     } catch (err) {
-      alert(`Login ${providerName} gagal atau dibatalkan.`);
+      console.error(`[LOGIN-SOCIAL] ${providerName}:`, err);
+      alert(`Login ${providerName} gagal: ${err?.message || err}`);
+    } finally {
+      setBusyProvider(null);
     }
   };
 
@@ -54,6 +128,7 @@ const Login = () => {
       alert("Browser/perangkat ini belum mendukung Passkey.");
       return;
     }
+    setBusyProvider('Passkey');
     try {
       // TODO: challenge harus dari server & hasilnya diverifikasi di server
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -65,7 +140,10 @@ const Login = () => {
         setAuthMode(null);
       }
     } catch (err) {
+      console.error('[LOGIN-SOCIAL] Passkey:', err);
       alert("Passkey dibatalkan atau tidak ditemukan.");
+    } finally {
+      setBusyProvider(null);
     }
   };
   // [LOGIN-SOCIAL-END]
@@ -77,12 +155,16 @@ const Login = () => {
 
   // [REG-PROVIDER-START] pilih provider → pilih akun → lanjut buat kredensial
   const handleSelectProviderForReg = async (providerName) => {
+    setBusyProvider(providerName);
     try {
-      const account = await providerLoginMap[providerName]();
+      const account = await runProvider(providerName);
       setTempData({ provider: providerName, account: account || null });
       setAuthMode('reg_form'); // lanjut: Username & Password → WA → OTP
     } catch (err) {
-      alert(`Pemilihan akun ${providerName} dibatalkan.`);
+      console.error(`[REG-PROVIDER] ${providerName}:`, err);
+      alert(`Pemilihan akun ${providerName} gagal: ${err?.message || err}`);
+    } finally {
+      setBusyProvider(null);
     }
   };
   // [REG-PROVIDER-END]
@@ -217,20 +299,27 @@ const Login = () => {
             </div>
 
             {/* [LOGIN-SOCIAL-UI-START] */}
-            <p className={styles.modalDesc} style={{ marginTop: 12 }}>atau masuk dengan</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-              <button type="button" onClick={handleLoginPasskey} className={styles.socialBtn} style={{ padding: '10px' }}>
-                🔑 Passkey
-              </button>
-              <button type="button" onClick={() => handleLoginProvider('Microsoft')} className={styles.socialBtn} style={{ background: '#1e293b', color: '#fff', padding: '10px' }}>
-                Microsoft
-              </button>
-              <button type="button" onClick={() => handleLoginProvider('Google')} className={styles.socialBtn} style={{ padding: '10px' }}>
-                Google
-              </button>
-              <button type="button" onClick={() => handleLoginProvider('Apple')} className={styles.socialBtn} style={{ background: '#0f172a', color: '#fff', padding: '10px' }}>
-                Apple
-              </button>
+            <div className={styles.dividerWrapper} style={{ width: '100%' }}>atau masuk dengan</div>
+
+            <button type="button" onClick={handleLoginPasskey} disabled={busyProvider !== null} className={styles.passkeyBtn}>
+              <ProviderIcon name="Passkey" />
+              {busyProvider === 'Passkey' ? 'Memverifikasi...' : 'Masuk dengan Passkey'}
+            </button>
+
+            <div className={styles.socialGrid}>
+              {['Microsoft', 'Google', 'Apple'].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handleLoginProvider(p)}
+                  disabled={busyProvider !== null}
+                  className={`${styles.providerBtn} ${styles.providerBtnStack}`}
+                  aria-label={`Masuk dengan ${p}`}
+                >
+                  <ProviderIcon name={p} />
+                  <span>{busyProvider === p ? '...' : p}</span>
+                </button>
+              ))}
             </div>
             {/* [LOGIN-SOCIAL-UI-END] */}
           </form>
@@ -244,17 +333,22 @@ const Login = () => {
             <h4 className={styles.modalTitle}>Pilih Metode Pendaftaran</h4>
             <p className={styles.modalDesc}>Pilih platform, lalu pilih akun Anda</p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 4 }}>
-              <button onClick={() => handleSelectProviderForReg('Microsoft')} className={styles.socialBtn} style={{ background: '#1e293b', color: '#fff', padding: '12px' }}>
-                Microsoft
-              </button>
-              <button onClick={() => handleSelectProviderForReg('Google')} className={styles.socialBtn} style={{ padding: '12px' }}>
-                Google
-              </button>
-              <button onClick={() => handleSelectProviderForReg('Apple')} className={styles.socialBtn} style={{ background: '#0f172a', color: '#fff', padding: '12px' }}>
-                Apple
-              </button>
+            {/* [REG-PROVIDER-UI-START] */}
+            <div className={styles.providerStack}>
+              {['Microsoft', 'Google', 'Apple'].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handleSelectProviderForReg(p)}
+                  disabled={busyProvider !== null}
+                  className={`${styles.providerBtn} ${styles.providerBtnWide}`}
+                >
+                  <ProviderIcon name={p} size={22} />
+                  <span>{busyProvider === p ? 'Membuka pilihan akun...' : `Daftar dengan ${p}`}</span>
+                </button>
+              ))}
             </div>
+            {/* [REG-PROVIDER-UI-END] */}
 
             <div className={styles.modalActionsRow} style={{ marginTop: 12 }}>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel} style={{ width: '100%' }}>KEMBALI</button>
