@@ -10,8 +10,7 @@ import {
   loadUsers,
   saveUsers,
   sameText,
-  isValidWa,
-  OTP_WA_SIM // WhatsApp masih menggunakan simulasi sesuai kebutuhan tahap ini
+  isValidWa
 } from './AuthShared';
 
 const PROVIDERS = ['Google', 'Microsoft', 'Apple'];
@@ -20,12 +19,12 @@ const Register = ({ open, onClose, onRegistered }) => {
   const { runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  // State alur pendaftaran
+  // State alur pendaftaran multistep
   const [step, setStep] = useState('provider');
   const [data, setData] = useState({}); 
   const [otpInput, setOtpInput] = useState('');
   
-  // State kode negara & status loading pengiriman email
+  // State pendukung
   const [countryCode, setCountryCode] = useState('+62');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -85,7 +84,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     
     setIsLoading(true);
     try {
-      // Memanggil API Resend backend secara nyata
       const res = await fetch('/api/send-otp-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,12 +96,11 @@ const Register = ({ open, onClose, onRegistered }) => {
         throw new Error(result.error || 'Gagal mengirim email OTP');
       }
 
-      // Menyimpan token OTP asli dari server secara rahasia untuk divalidasi
       if (result.test_otp) {
         setData((prev) => ({ ...prev, serverEmailOtp: result.test_otp }));
       }
 
-      alert(`Email verifikasi berhasil dikirim ke ${data.email}`);
+      alert(`Email verifikasi asli telah dikirim ke ${data.email}`);
       setOtpInput('');
       setStep('otp_email'); 
     } catch (err) {
@@ -114,29 +111,50 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
-  // --- 5. SUBMIT OTP EMAIL (VALIDASI NYATA TANPA SIMULASI STATIS) ---
-  const handleOtpEmailSubmit = (e) => {
+  // --- 5. SUBMIT OTP EMAIL & LANJUT KIRIM OTP WA VIA FONNTE ---
+  const handleOtpEmailSubmit = async (e) => {
     e.preventDefault();
     
-    if (!data.serverEmailOtp) {
-      alert('Kode OTP belum di-generate. Silakan ulangi proses.');
-      return;
-    }
-
-    // Mencocokkan input user persis dengan kode acak dari server Resend
-    if (otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
+    if (!data.serverEmailOtp || otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
       alert('Kode OTP Email salah! Periksa kembali email Anda.'); 
       return; 
     }
     
-    setOtpInput('');
-    setStep('otp_wa'); // Lanjut ke verifikasi WhatsApp
+    setIsLoading(true);
+    try {
+      // Panggil API Fonnte untuk mengirim OTP WhatsApp asli
+      const res = await fetch('/api/send-otp-wa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: data.whatsapp }),
+      });
+      
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Gagal mengirim WA OTP');
+
+      if (result.test_otp_wa) {
+        setData((prev) => ({ ...prev, serverWaOtp: result.test_otp_wa }));
+      }
+
+      alert(`Kode OTP WhatsApp telah dikirim ke nomor ${data.whatsapp}`);
+      setOtpInput('');
+      setStep('otp_wa');
+    } catch (err) {
+      console.error(err);
+      alert(`Gagal mengirim OTP WhatsApp: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // --- 6. SUBMIT OTP WHATSAPP & SELESAI ---
+  // --- 6. SUBMIT OTP WHATSAPP & SELESAI DAFTAR ---
   const handleOtpWaSubmit = (e) => {
     e.preventDefault();
-    if (otpInput !== OTP_WA_SIM) { alert('Kode OTP WhatsApp salah!'); return; }
+    
+    if (!data.serverWaOtp || otpInput.trim() !== data.serverWaOtp.toString().trim()) { 
+      alert('Kode OTP WhatsApp salah!'); 
+      return; 
+    }
     
     const users = loadUsers();
     users.push({
@@ -148,13 +166,13 @@ const Register = ({ open, onClose, onRegistered }) => {
     });
     saveUsers(users);
     
-    alert('Pendaftaran berhasil! Silakan masuk dengan username dan password Anda.');
+    alert('Pendaftaran berhasil! Akun PT Tunas Kembar Abadi Anda telah aktif.');
     onRegistered(); 
   };
 
   if (!open) return null;
 
-  // ================= RENDER LAYAR TAHAPAN =================
+  // ================= RENDER TAMPILAN (UI) =================
 
   if (step === 'provider') {
     return (
@@ -253,14 +271,14 @@ const Register = ({ open, onClose, onRegistered }) => {
         title="Verifikasi OTP Email"
         desc={
           <>
-            Kode verifikasi telah dikirim ke <b>{data.email}</b> via Resend.<br />
+            Kode telah dikirim ke <b>{data.email}</b> via Resend.<br />
             <span style={{ fontSize: '12px', color: '#c45e20', fontWeight: 'bold' }}>
-              Cek Kotak Masuk (Inbox) atau folder Spam Anda.
+              {isLoading ? 'Sedang mengirim OTP WhatsApp...' : 'Cek Inbox / Spam folder Anda.'}
             </span>
           </>
         }
         onSubmit={handleOtpEmailSubmit}
-        submitLabel="VERIFIKASI EMAIL"
+        submitLabel={isLoading ? "MENGIRIM WA OTP..." : "VERIFIKASI EMAIL"}
         onBack={() => { setStep('wa'); setOtpInput(''); }}
         backLabel="KEMBALI"
       >
@@ -272,6 +290,7 @@ const Register = ({ open, onClose, onRegistered }) => {
           value={otpInput}
           onChange={(e) => setOtpInput(e.target.value)}
           required
+          disabled={isLoading}
           className={styles.inputField}
           style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
         />
@@ -283,7 +302,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     return (
       <AuthModal
         title="Verifikasi OTP WhatsApp"
-        desc={<>Kode telah dikirim ke WA <b>{data.whatsapp}</b><br />(Simulasi: {OTP_WA_SIM})</>}
+        desc={<>Kode verifikasi telah dikirim ke WA <b>{data.whatsapp}</b> via Fonnte.</>}
         onSubmit={handleOtpWaSubmit}
         submitLabel="SELESAI DAFTAR"
         onBack={() => { setStep('otp_email'); setOtpInput(''); }}
