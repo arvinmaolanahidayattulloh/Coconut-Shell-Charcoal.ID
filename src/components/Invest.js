@@ -40,7 +40,12 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     setMenuOpen(false);
     switch (action) {
       case 'beranda':
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const berandaEl = document.getElementById('beranda');
+        if (berandaEl) {
+          berandaEl.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         break;
       case 'profil':
         alert(user ? `Profil: ${user.name} (${user.email})` : "Silakan login terlebih dahulu.");
@@ -100,11 +105,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
 
         {/* Konten Utama dengan Efek Blur saat Modal Password Terbuka */}
         <div style={{ filter: showPasswordModal ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
-          <span className={styles.eyebrow}>Peluang Investasi</span>
+          <span className={styles.eyebrow}>Investasi</span>
 
           <div className={styles.actionWrapper}>
             {!user ? (
-              /* SEBELUM LOGIN: Hanya teks peluang investasi dan tombol login */
+              /* SEBELUM LOGIN: Hanya teks Investasi dan tombol login */
               <div style={{ marginTop: '16px' }}>
                 <span className={styles.subtitle} style={{ display: 'block', marginBottom: '20px' }}>
                   Amankan alokasi kuota komoditas ekspor Anda sekarang.
