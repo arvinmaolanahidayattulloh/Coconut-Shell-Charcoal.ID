@@ -6,7 +6,7 @@ import styles from './Login.module.css';
 
 const Login = () => {
   const { loginGoogle, loginMicrosoft, loginApple } = useAccount();
-  const [authMode, setAuthMode] = useState(null); // 'login', 'register', 'reset_password', 'forgot_username', 'otp_wa', 'otp_email', 'new_password'
+  const [authMode, setAuthMode] = useState(null); 
   const [authInput, setAuthInput] = useState({ username: '', password: '', whatsapp: '', email: '', otp: '' });
   const [tempData, setTempData] = useState({});
 
@@ -117,15 +117,18 @@ const Login = () => {
         </button>
       </div>
 
+      {/* Pemisah Elegan */}
+      <div className={styles.dividerWrapper}>Atau masuk dengan</div>
+
       {/* Tombol Social Auth (Google, Microsoft, Apple) */}
       <div className={styles.socialButtonsContainer}>
         <button onClick={() => loginGoogle({ name: "Google User", email: "user@gmail.com" })} className={styles.socialBtn}>
           Google
         </button>
-        <button onClick={loginMicrosoft} className={styles.socialBtn} style={{ background: '#2f2f2f', color: '#fff' }}>
+        <button onClick={loginMicrosoft} className={styles.socialBtn} style={{ background: '#1e293b', color: '#fff', borderColor: '#1e293b' }}>
           Microsoft
         </button>
-        <button onClick={loginApple} className={styles.socialBtn} style={{ background: '#000000', color: '#fff' }}>
+        <button onClick={loginApple} className={styles.socialBtn} style={{ background: '#0f172a', color: '#fff', borderColor: '#0f172a' }}>
           Apple
         </button>
       </div>
@@ -145,9 +148,10 @@ const Login = () => {
         <div className={styles.modalOverlay}>
           <form onSubmit={handleLoginSubmit} className={styles.modalForm}>
             <h4 className={styles.modalTitle}>Masuk Akun</h4>
+            <p className={styles.modalDesc}>Masukkan username dan password Anda</p>
             <input type="text" placeholder="Username" value={authInput.username} onChange={e => setAuthInput({...authInput, username: e.target.value})} required className={styles.inputField} />
             <input type="password" placeholder="Password" value={authInput.password} onChange={e => setAuthInput({...authInput, password: e.target.value})} required className={styles.inputField} />
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <div className={styles.modalActionsRow}>
               <button type="submit" className={styles.btnSubmit}>MASUK</button>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
             </div>
@@ -159,11 +163,11 @@ const Login = () => {
         <div className={styles.modalOverlay}>
           <form onSubmit={handleRegisterSubmit} className={styles.modalForm}>
             <h4 className={styles.modalTitle}>Daftar Akun Baru</h4>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '-4px 0 8px 0', textAlign: 'center' }}>OTP dikirim ke WhatsApp</p>
+            <p className={styles.modalDesc}>Verifikasi OTP akan dikirim melalui WhatsApp</p>
             <input type="text" placeholder="Buat Username" value={authInput.username} onChange={e => setAuthInput({...authInput, username: e.target.value})} required className={styles.inputField} />
             <input type="password" placeholder="Buat Password" value={authInput.password} onChange={e => setAuthInput({...authInput, password: e.target.value})} required className={styles.inputField} />
             <input type="tel" placeholder="No. WhatsApp (0812...)" value={authInput.whatsapp} onChange={e => setAuthInput({...authInput, whatsapp: e.target.value})} required className={styles.inputField} />
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <div className={styles.modalActionsRow}>
               <button type="submit" className={styles.btnSubmit}>LANJUT & OTP</button>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
             </div>
@@ -175,9 +179,9 @@ const Login = () => {
         <div className={styles.modalOverlay}>
           <form onSubmit={handleVerifyWaOtp} className={styles.modalForm}>
             <h4 className={styles.modalTitle}>OTP WhatsApp</h4>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '-4px 0 8px 0', textAlign: 'center' }}>Simulasi kode: 123456</p>
-            <input type="text" maxLength={6} placeholder="123456" value={authInput.otp} onChange={e => setAuthInput({...authInput, otp: e.target.value})} required className={styles.inputField} style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px' }} />
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <p className={styles.modalDesc}>Simulasi kode OTP: <b>123456</b></p>
+            <input type="text" maxLength={6} placeholder="123456" value={authInput.otp} onChange={e => setAuthInput({...authInput, otp: e.target.value})} required className={styles.inputField} style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }} />
+            <div className={styles.modalActionsRow}>
               <button type="submit" className={styles.btnSubmit}>VERIFIKASI</button>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
             </div>
@@ -189,8 +193,9 @@ const Login = () => {
         <div className={styles.modalOverlay}>
           <form onSubmit={handleForgotPassSubmit} className={styles.modalForm}>
             <h4 className={styles.modalTitle}>Reset Password</h4>
-            <input type="tel" placeholder="No. WhatsApp Terdaftar" value={authInput.whatsapp} onChange={e => setAuthInput({...authInput, whatsapp: e.target.value})} required className={styles.inputField} />
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <p className={styles.modalDesc}>Masukkan No. WhatsApp terdaftar</p>
+            <input type="tel" placeholder="No. WhatsApp" value={authInput.whatsapp} onChange={e => setAuthInput({...authInput, whatsapp: e.target.value})} required className={styles.inputField} />
+            <div className={styles.modalActionsRow}>
               <button type="submit" className={styles.btnSubmit}>KIRIM OTP</button>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
             </div>
@@ -202,8 +207,9 @@ const Login = () => {
         <div className={styles.modalOverlay}>
           <form onSubmit={handleNewPasswordSubmit} className={styles.modalForm}>
             <h4 className={styles.modalTitle}>Password Baru</h4>
+            <p className={styles.modalDesc}>Masukkan sandi baru untuk akun Anda</p>
             <input type="password" placeholder="Password Baru" value={authInput.password} onChange={e => setAuthInput({...authInput, password: e.target.value})} required className={styles.inputField} />
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <div className={styles.modalActionsRow}>
               <button type="submit" className={styles.btnSubmit}>SIMPAN</button>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
             </div>
@@ -215,8 +221,9 @@ const Login = () => {
         <div className={styles.modalOverlay}>
           <form onSubmit={handleForgotUsernameSubmit} className={styles.modalForm}>
             <h4 className={styles.modalTitle}>Lupa Akun</h4>
+            <p className={styles.modalDesc}>Masukkan email terdaftar Anda</p>
             <input type="email" placeholder="email@domain.com" value={authInput.email} onChange={e => setAuthInput({...authInput, email: e.target.value})} required className={styles.inputField} />
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <div className={styles.modalActionsRow}>
               <button type="submit" className={styles.btnSubmit}>KIRIM OTP</button>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
             </div>
@@ -228,9 +235,9 @@ const Login = () => {
         <div className={styles.modalOverlay}>
           <form onSubmit={handleVerifyEmailOtp} className={styles.modalForm}>
             <h4 className={styles.modalTitle}>OTP Email</h4>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '-4px 0 8px 0', textAlign: 'center' }}>Simulasi kode: 654321</p>
-            <input type="text" maxLength={6} placeholder="654321" value={authInput.otp} onChange={e => setAuthInput({...authInput, otp: e.target.value})} required className={styles.inputField} style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px' }} />
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <p className={styles.modalDesc}>Simulasi kode OTP: <b>654321</b></p>
+            <input type="text" maxLength={6} placeholder="654321" value={authInput.otp} onChange={e => setAuthInput({...authInput, otp: e.target.value})} required className={styles.inputField} style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }} />
+            <div className={styles.modalActionsRow}>
               <button type="submit" className={styles.btnSubmit}>KIRIM USERNAME</button>
               <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
             </div>
