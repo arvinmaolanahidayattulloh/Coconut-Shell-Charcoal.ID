@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AccountProvider } from "@/components/Account";
-// ❌ HAPUS IMPORT PriceProvider: import { PriceProvider } from "@/context/PriceContext"; 
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Partners from "@/components/Partners";
@@ -21,7 +20,7 @@ import { LeftPanel, RightPanel } from "@/components/SidePanels";
 export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
   
-  // ✅ 1. Tambahkan state harga live di sini sebagai pusat data
+  // ✅ PUSAT DATA HARGA (Menggantikan PriceContext yang error)
   const [livePrice, setLivePrice] = useState(1250.50);
 
   useEffect(() => {
@@ -56,62 +55,51 @@ export default function Home() {
   return (
     <GoogleOAuthProvider clientId="677126002730-5m6a6uge42bvk9aglki09dqkoi467tfs.apps.googleusercontent.com">
       <AccountProvider>
-        {/* ❌ 2. Bungkus PriceProvider dihapus dari sini */}
-          <Header />
+        <Header />
+        <div className="pageFlexLayout">
+          <div className="mainLayoutContainer">
+            <main>
+              <div className="sectionWrapper">
+                <LeftPanel section="beranda" />
+                <Hero />
+                <RightPanel section="beranda" />
+              </div>
+              <Partners />
+              <AdBanner slot="1001" format="horizontal" className="adSection" />
+              <div className="sectionWrapper">
+                <LeftPanel section="tentang" />
+                <About />
+                <RightPanel section="tentang" />
+              </div>
+              <div className="sectionWrapper">
+                <LeftPanel section="produk" />
+                <Products />
+                <RightPanel section="produk" />
+              </div>
+              <AdBanner slot="1002" format="horizontal" className="adSection" />
+              <div className="sectionWrapper">
+                <LeftPanel section="keunggulan" />
+                <WhyUs />
+                <RightPanel section="keunggulan" />
+              </div>
+              <CTA />
 
-          <div className="pageFlexLayout">
-            <div className="mainLayoutContainer">
-              <main>
-                <div className="sectionWrapper">
-                  <LeftPanel section="beranda" />
-                  <Hero />
-                  <RightPanel section="beranda" />
-                </div>
-
-                <Partners />
-
-                <AdBanner slot="1001" format="horizontal" className="adSection" />
-
-                <div className="sectionWrapper">
-                  <LeftPanel section="tentang" />
-                  <About />
-                  <RightPanel section="tentang" />
-                </div>
-
-                <div className="sectionWrapper">
-                  <LeftPanel section="produk" />
-                  <Products />
-                  <RightPanel section="produk" />
-                </div>
-
-                <AdBanner slot="1002" format="horizontal" className="adSection" />
-
-                <div className="sectionWrapper">
-                  <LeftPanel section="keunggulan" />
-                  <WhyUs />
-                  <RightPanel section="keunggulan" />
-                </div>
-
-                <CTA />
-
-                {/* ✅ 3. Kirim fungsi pengubah harga ke Chart */}
-                <PriceChart setLivePrice={setLivePrice} />
-                
-                {/* ✅ 4. Kirim data harga live ke Terminal Trade */}
-                <Trade livePrice={livePrice} />
-                
-                <Invest />
-
-                <AdBanner slot="1003" format="horizontal" className="adSection" />
-
-                <div className="sectionWrapper">
-                  <LeftPanel section="kontak" />
-                  <Footer />
-                  <RightPanel section="kontak" />
-                </div>
-              </main>
-            </div>
+              {/* ✅ MENGIRIM FUNGSI UPDATE HARGA KE CHART */}
+              <PriceChart setLivePrice={setLivePrice} />
+              
+              {/* ✅ MENGIRIM HARGA LIVE KE TERMINAL TRADE */}
+              <Trade livePrice={livePrice} />
+              
+              <Invest />
+              <AdBanner slot="1003" format="horizontal" className="adSection" />
+              <div className="sectionWrapper">
+                <LeftPanel section="kontak" />
+                <Footer />
+                <RightPanel section="kontak" />
+              </div>
+            </main>
           </div>
+        </div>
       </AccountProvider>
     </GoogleOAuthProvider>
   );
