@@ -1,44 +1,70 @@
 "use client";
 
-import React, { createContext, useContext, useState } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AccountContext = createContext();
 
 export function AccountProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  const login = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-        const userInfo = await res.json();
-        setUser(userInfo);
-      } catch (error) {
-        console.error("Gagal mengambil data user:", error);
+  // Cek sesi login yang tersimpan di localStorage
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("csc_user");
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
       }
-    },
-    onError: (error) => console.error('Login Gagal:', error)
-  });
+    } catch (e) {}
+  }, []);
+
+  // Login Google
+  const loginGoogle = (userData) => {
+    const userInfo = {
+      name: userData.name || "Google User",
+      email: userData.email || "",
+      picture: userData.picture || "https://via.placeholder.com/40",
+      provider: "google"
+    };
+    setUser(userInfo);
+    localStorage.setItem("csc_user", JSON.stringify(userInfo));
+  };
+
+  // Login Microsoft
+  const loginMicrosoft = () => {
+    const mockUser = {
+      name: "Microsoft User",
+      email: "user@outlook.com",
+      picture: "https://via.placeholder.com/40",
+      provider: "microsoft"
+    };
+    setUser(mockUser);
+    localStorage.setItem("csc_user", JSON.stringify(mockUser));
+  };
+
+  // Login Apple
+  const loginApple = () => {
+    const mockUser = {
+      name: "Apple User",
+      email: "user@privaterelay.appleid.com",
+      picture: "https://via.placeholder.com/40",
+      provider: "apple"
+    };
+    setUser(mockUser);
+    localStorage.setItem("csc_user", JSON.stringify(mockUser));
+  };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem("csc_user");
   };
 
   return (
-    <AccountContext.Provider value={{ user, login, logout }}>
+    <AccountContext.Provider value={{ user, loginGoogle, loginMicrosoft, loginApple, logout }}>
       {children}
     </AccountContext.Provider>
   );
 }
 
-export const useAccount = () => {
-  const context = useContext(AccountContext);
-  // Pengaman jika context belum siap saat loading
-  if (context === undefined) {
-    return { user: null, login: () => {}, logout: () => {} }; 
-  }
-  return context;
-};
+export function useAccount() {
+  return useContext(AccountContext);
+}
