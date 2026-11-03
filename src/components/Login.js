@@ -78,14 +78,13 @@ const Login = () => {
 
   return (
     <div className={styles.loginContainer}>
-      {/* Judul Baru */}
+      {/* 1. Hanya 1 Judul: Investasi CSCID */}
       <h2 className={styles.cardTitle}>Investasi CSCID</h2>
 
       <span className={styles.subtitle}>
         Amankan alokasi kuota komoditas ekspor Anda sekarang.
       </span>
 
-      {/* Gambar di Tengah (Tanpa Background) */}
       <div className={styles.imageWrapper}>
         <img 
           src="/NephiPhelia.png" 
@@ -94,55 +93,58 @@ const Login = () => {
         />
       </div>
 
-      {/* Baris Tombol: Daftar di Kiri, Masuk di Kanan */}
       <div className={styles.authButtonsRow}>
         <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
         <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
       </div>
 
-      {/* Baris Tautan: Lupa Akun di Kiri, Reset Password di Kanan */}
       <div className={styles.linksRow}>
         <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
         <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
       </div>
 
       {authMode === 'login_username' && (
-        <AuthModal
-          title="Masuk Akun"
-          desc="Masukkan username dan password Anda"
-          onSubmit={handleLoginSubmit}
-          submitLabel="MASUK"
-          onBack={closeAll}
-          footer={
-            <>
-              <div className={styles.dividerWrapper}>atau masuk dengan</div>
+        <div className={styles.modalBackdrop} onClick={closeAll}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
+            <AuthModal
+              title="Masuk Akun"
+              desc="Masukkan username dan password Anda"
+              onSubmit={handleLoginSubmit}
+              submitLabel="MASUK"
+              onBack={closeAll} // Tetap ada handler tutup
+              hideBackBtn={true} // Tanpa tombol kembali
+              footer={
+                <>
+                  <div className={styles.dividerWrapper}>atau masuk dengan</div>
 
-              <button type="button" onClick={handleLoginPasskey} disabled={busyProvider !== null} className={styles.passkeyBtn}>
-                <ProviderIcon name="Passkey" />
-                {busyProvider === 'Passkey' ? 'Memverifikasi...' : 'Masuk dengan Passkey'}
-              </button>
-
-              <div className={styles.socialGrid}>
-                {['Microsoft', 'Google', 'Apple'].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => handleLoginProvider(p)}
-                    disabled={busyProvider !== null}
-                    className={styles.providerCard}
-                    aria-label={`Masuk dengan ${p}`}
-                  >
-                    <ProviderIcon name={p} />
-                    <span>{busyProvider === p ? '...' : p}</span>
+                  <button type="button" onClick={handleLoginPasskey} disabled={busyProvider !== null} className={styles.passkeyBtn}>
+                    <ProviderIcon name="Passkey" />
+                    {busyProvider === 'Passkey' ? 'Memverifikasi...' : 'Masuk dengan Passkey'}
                   </button>
-                ))}
-              </div>
-            </>
-          }
-        >
-          <input type="text" placeholder="Username" {...bind('username')} />
-          <input type="password" placeholder="Password" {...bind('password')} />
-        </AuthModal>
+
+                  <div className={styles.socialGrid}>
+                    {['Microsoft', 'Google', 'Apple'].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => handleLoginProvider(p)}
+                        disabled={busyProvider !== null}
+                        className={styles.providerCard}
+                        aria-label={`Masuk dengan ${p}`}
+                      >
+                        <ProviderIcon name={p} />
+                        <span>{busyProvider === p ? '...' : p}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              }
+            >
+              <input type="text" placeholder="Username" {...bind('username')} />
+              <input type="password" placeholder="Password" {...bind('password')} />
+            </AuthModal>
+          </div>
+        </div>
       )}
 
       <Register open={authMode === 'register'} onClose={closeAll} onRegistered={goLogin} />
