@@ -5,6 +5,9 @@ import { useAccount } from './Account';
 import Login from './Login';
 import styles from './Invest.module.css';
 
+// 1. IMPORT DATA DARI Mitra.js
+import { partnersData } from './Mitra'; 
+
 const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const { user, logout } = useAccount();
   
@@ -14,12 +17,15 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const [passwordError, setPasswordError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Set default mitra dari data pertama di Mitra.js (jika ada)
+  const defaultMitra = partnersData && partnersData.length > 0 ? partnersData[0].name : 'PT. Tunas Kembar Abadi';
+
   // State Form Investasi Baru
   const [isInvestingFlow, setIsInvestingFlow] = useState(false);
   const [invData, setInvData] = useState({
     ton: 1,
     currency: 'IDR',
-    mitra: 'PT. Tunas Kembar Abadi',
+    mitra: defaultMitra,
     payment: 'bank',
     senderName: '',
     senderBank: '',
@@ -28,11 +34,14 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   
   const [invAgreed, setInvAgreed] = useState(false);
   const [invShake, setInvShake] = useState(false);
-  const [showTerms, setShowTerms] = useState(false); // Toggle teks S&K
+  const [showTerms, setShowTerms] = useState(false); 
 
   // Harga Dasar
   const PRICE_PER_TON_IDR = 10500000;
   const USD_EXCHANGE_RATE = 15500;
+
+  // 2. AMBIL DATA REKENING BANK OTOMATIS BERDASARKAN MITRA YANG DIPILIH
+  const selectedMitraData = partnersData.find(p => p.name === invData.mitra) || partnersData[0];
 
   const handleLogout = () => {
     logout();
@@ -98,7 +107,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     alert(`Pembayaran berhasil dikonfirmasi!\n\nNama: ${invData.senderName}\nBank: ${invData.senderBank}\nInvestasi sebesar ${invData.ton} Ton pada ${invData.mitra} akan segera diverifikasi oleh sistem.`);
   };
 
-  // Kalkulasi & Format Mata Uang
   const currentTotalIdr = invData.ton * PRICE_PER_TON_IDR;
   const displayTotal = invData.currency === 'IDR' 
     ? `Rp ${currentTotalIdr.toLocaleString('id-ID')}`
@@ -154,7 +162,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
             ) : (
               <div className={styles.userDashboard}>
                 
-                {/* --- TAMPILAN 1: DASBOR UTAMA (BERANDA INVEST) --- */}
                 {!isInvestingFlow && (
                   <>
                     <div className={styles.userInfo} style={{ marginBottom: '24px' }}>
@@ -184,13 +191,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                   </>
                 )}
 
-                {/* --- TAMPILAN 2: FORMULIR PEMESANAN INVESTASI --- */}
                 {isInvestingFlow && (
                   <div style={{ textAlign: 'left', animation: 'fadeIn 0.3s ease' }}>
                     
                     <form onSubmit={handleProcessPayment}>
                       
-                      {/* Desain Input Qty (Ton) yang Lebih Bagus */}
                       <div style={{ marginBottom: '16px' }}>
                         <label style={labelStyle}>Jumlah Investasi (Ton)</label>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -211,23 +216,25 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         </div>
                       </div>
 
-                      {/* Tampilan Total Harga */}
                       <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '10px', marginBottom: '16px', border: '1px solid #fde68a' }}>
                         <span style={{ display: 'block', fontSize: '13px', color: '#92400e', marginBottom: '4px' }}>Total Tagihan Pembayaran:</span>
                         <span style={{ fontSize: '24px', fontWeight: '800', color: '#b45309' }}>{displayTotal}</span>
                       </div>
 
-                      {/* Pilihan Mitra PT */}
+                      {/* 3. LOOPING NAMA PERUSAHAAN DARI Mitra.js */}
                       <div style={{ marginBottom: '16px' }}>
                         <label style={labelStyle}>Mitra Broker / Perusahaan (PT)</label>
                         <select value={invData.mitra} onChange={(e) => setInvData({...invData, mitra: e.target.value})} style={inputStyle}>
-                          <option value="PT. Tunas Kembar Abadi">PT. Tunas Kembar Abadi</option>
-                          <option value="PT. Arang Nusantara Jaya">PT. Arang Nusantara Jaya</option>
-                          <option value="PT. Indo Charcoal Ekspor">PT. Indo Charcoal Ekspor</option>
+                          {partnersData && partnersData.length > 0 ? (
+                            partnersData.map((mitra) => (
+                              <option key={mitra.id} value={mitra.name}>{mitra.name}</option>
+                            ))
+                          ) : (
+                            <option value="PT. Tunas Kembar Abadi">PT. Tunas Kembar Abadi</option>
+                          )}
                         </select>
                       </div>
 
-                      {/* Metode Pembayaran */}
                       <div style={{ marginBottom: '16px' }}>
                         <label style={labelStyle}>Metode Pembayaran</label>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -242,14 +249,14 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         </div>
                       </div>
 
-                      {/* Detail Rekening Pembayaran */}
+                      {/* 4. DETAIL REKENING DINAMIS DARI Mitra.js */}
                       <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
                         {invData.payment === 'bank' ? (
                           <>
                             <h5 style={{ margin: '0 0 8px 0', color: '#334155', fontSize: '14px' }}>Tujuan Transfer Bank</h5>
-                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Bank: <b>BCA (Bank Central Asia)</b></p>
-                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>No. Rekening: <b style={{ fontSize: '18px', color: '#0f172a' }}>869 1234 5678</b></p>
-                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Atas Nama: <b>{invData.mitra}</b></p>
+                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Bank: <b>{selectedMitraData?.bank || 'BCA (Bank Central Asia)'}</b></p>
+                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>No. Rekening: <b style={{ fontSize: '18px', color: '#0f172a' }}>{selectedMitraData?.noRekening || '869 1234 5678'}</b></p>
+                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Atas Nama: <b>{selectedMitraData?.anRekening || invData.mitra}</b></p>
                           </>
                         ) : (
                           <div style={{ textAlign: 'center' }}>
@@ -257,12 +264,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                             <div style={{ width: '140px', height: '140px', background: '#cbd5e1', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '2px dashed #94a3b8' }}>
                               <span style={{ fontSize: '12px', color: '#64748b' }}>[Mockup QRIS]</span>
                             </div>
-                            <p style={{ margin: '12px 0 0 0', fontSize: '14px', color: '#475569' }}>A.n <b>{invData.mitra}</b></p>
+                            <p style={{ margin: '12px 0 0 0', fontSize: '14px', color: '#475569' }}>A.n <b>{selectedMitraData?.anRekening || invData.mitra}</b></p>
                           </div>
                         )}
                       </div>
 
-                      {/* Form Konfirmasi Data Pengirim */}
                       <h3 style={{ margin: '0 0 12px 0', color: '#111827', fontSize: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
                         Data Konfirmasi Pembayaran
                       </h3>
@@ -282,7 +288,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         <input type="file" accept="image/*,application/pdf" required onChange={(e) => setInvData({...invData, proofFile: e.target.files[0]})} style={{ ...inputStyle, padding: '9px', background: '#ffffff', cursor: 'pointer' }} />
                       </div>
 
-                      {/* Syarat, Ketentuan & Risiko (Dapat di-Toggle) */}
                       <div className={invShake ? styles.shakeRed : ''} style={{ marginBottom: '24px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                           <input type="checkbox" checked={invAgreed} onChange={(e) => setInvAgreed(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#c45e20', marginTop: '2px' }} />
@@ -305,7 +310,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         )}
                       </div>
 
-                      {/* Tombol Aksi */}
                       <div style={{ display: 'flex', gap: '12px' }}>
                         <button type="button" onClick={() => setIsInvestingFlow(false)} style={{ padding: '14px 20px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
                           BATAL
