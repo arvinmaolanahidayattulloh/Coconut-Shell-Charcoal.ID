@@ -63,7 +63,7 @@ export default function Home() {
 
           <div className="pageFlexLayout">
             <div className="mainLayoutContainer">
-              <main>
+              <main id="beranda">
                 <div className="sectionWrapper">
                   <LeftPanel section="beranda" />
                   <Hero />
@@ -74,13 +74,13 @@ export default function Home() {
 
                 <AdBanner slot="1001" format="horizontal" className="adSection" />
 
-                <div className="sectionWrapper">
+                <div className="sectionWrapper" id="tentang">
                   <LeftPanel section="tentang" />
                   <About />
                   <RightPanel section="tentang" />
                 </div>
 
-                <div className="sectionWrapper">
+                <div className="sectionWrapper" id="produk">
                   <LeftPanel section="produk" />
                   <Products />
                   <RightPanel section="produk" />
@@ -88,7 +88,7 @@ export default function Home() {
 
                 <AdBanner slot="1002" format="horizontal" className="adSection" />
 
-                <div className="sectionWrapper">
+                <div className="sectionWrapper" id="keunggulan">
                   <LeftPanel section="keunggulan" />
                   <WhyUs />
                   <RightPanel section="keunggulan" />
@@ -98,7 +98,7 @@ export default function Home() {
 
                 <PriceChart setLivePrice={setLivePrice} />
                 
-                {/* Switch Tampilan Berdasarkan Tab yang Aktif (Hanya render 1 saja) */}
+                {/* Switch Tampilan Dinamis Berdasarkan Tab Aktif */}
                 {activeTab === 'invest' ? (
                   <Invest 
                     invested={invested} 
@@ -122,7 +122,7 @@ export default function Home() {
 
                 <AdBanner slot="1003" format="horizontal" className="adSection" />
 
-                <div className="sectionWrapper">
+                <div className="sectionWrapper" id="kontak">
                   <LeftPanel section="kontak" />
                   <Footer />
                   <RightPanel section="kontak" />
