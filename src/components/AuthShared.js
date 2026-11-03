@@ -6,10 +6,9 @@ import styles from './AuthShared.module.css';
 
 // ============================================================
 // AuthShared.jsx — dipakai bersama oleh Login.jsx & Register.jsx
-// Jangan taruh logika khusus Login/Register di sini.
 // ============================================================
 
-// [CONST-START] Konstanta (OTP masih simulasi, ganti dengan backend saat produksi)
+// [CONST-START] Konstanta
 export const OTP_EMAIL_SIM = '654321';
 export const OTP_WA_SIM = '123456';
 export const USERS_KEY = 'csc_registered_users';
@@ -27,7 +26,7 @@ export const normalizeWa = (v) => (v || '').replace(/\D/g, '').replace(/^62/, '0
 export const isValidWa = (v) => { const d = normalizeWa(v); return d.length >= 9 && d.length <= 14; };
 // [HELPERS-END]
 
-// [ICONS-START] Logo penyedia auth (SVG inline, tanpa dependensi)
+// [ICONS-START] Logo penyedia auth
 export const ProviderIcon = ({ name, size = 20 }) => {
   const common = { width: size, height: size, className: styles.providerIcon, 'aria-hidden': true };
 
@@ -61,7 +60,6 @@ export const ProviderIcon = ({ name, size = 20 }) => {
     );
   }
 
-  // Passkey
   return (
     <svg {...common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="15" r="4" />
@@ -73,7 +71,7 @@ export const ProviderIcon = ({ name, size = 20 }) => {
 };
 // [ICONS-END]
 
-// [MODAL-WRAPPER-START] Pembungkus modal form (dipakai semua modal form)
+// [MODAL-WRAPPER-START] Pembungkus modal form
 export const AuthModal = ({ title, desc, onSubmit, submitLabel, onBack, backLabel = 'BATAL', footer = null, children }) => (
   <div className={styles.modalOverlay}>
     <form onSubmit={onSubmit} className={styles.modalForm}>
@@ -90,7 +88,7 @@ export const AuthModal = ({ title, desc, onSubmit, submitLabel, onBack, backLabe
 );
 // [MODAL-WRAPPER-END]
 
-// [FORM-HOOK-START] State form + helper bind() untuk <input>
+// [FORM-HOOK-START] State form
 export const useAuthForm = () => {
   const [values, setValues] = useState(EMPTY_INPUT);
   const bind = (key, extra = {}) => ({
@@ -105,42 +103,29 @@ export const useAuthForm = () => {
 };
 // [FORM-HOOK-END]
 
-// [PROVIDER-HOOK-START] Pemanggil provider terpusat (perbaiki integrasi provider di sini saja)
+// [PROVIDER-HOOK-START] Pemanggil provider terpusat
 export const useProviderAuth = () => {
   const { loginGoogle, loginMicrosoft, loginApple } = useAccount();
   const [busyProvider, setBusyProvider] = useState(null);
 
-  const providerLoginMap = { Microsoft: loginMicrosoft, Google: loginGoogle, Apple: loginApple };
-
+  // FUNGSI INI SEKARANG HANYA MENGAMBIL DATA PROFIL TANPA TRIGGER LOGIN
   const runProvider = async (providerName) => {
-    const fn = providerLoginMap[providerName];
-    if (typeof fn !== 'function') {
-      throw new Error(`Fungsi login${providerName} tidak ditemukan di useAccount()`);
-    }
-    const fallbackProfile = {
+    // Simulasi loading OAuth / pemanggilan API Google, dll
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    
+    return {
       name: `${providerName} User`,
       email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id`,
     };
-    try {
-      const res = await fn();
-      return res && typeof res === 'object' ? res : fallbackProfile;
-    } catch (err) {
-      if (err instanceof TypeError) {
-        console.warn(`[PROVIDER] ${providerName} tanpa argumen gagal, coba dengan profil:`, err);
-        await fn(fallbackProfile);
-        return fallbackProfile;
-      }
-      throw err;
-    }
   };
 
-  return { loginGoogle, runProvider, busyProvider, setBusyProvider };
+  return { loginGoogle, loginMicrosoft, loginApple, runProvider, busyProvider, setBusyProvider };
 };
 // [PROVIDER-HOOK-END]
 
-// [OTP-FLOW-START] OTP Email → OTP WhatsApp (dipakai Daftar, Lupa Akun, Reset Password)
+// [OTP-FLOW-START] OTP Email → OTP WhatsApp
 export const OtpFlow = ({ email, whatsapp, onSuccess, onCancel }) => {
-  const [step, setStep] = useState('email'); // 'email' | 'wa'
+  const [step, setStep] = useState('email'); 
   const [otp, setOtp] = useState('');
 
   const handleSubmit = (e) => {
