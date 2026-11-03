@@ -22,6 +22,15 @@ const Login = () => {
   const closeAll = () => openMode(null);
   const goLogin = () => openMode('login_username');
 
+  // --- AUTO LOGIN SETELAH MENDAFTAR ---
+  const handleAutoLoginAfterRegister = (registeredData) => {
+    closeAll();
+    loginGoogle({
+      name: registeredData.username,
+      email: registeredData.email,
+    });
+  };
+
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     const found = loadUsers().find(
@@ -78,7 +87,7 @@ const Login = () => {
 
   return (
     <div className={styles.loginContainer}>
-      {/* Judul Utama Tunggal */}
+      {/* Judul Tunggal */}
       <h2 className={styles.cardTitle}>Investasi CSCID</h2>
 
       <p className={styles.subtitle}>
@@ -94,13 +103,13 @@ const Login = () => {
         />
       </div>
 
-      {/* Baris Tombol: Daftar di Kiri, Masuk di Kanan */}
+      {/* Tombol: Daftar di Kiri, Masuk di Kanan */}
       <div className={styles.authButtonsRow}>
         <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
         <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
       </div>
 
-      {/* Baris Tautan: Lupa Akun di Kiri, Reset Password di Kanan */}
+      {/* Tautan: Lupa Akun di Kiri, Reset Password di Kanan */}
       <div className={styles.linksRow}>
         <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
         <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
@@ -149,7 +158,8 @@ const Login = () => {
         </div>
       )}
 
-      <Register open={authMode === 'register'} onClose={closeAll} onRegistered={goLogin} />
+      {/* Komponen Register dengan Auto Login */}
+      <Register open={authMode === 'register'} onClose={closeAll} onRegistered={handleAutoLoginAfterRegister} />
 
       <Recovery
         mode={authMode === 'forgot' ? 'forgot' : authMode === 'reset' ? 'reset' : null}
