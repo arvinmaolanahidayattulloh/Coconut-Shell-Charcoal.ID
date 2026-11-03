@@ -50,8 +50,7 @@ export default function Home() {
   }, []);
 
   return (
-    // Membungkus seluruh aplikasi dengan Provider Google & Account
-    <GoogleOAuthProvider clientId="GANTI_DENGAN_CLIENT_ID_GOOGLE_ANDA">
+    <GoogleOAuthProvider clientId="677126002730-5m6a6uge42bvk9aglki09dqkoi467tfs.apps.googleusercontent.com">
       <AccountProvider>
         <Header />
 
