@@ -18,14 +18,16 @@ const Register = ({ open, onClose, onRegistered }) => {
   const { runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  // State alur pendaftaran multistep
   const [step, setStep] = useState('provider');
   const [data, setData] = useState({}); 
   const [otpInput, setOtpInput] = useState('');
   
-  // State pendukung
   const [countryCode, setCountryCode] = useState('+62');
   const [isLoading, setIsLoading] = useState(false);
+
+  // State Syarat & Ketentuan + Animasi Getar Merah
+  const [isAgreed, setIsAgreed] = useState(false);
+  const [shakeError, setShakeError] = useState(false);
 
   useEffect(() => {
     if (open) { 
@@ -35,24 +37,21 @@ const Register = ({ open, onClose, onRegistered }) => {
       setOtpInput(''); 
       setCountryCode('+62');
       setIsLoading(false);
+      setIsAgreed(false);
+      setShakeError(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]); 
 
-  // --- 1. PILIH PROVIDER & LANGSUNG KIRIM OTP EMAIL NYATA VIA RESEND ---
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
       const account = await runProvider(providerName);
       const userEmail = account?.email || '';
-      if (!userEmail) {
-        throw new Error('Email akun tidak ditemukan.');
-      }
+      if (!userEmail) throw new Error('Email akun tidak ditemukan.');
 
       setData({ provider: providerName, email: userEmail });
       
       setIsLoading(true);
-      // Kirim OTP Email otomatis setelah memilih akun
       const res = await fetch('/api/send-otp-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,7 +65,6 @@ const Register = ({ open, onClose, onRegistered }) => {
         setData((prev) => ({ ...prev, serverEmailOtp: result.test_otp }));
       }
 
-      alert(`Email verifikasi telah dikirim ke ${userEmail}`);
       setOtpInput('');
       setStep('otp_email'); 
     } catch (err) {
@@ -78,20 +76,16 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
-  // --- 2. SUBMIT OTP EMAIL & LANJUT BUAT USERNAME ---
   const handleOtpEmailSubmit = (e) => {
     e.preventDefault();
-    
     if (!data.serverEmailOtp || otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
-      alert('Kode OTP Email salah! Periksa kembali email Anda.'); 
+      alert('Kode OTP Email salah!'); 
       return; 
     }
-    
     setOtpInput('');
     setStep('username'); 
   };
 
-  // --- 3. SUBMIT USERNAME ---
   const handleUsernameSubmit = (e) => {
     e.preventDefault();
     if (loadUsers().some((u) => sameText(u.username, values.username))) {
@@ -102,19 +96,24 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('password'); 
   };
 
-  // --- 4. SUBMIT PASSWORD ---
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setData((prev) => ({ ...prev, password: values.password }));
     setStep('wa'); 
   };
 
-  // --- 5. SUBMIT WHATSAPP & KIRIM OTP WA VIA FONNTE ---
   const handleWaSubmit = async (e) => {
     e.preventDefault();
     const cleanNumber = values.whatsapp.replace(/^0+/, '');
     if (cleanNumber.length < 8) { alert('Nomor WhatsApp tidak valid.'); return; }
     
+    // Validasi S&K sebelum kirim OTP WhatsApp terakhir
+    if (!isAgreed) {
+      setShakeError(true);
+      setTimeout(() => setShakeError(false), 600); // Bergetar selama 600ms
+      return;
+    }
+
     const fullWaNumber = `${countryCode}${cleanNumber}`;
     setData((prev) => ({ ...prev, whatsapp: fullWaNumber }));
     
@@ -133,7 +132,6 @@ const Register = ({ open, onClose, onRegistered }) => {
         setData((prev) => ({ ...prev, serverWaOtp: result.test_otp_wa }));
       }
 
-      alert(`Kode OTP WhatsApp telah dikirim ke nomor ${fullWaNumber}`);
       setOtpInput('');
       setStep('otp_wa');
     } catch (err) {
@@ -144,10 +142,8 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
-  // --- 6. SUBMIT OTP WHATSAPP & SELESAI DAFTAR ---
   const handleOtpWaSubmit = (e) => {
     e.preventDefault();
-    
     if (!data.serverWaOtp || otpInput.trim() !== data.serverWaOtp.toString().trim()) { 
       alert('Kode OTP WhatsApp salah!'); 
       return; 
@@ -163,163 +159,153 @@ const Register = ({ open, onClose, onRegistered }) => {
     });
     saveUsers(users);
     
-    alert('Pendaftaran berhasil! Akun PT Tunas Kembar Abadi Anda telah aktif.');
+    alert('Pendaftaran berhasil! Akun Anda telah aktif.');
     onRegistered(); 
   };
 
   if (!open) return null;
 
-  // ================= RENDER TAMPILAN (UI) =================
+  return (
+    /* Klik di luar area modal untuk menutup */
+    <div className={styles.modalBackdrop} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
+        
+        {step === 'provider' && (
+          <div className={styles.card}>
+            <h4 className={styles.title}>Daftar Akun</h4>
+            <p className={styles.desc}>Pilih platform untuk memulai verifikasi email</p>
 
-  if (step === 'provider') {
-    return (
-      <div className={styles.overlay}>
-        <div className={styles.card}>
-          <h4 className={styles.title}>Daftar Akun</h4>
-          <p className={styles.desc}>Pilih platform untuk memulai verifikasi email</p>
-
-          <div className={styles.providerStack}>
-            {PROVIDERS.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => handleSelectProvider(p)}
-                disabled={busyProvider !== null || isLoading}
-                className={styles.providerBtn}
-              >
-                <ProviderIcon name={p} size={22} />
-                <span>{busyProvider === p || isLoading ? 'Memproses...' : `Daftar dengan ${p}`}</span>
-              </button>
-            ))}
+            <div className={styles.providerStack}>
+              {PROVIDERS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handleSelectProvider(p)}
+                  disabled={busyProvider !== null || isLoading}
+                  className={styles.providerBtn}
+                >
+                  <ProviderIcon name={p} size={22} />
+                  <span>{busyProvider === p || isLoading ? 'Memproses...' : `Daftar dengan ${p}`}</span>
+                </button>
+              ))}
+            </div>
           </div>
+        )}
 
-          <button type="button" onClick={onClose} className={styles.backBtn}>KEMBALI</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 'otp_email') {
-    return (
-      <AuthModal
-        title="Verifikasi OTP Email"
-        desc={
-          <>
-            Kode telah dikirim ke <b>{data.email}</b> via Resend.<br />
-            <span style={{ fontSize: '12px', color: '#c45e20', fontWeight: 'bold' }}>
-              Cek Kotak Masuk (Inbox) atau folder Spam Anda.
-            </span>
-          </>
-        }
-        onSubmit={handleOtpEmailSubmit}
-        submitLabel="VERIFIKASI EMAIL"
-        onBack={() => { setStep('provider'); setOtpInput(''); }}
-        backLabel="KEMBALI"
-      >
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={6}
-          placeholder="••••••"
-          value={otpInput}
-          onChange={(e) => setOtpInput(e.target.value)}
-          required
-          className={styles.inputField}
-          style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
-        />
-      </AuthModal>
-    );
-  }
-
-  if (step === 'username') {
-    return (
-      <AuthModal
-        title="Buat Username"
-        desc={<>Email terverifikasi: <b>{data.email}</b></>}
-        onSubmit={handleUsernameSubmit}
-        submitLabel="LANJUT"
-        onBack={() => setStep('otp_email')}
-        backLabel="KEMBALI"
-      >
-        <input type="text" placeholder="Masukkan Username" {...bind('username')} />
-      </AuthModal>
-    );
-  }
-
-  if (step === 'password') {
-    return (
-      <AuthModal
-        title="Buat Password"
-        desc="Buat password untuk akun Anda (min. 6 karakter)"
-        onSubmit={handlePasswordSubmit}
-        submitLabel="LANJUT"
-        onBack={() => setStep('username')}
-        backLabel="KEMBALI"
-      >
-        <input type="password" placeholder="Masukkan Password" {...bind('password', { minLength: 6 })} />
-      </AuthModal>
-    );
-  }
-
-  if (step === 'wa') {
-    return (
-      <AuthModal
-        title="Nomor WhatsApp"
-        desc="Pilih negara dan masukkan nomor WhatsApp untuk verifikasi akhir"
-        onSubmit={handleWaSubmit}
-        submitLabel={isLoading ? "MENGIRIM WA OTP..." : "KIRIM OTP WHATSAPP"}
-        onBack={() => setStep('password')}
-        backLabel="KEMBALI"
-      >
-        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-          <select 
-            value={countryCode} 
-            onChange={(e) => setCountryCode(e.target.value)}
-            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', outline: 'none' }}
+        {step === 'otp_email' && (
+          <AuthModal
+            title="Verifikasi OTP Email"
+            desc={<>Kode telah dikirim ke <b>{data.email}</b> via Resend.</>}
+            onSubmit={handleOtpEmailSubmit}
+            submitLabel="VERIFIKASI EMAIL"
+            hideBackBtn={true}
           >
-            <option value="+62">🇮🇩 +62</option>
-            <option value="+65">🇸🇬 +65</option>
-            <option value="+60">🇲🇾 +60</option>
-            <option value="+86">🇨🇳 +86</option>
-            <option value="+1">🇺🇸 +1</option>
-          </select>
-          <input 
-            type="tel" 
-            placeholder="8123456789" 
-            {...bind('whatsapp')} 
-            style={{ flex: 1, padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none' }}
-          />
-        </div>
-      </AuthModal>
-    );
-  }
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="••••••"
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value)}
+              required
+              className={styles.inputField}
+              style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
+            />
+          </AuthModal>
+        )}
 
-  if (step === 'otp_wa') {
-    return (
-      <AuthModal
-        title="Verifikasi OTP WhatsApp"
-        desc={<>Kode verifikasi telah dikirim ke WA <b>{data.whatsapp}</b> via Fonnte.</>}
-        onSubmit={handleOtpWaSubmit}
-        submitLabel="SELESAI DAFTAR"
-        onBack={() => { setStep('wa'); setOtpInput(''); }}
-        backLabel="KEMBALI"
-      >
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={6}
-          placeholder="••••••"
-          value={otpInput}
-          onChange={(e) => setOtpInput(e.target.value)}
-          required
-          className={styles.inputField}
-          style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
-        />
-      </AuthModal>
-    );
-  }
+        {step === 'username' && (
+          <AuthModal
+            title="Buat Username"
+            desc={<>Email terverifikasi: <b>{data.email}</b></>}
+            onSubmit={handleUsernameSubmit}
+            submitLabel="LANJUT"
+            hideBackBtn={true}
+          >
+            <input type="text" placeholder="Masukkan Username" {...bind('username')} />
+          </AuthModal>
+        )}
 
-  return null;
+        {step === 'password' && (
+          <AuthModal
+            title="Buat Password"
+            desc="Buat password untuk akun Anda (min. 6 karakter)"
+            onSubmit={handlePasswordSubmit}
+            submitLabel="LANJUT"
+            hideBackBtn={true}
+          >
+            <input type="password" placeholder="Masukkan Password" {...bind('password', { minLength: 6 })} />
+          </AuthModal>
+        )}
+
+        {step === 'wa' && (
+          <AuthModal
+            title="Nomor WhatsApp"
+            desc="Pilih negara dan masukkan nomor WhatsApp"
+            onSubmit={handleWaSubmit}
+            submitLabel={isLoading ? "MENGIRIM WA OTP..." : "KIRIM OTP WHATSAPP"}
+            hideBackBtn={true}
+          >
+            <div style={{ display: 'flex', gap: '8px', width: '100%', marginBottom: '12px' }}>
+              <select 
+                value={countryCode} 
+                onChange={(e) => setCountryCode(e.target.value)}
+                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff' }}
+              >
+                <option value="+62">🇮🇩 +62</option>
+                <option value="+65">🇸🇬 +65</option>
+                <option value="+60">🇲🇾 +60</option>
+                <option value="+86">🇨🇳 +86</option>
+                <option value="+1">🇺🇸 +1</option>
+              </select>
+              <input 
+                type="tel" 
+                placeholder="8123456789" 
+                {...bind('whatsapp')} 
+                style={{ flex: 1, padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+              />
+            </div>
+
+            {/* Tombol Persetujuan S&K dengan efek getar merah jika belum dicentang */}
+            <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isAgreed} 
+                  onChange={(e) => setIsAgreed(e.target.checked)} 
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                Saya Menyetujui Syarat dan Ketentuan
+              </label>
+            </div>
+          </AuthModal>
+        )}
+
+        {step === 'otp_wa' && (
+          <AuthModal
+            title="Verifikasi OTP WhatsApp"
+            desc={<>Kode telah dikirim ke WA <b>{data.whatsapp}</b></>}
+            onSubmit={handleOtpWaSubmit}
+            submitLabel="SELESAI DAFTAR"
+            hideBackBtn={true}
+          >
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="••••••"
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value)}
+              required
+              className={styles.inputField}
+              style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
+            />
+          </AuthModal>
+        )}
+
+      </div>
+    </div>
+  );
 };
 
 export default Register;
