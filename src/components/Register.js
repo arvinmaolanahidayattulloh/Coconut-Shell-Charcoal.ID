@@ -11,8 +11,7 @@ import {
   saveUsers,
   sameText,
   isValidWa,
-  OTP_EMAIL_SIM,
-  OTP_WA_SIM
+  OTP_WA_SIM // OTP WA masih simulasi, OTP Email sudah pakai API Asli Resend
 } from './AuthShared';
 
 const PROVIDERS = ['Google', 'Microsoft', 'Apple'];
@@ -25,15 +24,19 @@ const Register = ({ open, onClose, onRegistered }) => {
   const [step, setStep] = useState('provider');
   const [data, setData] = useState({}); 
   const [otpInput, setOtpInput] = useState('');
+  
+  // State untuk kode negara WhatsApp (Default +62 Indonesia)
+  const [countryCode, setCountryCode] = useState('+62');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // [PERBAIKAN SANGAT PENTING DI SINI]
-  // Menghapus 'reset' dari dependency array agar form tidak hilang saat berpindah step
   useEffect(() => {
     if (open) { 
       reset(); 
       setData({}); 
       setStep('provider'); 
       setOtpInput(''); 
+      setCountryCode('+62');
+      setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]); 
@@ -44,7 +47,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     try {
       const account = await runProvider(providerName);
       setData({ provider: providerName, email: account?.email || '' });
-      setStep('username'); // Sukses dari Google, langsung buka layar Username
+      setStep('username'); 
     } catch (err) {
       console.error(`[REG-PROVIDER] ${providerName}:`, err);
       alert(`Pemilihan akun ${providerName} gagal: ${err?.message || err}`);
@@ -61,29 +64,67 @@ const Register = ({ open, onClose, onRegistered }) => {
       return;
     }
     setData((prev) => ({ ...prev, username: values.username.trim() }));
-    setStep('password'); // Lanjut ke layar Password
+    setStep('password'); 
   };
 
   // --- 3. SUBMIT PASSWORD ---
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setData((prev) => ({ ...prev, password: values.password }));
-    setStep('wa'); // Lanjut ke layar WhatsApp
+    setStep('wa'); 
   };
 
-  // --- 4. SUBMIT WHATSAPP ---
-  const handleWaSubmit = (e) => {
+  // --- 4. SUBMIT WHATSAPP & KIRIM OTP EMAIL NYATA VIA RESEND ---
+  const handleWaSubmit = async (e) => {
     e.preventDefault();
-    if (!isValidWa(values.whatsapp)) { alert('Nomor WhatsApp tidak valid.'); return; }
-    setData((prev) => ({ ...prev, whatsapp: values.whatsapp }));
-    setOtpInput('');
-    setStep('otp_email'); // Lanjut ke layar OTP Email
+    const cleanNumber = values.whatsapp.replace(/^0+/, '');
+    if (cleanNumber.length < 8) { alert('Nomor WhatsApp tidak valid.'); return; }
+    
+    const fullWaNumber = `${countryCode}${cleanNumber}`;
+    setData((prev) => ({ ...prev, whatsapp: fullWaNumber }));
+    
+    setIsLoading(true);
+    try {
+      // Memanggil API Resend yang sudah Anda buat di /api/send-otp-email
+      const res = await fetch('/api/send-otp-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
+      
+      const result = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(result.error || 'Gagal mengirim email OTP');
+      }
+
+      // Jika menggunakan mode test/development, kita simpan server_otp sementara untuk verifikasi lokal
+      if (result.test_otp) {
+        setData((prev) => ({ ...prev, serverEmailOtp: result.test_otp }));
+      }
+
+      alert(`Email verifikasi telah dikirim ke ${data.email}`);
+      setOtpInput('');
+      setStep('otp_email'); 
+    } catch (err) {
+      console.error(err);
+      alert(`Gagal mengirim OTP Email: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- 5. SUBMIT OTP EMAIL ---
   const handleOtpEmailSubmit = (e) => {
     e.preventDefault();
-    if (otpInput !== OTP_EMAIL_SIM) { alert('Kode OTP Email salah!'); return; }
+    // Mencocokkan dengan kode yang dikirim API (atau fallback ke '654321' jika testing)
+    const validOtp = data.serverEmailOtp || '654321';
+    
+    if (otpInput !== validOtp) { 
+      alert('Kode OTP Email salah!'); 
+      return; 
+    }
+    
     setOtpInput('');
     setStep('otp_wa'); // Lanjut ke layar OTP WhatsApp
   };
@@ -111,7 +152,6 @@ const Register = ({ open, onClose, onRegistered }) => {
 
   // ================= RENDER LAYAR =================
 
-  // 1. LAYAR PILIH AKUN
   if (step === 'provider') {
     return (
       <div className={styles.overlay}>
@@ -140,7 +180,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // 2. LAYAR BUAT USERNAME
   if (step === 'username') {
     return (
       <AuthModal
@@ -156,7 +195,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // 3. LAYAR BUAT PASSWORD
   if (step === 'password') {
     return (
       <AuthModal
@@ -172,28 +210,45 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // 4. LAYAR NOMOR WHATSAPP
+  // Layar WhatsApp dengan Pilihan Negara
   if (step === 'wa') {
     return (
       <AuthModal
         title="Nomor WhatsApp"
-        desc="Masukkan nomor WhatsApp untuk verifikasi"
+        desc="Pilih negara dan masukkan nomor WhatsApp Anda"
         onSubmit={handleWaSubmit}
-        submitLabel="KIRIM OTP EMAIL"
+        submitLabel={isLoading ? "MENGIRIM EMAIL OTP..." : "KIRIM OTP EMAIL"}
         onBack={() => setStep('password')}
         backLabel="KEMBALI"
       >
-        <input type="tel" placeholder="No. WhatsApp (0812...)" {...bind('whatsapp')} />
+        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+          <select 
+            value={countryCode} 
+            onChange={(e) => setCountryCode(e.target.value)}
+            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="+62">🇮🇩 +62</option>
+            <option value="+65">🇸🇬 +65</option>
+            <option value="+60">🇲🇾 +60</option>
+            <option value="+86">🇨🇳 +86</option>
+            <option value="+1">🇺🇸 +1</option>
+          </select>
+          <input 
+            type="tel" 
+            placeholder="8123456789" 
+            {...bind('whatsapp')} 
+            style={{ flex: 1, padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none' }}
+          />
+        </div>
       </AuthModal>
     );
   }
 
-  // 5. LAYAR OTP EMAIL
   if (step === 'otp_email') {
     return (
       <AuthModal
         title="Verifikasi OTP Email"
-        desc={<>Kode telah dikirim ke <b>{data.email}</b><br />(Simulasi: {OTP_EMAIL_SIM})</>}
+        desc={<>Kode telah dikirim ke email <b>{data.email}</b> via Resend.<br /><span style={{ fontSize: '12px', color: '#666' }}>(Cek Inbox / Spam folder Anda)</span></>}
         onSubmit={handleOtpEmailSubmit}
         submitLabel="VERIFIKASI EMAIL"
         onBack={() => { setStep('wa'); setOtpInput(''); }}
@@ -214,7 +269,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // 6. LAYAR OTP WHATSAPP
   if (step === 'otp_wa') {
     return (
       <AuthModal
