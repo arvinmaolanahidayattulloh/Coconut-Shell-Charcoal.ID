@@ -3,35 +3,31 @@
 import React, { useState } from 'react';
 import styles from './Login.module.css';
 import Register from './Register';
+import Recovery from './Recovery';
 import {
   AuthModal,
-  OtpFlow,
   ProviderIcon,
   useAuthForm,
   useProviderAuth,
   loadUsers,
-  saveUsers,
   sameText,
-  normalizeWa,
 } from './AuthShared';
 
 // ============================================================
-// Login.jsx — titik masuk: Masuk, Passkey, provider, Lupa Akun, Reset Password
-// Daftar ada di Register.jsx (dipanggil dari sini)
+// Login.jsx — titik masuk: Masuk, Passkey, provider
+// Daftar  → Register.jsx (dipanggil dari sini)
+// Lupa Akun & Reset Password → Recovery.jsx (dipanggil dari sini)
 // ============================================================
 
 const Login = () => {
   const { loginGoogle, runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  // authMode: null | login_username | register
-  //           | forgot_email | forgot_wa | forgot_otp
-  //           | reset_username | reset_email | reset_wa | reset_otp | new_password
+  // authMode: null | login_username | register | forgot | reset
   const [authMode, setAuthMode] = useState(null);
-  const [tempData, setTempData] = useState({});
 
   // [NAV-START] navigasi antar modal
-  const openMode = (mode, data = {}) => { reset(); setTempData(data); setAuthMode(mode); };
+  const openMode = (mode) => { reset(); setAuthMode(mode); };
   const closeAll = () => openMode(null);
   const goLogin = () => openMode('login_username');
   // [NAV-END]
@@ -90,69 +86,6 @@ const Login = () => {
   };
   // [LOGIN-SOCIAL-END]
 
-  // [FORGOT-START] 2. LUPA AKUN: email → WA → OTP Email → OTP WA → username dikirim via email
-  const handleForgotEmailSubmit = (e) => {
-    e.preventDefault();
-    setTempData((prev) => ({ ...prev, email: values.email.trim() }));
-    setAuthMode('forgot_wa');
-  };
-
-  const handleForgotWaSubmit = (e) => {
-    e.preventDefault();
-    const found = loadUsers().find(
-      (u) => sameText(u.email, tempData.email) && normalizeWa(u.whatsapp) === normalizeWa(values.whatsapp)
-    );
-    if (!found) { alert('Email dan No. WhatsApp tidak cocok dengan akun terdaftar.'); return; }
-    setTempData((prev) => ({ ...prev, whatsapp: values.whatsapp, username: found.username }));
-    setAuthMode('forgot_otp');
-  };
-
-  const handleForgotOtpSuccess = () => {
-    // TODO produksi: kirim email lewat backend
-    alert(`Username Anda telah dikirim ke email ${tempData.email}. (Simulasi: username = ${tempData.username})`);
-    goLogin();
-  };
-  // [FORGOT-END]
-
-  // [RESET-START] 3. RESET PASSWORD: username → email → WA → OTP Email → OTP WA → password baru
-  const handleResetUsernameSubmit = (e) => {
-    e.preventDefault();
-    setTempData((prev) => ({ ...prev, username: values.username.trim() }));
-    setAuthMode('reset_email');
-  };
-
-  const handleResetEmailSubmit = (e) => {
-    e.preventDefault();
-    setTempData((prev) => ({ ...prev, email: values.email.trim() }));
-    setAuthMode('reset_wa');
-  };
-
-  const handleResetWaSubmit = (e) => {
-    e.preventDefault();
-    const found = loadUsers().find(
-      (u) =>
-        sameText(u.username, tempData.username) &&
-        sameText(u.email, tempData.email) &&
-        normalizeWa(u.whatsapp) === normalizeWa(values.whatsapp)
-    );
-    if (!found) { alert('Username, Email, dan No. WhatsApp tidak cocok dengan akun terdaftar.'); return; }
-    setTempData((prev) => ({ ...prev, whatsapp: values.whatsapp }));
-    setAuthMode('reset_otp');
-  };
-
-  const handleResetOtpSuccess = () => { reset(); setAuthMode('new_password'); };
-
-  const handleNewPasswordSubmit = (e) => {
-    e.preventDefault();
-    const users = loadUsers().map((u) =>
-      sameText(u.username, tempData.username) ? { ...u, password: values.password } : u
-    );
-    saveUsers(users);
-    alert('Password berhasil diubah! Silakan login kembali.');
-    goLogin();
-  };
-  // [RESET-END]
-
   return (
     <div className={styles.loginContainer}>
       <span className={styles.subtitle}>
@@ -167,8 +100,8 @@ const Login = () => {
 
       {/* Tautan Bantuan */}
       <div className={styles.linksRow}>
-        <button onClick={() => openMode('reset_username')} className={styles.linkBtn}>Reset Password</button>
-        <button onClick={() => openMode('forgot_email')} className={styles.linkBtn}>Lupa Akun?</button>
+        <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
+        <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
       </div>
 
       {/* ============ MODAL: MASUK (username+password, Passkey, Microsoft/Google/Apple) ============ */}
@@ -216,51 +149,12 @@ const Login = () => {
       {/* ============ DAFTAR (komponen terpisah: Register.jsx) ============ */}
       <Register open={authMode === 'register'} onClose={closeAll} onRegistered={goLogin} />
 
-      {/* ============ LUPA AKUN ============ */}
-      {authMode === 'forgot_email' && (
-        <AuthModal title="Lupa Akun" desc="Masukkan email terdaftar Anda" onSubmit={handleForgotEmailSubmit} submitLabel="NEXT" onBack={closeAll}>
-          <input type="email" placeholder="email@domain.com" {...bind('email')} />
-        </AuthModal>
-      )}
-
-      {authMode === 'forgot_wa' && (
-        <AuthModal title="Nomor WhatsApp" desc="Masukkan nomor WhatsApp yang terdaftar" onSubmit={handleForgotWaSubmit} submitLabel="KIRIM OTP" onBack={() => setAuthMode('forgot_email')} backLabel="KEMBALI">
-          <input type="tel" placeholder="No. WhatsApp (0812...)" {...bind('whatsapp')} />
-        </AuthModal>
-      )}
-
-      {authMode === 'forgot_otp' && (
-        <OtpFlow email={tempData.email} whatsapp={tempData.whatsapp} onSuccess={handleForgotOtpSuccess} onCancel={closeAll} />
-      )}
-
-      {/* ============ RESET PASSWORD ============ */}
-      {authMode === 'reset_username' && (
-        <AuthModal title="Reset Password" desc="Masukkan username akun Anda" onSubmit={handleResetUsernameSubmit} submitLabel="NEXT" onBack={closeAll}>
-          <input type="text" placeholder="Username" {...bind('username')} />
-        </AuthModal>
-      )}
-
-      {authMode === 'reset_email' && (
-        <AuthModal title="Email Terdaftar" desc="Masukkan email yang terdaftar" onSubmit={handleResetEmailSubmit} submitLabel="NEXT" onBack={() => setAuthMode('reset_username')} backLabel="KEMBALI">
-          <input type="email" placeholder="email@domain.com" {...bind('email')} />
-        </AuthModal>
-      )}
-
-      {authMode === 'reset_wa' && (
-        <AuthModal title="Nomor WhatsApp" desc="Masukkan nomor WhatsApp yang terdaftar" onSubmit={handleResetWaSubmit} submitLabel="KIRIM OTP" onBack={() => setAuthMode('reset_email')} backLabel="KEMBALI">
-          <input type="tel" placeholder="No. WhatsApp (0812...)" {...bind('whatsapp')} />
-        </AuthModal>
-      )}
-
-      {authMode === 'reset_otp' && (
-        <OtpFlow email={tempData.email} whatsapp={tempData.whatsapp} onSuccess={handleResetOtpSuccess} onCancel={closeAll} />
-      )}
-
-      {authMode === 'new_password' && (
-        <AuthModal title="Password Baru" desc="Masukkan sandi baru untuk akun Anda" onSubmit={handleNewPasswordSubmit} submitLabel="SIMPAN" onBack={closeAll}>
-          <input type="password" placeholder="Password Baru (min. 6 karakter)" {...bind('password', { minLength: 6 })} />
-        </AuthModal>
-      )}
+      {/* ============ LUPA AKUN & RESET PASSWORD (komponen terpisah: Recovery.jsx) ============ */}
+      <Recovery
+        mode={authMode === 'forgot' ? 'forgot' : authMode === 'reset' ? 'reset' : null}
+        onClose={closeAll}
+        onDone={goLogin}
+      />
     </div>
   );
 };
