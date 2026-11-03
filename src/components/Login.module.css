@@ -1,5 +1,5 @@
 /* ============================================================
-   Login.module.css — gaya khusus Login.jsx
+   Login.module.css — gaya khusus Login.jsx & Register.jsx
    ============================================================ */
 
 .loginContainer {
@@ -113,7 +113,7 @@
   text-decoration: underline;
 }
 
-/* Latar belakang modal gelap transparan untuk klik luar tertutup */
+/* Latar belakang popup dengan efek blur (klik area blur untuk menutup) */
 .modalBackdrop {
   position: fixed;
   top: 0;
@@ -121,6 +121,8 @@
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
