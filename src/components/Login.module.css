@@ -21,18 +21,37 @@
 }
 /* [CONTAINER-END] */
 
-/* [MAIN-BUTTONS-START] Baris Tombol Aksi Utama (Masuk & Daftar) */
+/* [IMAGE-CENTER-START] Wrapper & Style Gambar NephiPhelia.png di Tengah */
+.imageWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0;
+  width: 100%;
+}
+
+.centerImage {
+  max-width: 140px;
+  height: auto;
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+/* [IMAGE-CENTER-END] */
+
+/* [MAIN-BUTTONS-START] Baris Tombol Aksi Utama (Masuk & Daftar di Kanan) */
 .authButtonsRow {
   display: flex;
   gap: 12px;
   width: 100%;
+  justify-content: flex-end; /* Menggeser posisi tombol ke sebelah kanan */
   flex-wrap: wrap;
 }
 
 .primaryAuthBtn {
-  flex: 1;
-  min-width: 140px;
-  padding: 14px 20px;
+  flex: 0 1 auto;
+  min-width: 130px;
+  padding: 12px 18px;
   border-radius: 12px;
   border: none;
   background: #c45e20;
@@ -52,9 +71,9 @@
 }
 
 .secondaryAuthBtn {
-  flex: 1;
-  min-width: 140px;
-  padding: 14px 20px;
+  flex: 0 1 auto;
+  min-width: 130px;
+  padding: 12px 18px;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
@@ -188,6 +207,7 @@
 @media (max-width: 480px) {
   .authButtonsRow {
     flex-direction: column;
+    justify-content: stretch;
   }
   .primaryAuthBtn, .secondaryAuthBtn {
     width: 100%;
