@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import styles from './Register.module.css';
+import styles from './Login.module.css'; // Menggunakan style modul yang sama dengan Login
 import {
   AuthModal,
   ProviderIcon,
@@ -18,7 +18,7 @@ const Register = ({ open, onClose, onRegistered }) => {
   const { runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  const [step, setStep] = useState('terms_agreement'); // Langkah awal: Setuju Syarat & Ketentuan
+  const [step, setStep] = useState('terms_agreement'); // Mulai dengan persetujuan syarat
   const [data, setData] = useState({}); 
   const [otpInput, setOtpInput] = useState('');
   
@@ -33,7 +33,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     if (open) { 
       reset(); 
       setData({}); 
-      setStep('terms_agreement'); // Mulai dari setuju syarat
+      setStep('terms_agreement'); 
       setOtpInput(''); 
       setCountryCode('+62');
       setIsLoading(false);
@@ -42,7 +42,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   }, [open]); 
 
-  // --- 0. VALIDASI CHECKBOX S&K SEBELUM LANJUT KE PILIH PLATFORM ---
+  // Validasi centang S&K sebelum lanjut ke pilihan platform
   const handleProceedToProvider = (e) => {
     e.preventDefault();
     if (!isAgreed) {
@@ -53,7 +53,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('provider');
   };
 
-  // --- 1. PILIH PROVIDER & CEK APAKAH SUDAH TERDAFTAR ---
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
@@ -185,50 +184,43 @@ const Register = ({ open, onClose, onRegistered }) => {
     <div className={styles.modalBackdrop} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
         
-        {/* LANGKAH 0: SETUJU SYARAT & KETENTUAN DI AWAL */}
+        {/* LANGKAH 0: PERSETUJUAN SYARAT & KETENTUAN */}
         {step === 'terms_agreement' && (
-          <div className={styles.card} style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#111827' }}>Persetujuan</h4>
-            <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280' }}>Anda harus menyetujui syarat & ketentuan sebelum mendaftar.</p>
-
-            <form onSubmit={handleProceedToProvider}>
-              <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`} style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={isAgreed} 
-                    onChange={(e) => setIsAgreed(e.target.checked)} 
-                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                  />
-                  Saya Menyetujui Syarat dan Ketentuan
-                </label>
-              </div>
-
-              <button 
-                type="submit" 
-                style={{ width: '100%', padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                LANJUT
-              </button>
-            </form>
-          </div>
+          <AuthModal
+            title="Persetujuan"
+            desc="Anda harus menyetujui syarat & ketentuan sebelum mendaftar."
+            onSubmit={handleProceedToProvider}
+            submitLabel="LANJUT"
+            hideBackBtn={true}
+          >
+            <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`} style={{ width: '100%', margin: '8px 0' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isAgreed} 
+                  onChange={(e) => setIsAgreed(e.target.checked)} 
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                Saya Menyetujui Syarat dan Ketentuan
+              </label>
+            </div>
+          </AuthModal>
         )}
 
         {/* LANGKAH 1: PILIH PLATFORM */}
         {step === 'provider' && (
-          <div className={styles.card} style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-            <h4 className={styles.title} style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: '#111827' }}>Daftar Akun</h4>
-            <p className={styles.desc} style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280' }}>Pilih platform untuk memulai verifikasi email</p>
+          <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '100%' }}>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: '#111827' }}>Daftar Akun</h4>
+            <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280' }}>Pilih platform untuk memulai verifikasi email</p>
 
-            <div className={styles.providerStack} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {PROVIDERS.map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => handleSelectProvider(p)}
                   disabled={busyProvider !== null || isLoading}
-                  className={styles.providerBtn}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', color: '#111827' }}
                 >
                   <ProviderIcon name={p} size={22} />
                   <span>{busyProvider === p || isLoading ? 'Memeriksa...' : `Daftar dengan ${p}`}</span>
@@ -255,8 +247,7 @@ const Register = ({ open, onClose, onRegistered }) => {
               value={otpInput}
               onChange={(e) => setOtpInput(e.target.value)}
               required
-              className={styles.inputField}
-              style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
+              style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold', padding: '10px', width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px' }}
             />
           </AuthModal>
         )}
@@ -270,7 +261,7 @@ const Register = ({ open, onClose, onRegistered }) => {
             submitLabel="LANJUT"
             hideBackBtn={true}
           >
-            <input type="text" placeholder="Masukkan Username" {...bind('username')} />
+            <input type="text" placeholder="Masukkan Username" {...bind('username')} style={{ padding: '10px 12px', width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
           </AuthModal>
         )}
 
@@ -283,7 +274,7 @@ const Register = ({ open, onClose, onRegistered }) => {
             submitLabel="LANJUT"
             hideBackBtn={true}
           >
-            <input type="password" placeholder="Masukkan Password" {...bind('password', { minLength: 6 })} />
+            <input type="password" placeholder="Masukkan Password" {...bind('password', { minLength: 6 })} style={{ padding: '10px 12px', width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
           </AuthModal>
         )}
 
@@ -335,8 +326,7 @@ const Register = ({ open, onClose, onRegistered }) => {
               value={otpInput}
               onChange={(e) => setOtpInput(e.target.value)}
               required
-              className={styles.inputField}
-              style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
+              style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold', padding: '10px', width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px' }}
             />
           </AuthModal>
         )}
