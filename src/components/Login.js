@@ -22,7 +22,7 @@ const Login = () => {
   const closeAll = () => openMode(null);
   const goLogin = () => openMode('login_username');
 
-  // --- AUTO LOGIN SETELAH MENDAFTAR ---
+  // Auto-login setelah registrasi selesai
   const handleAutoLoginAfterRegister = (registeredData) => {
     closeAll();
     loginGoogle({
@@ -94,7 +94,7 @@ const Login = () => {
         Amankan alokasi kuota komoditas ekspor Anda sekarang.
       </p>
 
-      {/* Gambar di Tengah */}
+      {/* Gambar di Tengah Tanpa Background */}
       <div className={styles.imageWrapper}>
         <img 
           src="/NephiPhelia.png" 
@@ -115,6 +115,7 @@ const Login = () => {
         <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
       </div>
 
+      {/* Modal Login Username */}
       {authMode === 'login_username' && (
         <div className={styles.modalBackdrop} onClick={closeAll}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
@@ -158,9 +159,10 @@ const Login = () => {
         </div>
       )}
 
-      {/* Komponen Register dengan Auto Login */}
+      {/* Komponen Register */}
       <Register open={authMode === 'register'} onClose={closeAll} onRegistered={handleAutoLoginAfterRegister} />
 
+      {/* Komponen Recovery (Lupa Akun / Reset Password) */}
       <Recovery
         mode={authMode === 'forgot' ? 'forgot' : authMode === 'reset' ? 'reset' : null}
         onClose={closeAll}
