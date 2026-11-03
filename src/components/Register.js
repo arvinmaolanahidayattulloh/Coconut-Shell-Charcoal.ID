@@ -14,35 +14,19 @@ import {
   isValidWa,
 } from './AuthShared';
 
-// ============================================================
-// Register.jsx — alur Daftar
-// pilih akun provider → username → password → No. WhatsApp
-// → OTP Email → OTP WhatsApp → kembali ke Login
-//
-// Props:
-//   open          : boolean, tampilkan alur Daftar
-//   onClose       : dipanggil saat user membatalkan
-//   onRegistered  : dipanggil saat pendaftaran sukses (Login membuka modal Masuk)
-// ============================================================
-
 const PROVIDERS = ['Microsoft', 'Google', 'Apple'];
 
 const Register = ({ open, onClose, onRegistered }) => {
   const { runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  // step: provider | form | wa | otp
   const [step, setStep] = useState('provider');
-  const [data, setData] = useState({}); // { provider, email, username, password, whatsapp }
+  const [data, setData] = useState({}); 
 
-  // [RESET-ON-OPEN-START] mulai dari awal setiap kali alur Daftar dibuka
   useEffect(() => {
     if (open) { reset(); setData({}); setStep('provider'); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-  // [RESET-ON-OPEN-END]
+  }, [open, reset]);
 
-  // [REG-PROVIDER-START] 1. pilih provider → pilih akun
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
@@ -56,9 +40,7 @@ const Register = ({ open, onClose, onRegistered }) => {
       setBusyProvider(null);
     }
   };
-  // [REG-PROVIDER-END]
 
-  // [REG-FORM-START] 2. buat username & password
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (loadUsers().some((u) => sameText(u.username, values.username))) {
@@ -68,36 +50,30 @@ const Register = ({ open, onClose, onRegistered }) => {
     setData((prev) => ({ ...prev, username: values.username.trim(), password: values.password }));
     setStep('wa');
   };
-  // [REG-FORM-END]
 
-  // [REG-WA-START] 3. nomor WhatsApp → lanjut OTP
   const handleWaSubmit = (e) => {
     e.preventDefault();
     if (!isValidWa(values.whatsapp)) { alert('Nomor WhatsApp tidak valid.'); return; }
     setData((prev) => ({ ...prev, whatsapp: values.whatsapp }));
     setStep('otp');
   };
-  // [REG-WA-END]
 
-  // [REG-FINISH-START] 4. OTP Email & WA sukses → simpan akun → ke Login
   const handleOtpSuccess = () => {
     const users = loadUsers();
     users.push({
       provider: data.provider,
       email: data.email,
       username: data.username,
-      password: data.password, // TODO produksi: hash di server, jangan simpan polos
+      password: data.password, 
       whatsapp: data.whatsapp,
     });
     saveUsers(users);
     alert('Pendaftaran berhasil! Silakan masuk dengan username dan password Anda.');
     onRegistered();
   };
-  // [REG-FINISH-END]
 
   if (!open) return null;
 
-  // ============ LANGKAH 1: PILIH AKUN PROVIDER ============
   if (step === 'provider') {
     return (
       <div className={styles.overlay}>
@@ -105,7 +81,6 @@ const Register = ({ open, onClose, onRegistered }) => {
           <h4 className={styles.title}>Daftar Akun</h4>
           <p className={styles.desc}>Pilih platform, lalu pilih akun Anda</p>
 
-          {/* [REG-PROVIDER-UI-START] */}
           <div className={styles.providerStack}>
             {PROVIDERS.map((p) => (
               <button
@@ -120,7 +95,6 @@ const Register = ({ open, onClose, onRegistered }) => {
               </button>
             ))}
           </div>
-          {/* [REG-PROVIDER-UI-END] */}
 
           <button type="button" onClick={onClose} className={styles.backBtn}>KEMBALI</button>
         </div>
@@ -128,7 +102,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // ============ LANGKAH 2: USERNAME & PASSWORD ============
   if (step === 'form') {
     return (
       <AuthModal
@@ -145,7 +118,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // ============ LANGKAH 3: NO. WHATSAPP ============
   if (step === 'wa') {
     return (
       <AuthModal
@@ -161,7 +133,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  // ============ LANGKAH 4: OTP EMAIL → OTP WHATSAPP ============
   return (
     <OtpFlow
       email={data.email}
