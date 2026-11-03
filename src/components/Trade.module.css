@@ -1,290 +1,110 @@
 .tradeSection {
-padding: 0 24px;
-max-width: 100%;
-margin: 0 auto 80px;
-font-family: var(--font-body), system-ui, sans-serif;
+  padding: 0 24px;
+  max-width: 100%;
+  margin: 0 auto 80px;
+  font-family: var(--font-body), system-ui, sans-serif;
 }
-​.tradeContainer {
-background: #ffffff;
-border: 1px solid #e5e7eb;
-border-radius: 24px;
-padding: 48px 56px;
-box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-color: #111827;
+
+.tradeContainer {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 40px 48px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
 }
-​/* Header & Stats */
+
 .topBar {
-display: flex;
-justify-content: space-between;
-align-items: flex-start;
-margin-bottom: 24px;
-padding-bottom: 24px;
-border-bottom: 1px solid #f3f4f6;
-flex-wrap: wrap;
-gap: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+  gap: 20px;
 }
-​.tradeTitle {
-font-family: var(--font-display), system-ui;
-font-size: 28px;
-font-weight: 700;
-color: #c45e20;
-letter-spacing: -0.02em;
-margin: 0 0 16px 0;
+
+.tradeTitle {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #c45e20;
+  margin: 0 0 20px 0;
 }
-​.accountStats {
-display: flex;
-gap: 24px;
-flex-wrap: wrap;
-}
-​.statBox {
-display: flex;
-flex-direction: column;
-gap: 4px;
-}
-​.statLabel {
-font-size: 11px;
-font-weight: 600;
-color: #9ca3af;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-}
-​.statValue {
-font-family: var(--font-display), system-ui;
-font-size: 20px;
-font-weight: 700;
-color: #111827;
-}
-​.textGreen { color: #16a34a !important; }
+
+.accountStats { display: flex; gap: 28px; flex-wrap: wrap; }
+.statBox { display: flex; flex-direction: column; gap: 4px; }
+.statLabel { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
+.statValue { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: #111827; }
+
+.textGreen { color: #16a34a !important; }
 .textRed { color: #dc2626 !important; }
-​/* Live Prices Header */
-.livePrices {
-display: flex;
-gap: 12px;
+
+.livePrices { display: flex; gap: 12px; }
+.priceBoxBuy, .priceBoxSell {
+  display: flex; flex-direction: column; padding: 10px 16px; border-radius: 14px; min-width: 120px; text-align: right;
 }
-​.priceBoxBuy, .priceBoxSell {
-display: flex;
-flex-direction: column;
-padding: 10px 16px;
-border-radius: 12px;
-min-width: 130px;
-text-align: right;
-background: #fafaf9;
-border: 1px solid #f3f4f6;
-}
-​.priceBoxBuy span, .priceBoxSell span {
-font-size: 10px;
-font-weight: 600;
-color: #9ca3af;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-}
-​.priceBoxBuy strong { color: #16a34a; font-size: 22px; font-weight: 700; font-family: var(--font-display), system-ui; }
-.priceBoxSell strong { color: #dc2626; font-size: 22px; font-weight: 700; font-family: var(--font-display), system-ui; }
-​/* Notification */
-.notificationBanner {
-background: #f0fdf4;
-border: 1px solid #bbf7d0;
-color: #16a34a;
-text-align: center;
-padding: 12px;
-border-radius: 12px;
-font-size: 14px;
-font-weight: 600;
-margin-bottom: 24px;
-}
-​/* Grid Layout */
-.tradeGrid {
-display: grid;
-grid-template-columns: 280px 1fr;
-gap: 32px;
-}
-​@media (max-width: 900px) {
-.tradeGrid { grid-template-columns: 1fr; }
-.tradeContainer { padding: 32px 24px; }
-}
-​/* Control Panel (Kiri) */
-.controlPanel {
-background: #fafaf9;
-padding: 24px;
-border-radius: 16px;
-border: 1px solid #f3f4f6;
-}
-​.panelSection {
-margin-bottom: 20px;
-}
-​.label {
-display: block;
-font-size: 12px;
-font-weight: 600;
-color: #4b5563;
-margin-bottom: 8px;
-}
-​.selectInput, .amountInput {
-width: 100%;
-background-color: #ffffff;
-border: 1px solid #e5e7eb;
-color: #111827;
-padding: 10px 14px;
-border-radius: 8px;
-font-size: 14px;
-font-weight: 600;
-outline: none;
-transition: all 0.2s;
-}
-.selectInput:focus, .amountInput:focus { border-color: #c45e20; box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.1); }
-​.amountBox {
-display: flex;
-}
-.amountBox .amountInput {
-border-radius: 0;
-border-left: none;
-border-right: none;
-text-align: center;
-}
-.amountBtn {
-background-color: #f3f4f6;
-border: 1px solid #e5e7eb;
-color: #4b5563;
-padding: 0 16px;
-cursor: pointer;
-font-size: 16px;
-font-weight: bold;
-transition: 0.2s;
-}
-.amountBtn:first-child { border-radius: 8px 0 0 8px; }
-.amountBtn:last-child { border-radius: 0 8px 8px 0; }
-.amountBtn:hover { background-color: #e5e7eb; color: #111827; }
-​.actionButtons {
-display: flex;
-gap: 12px;
-margin-top: 24px;
-}
-​.buyBtn, .sellBtn {
-flex: 1;
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-padding: 14px 10px;
-border: none;
-border-radius: 12px;
-cursor: pointer;
-color: white;
-transition: all 0.2s;
-box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-.buyBtn { background-color: #16a34a; }
-.sellBtn { background-color: #dc2626; }
-.buyBtn:hover { background-color: #15803d; transform: translateY(-2px); }
-.sellBtn:hover { background-color: #b91c1c; transform: translateY(-2px); }
-​.btnTitle { font-size: 16px; font-weight: 800; }
-.btnSub { font-size: 11px; opacity: 0.9; margin-top: 4px; }
-​.warningText {
-font-size: 12px;
-color: #d97706;
-margin-top: 16px;
-text-align: center;
-font-weight: 500;
-}
-​/* Info Panel (Kanan) */
-.panelHeader {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: 20px;
-flex-wrap: wrap;
-gap: 16px;
-}
-​.panelTitle {
-font-size: 18px;
-font-weight: 700;
-color: #111827;
-margin: 0;
-}
-​.bulkActions {
-display: flex;
-gap: 8px;
-flex-wrap: wrap;
-}
-​.bulkBtn, .bulkBtnProfit, .bulkBtnLoss {
-background-color: #ffffff;
-border: 1px solid #e5e7eb;
-color: #4b5563;
-font-size: 11px;
-font-weight: 600;
-padding: 6px 12px;
-border-radius: 8px;
-cursor: pointer;
-transition: 0.2s;
-}
-.bulkBtn:hover { background-color: #f3f4f6; color: #111827; border-color: #d1d5db; }
-.bulkBtnProfit { color: #16a34a; border-color: #bbf7d0; background: #f0fdf4; }
-.bulkBtnProfit:hover { background-color: #dcfce7; }
-.bulkBtnLoss { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
-.bulkBtnLoss:hover { background-color: #fee2e2; }
-​/* Table */
-.positionsList {
-width: 100%;
-overflow-x: auto;
-}
-​.emptyState {
-text-align: center;
-padding: 48px;
-color: #9ca3af;
-font-size: 14px;
-font-weight: 500;
-background: #fafaf9;
-border-radius: 12px;
-border: 1px dashed #e5e7eb;
-}
-​.posTable {
-width: 100%;
-border-collapse: collapse;
-font-size: 13px;
-}
-​.posTable th {
-text-align: left;
-color: #6b7280;
-padding: 12px 16px;
-border-bottom: 2px solid #e5e7eb;
-font-weight: 600;
-}
-​.posTable td {
-padding: 16px;
-border-bottom: 1px solid #f3f4f6;
-vertical-align: middle;
-font-weight: 500;
-color: #111827;
-}
-​.badgeBuy, .badgeSell {
-padding: 4px 8px;
-border-radius: 6px;
-font-size: 11px;
-font-weight: 700;
-}
-.badgeBuy { color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; }
-.badgeSell { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; }
-​.pnlPct {
-font-size: 11px;
-margin-top: 4px;
-font-weight: 600;
-}
-​.closeBtn {
-background-color: #ffffff;
-border: 1px solid #e5e7eb;
-color: #6b7280;
-border-radius: 6px;
-width: 28px;
-height: 28px;
-cursor: pointer;
-display: flex;
-align-items: center;
-justify-content: center;
-transition: 0.2s;
-font-weight: bold;
-}
-.closeBtn:hover {
-border-color: #dc2626;
-color: #dc2626;
-background-color: #fef2f2;
+.priceBoxBuy { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.priceBoxSell { background: #fef2f2; border: 1px solid #fecaca; }
+.priceBoxBuy span, .priceBoxSell span { font-size: 11px; font-weight: 700; color: #16a34a; }
+.priceBoxSell span { color: #dc2626; }
+.priceBoxBuy strong, .priceBoxSell strong { font-family: var(--font-display); font-size: 20px; margin-top: 2px; }
+.priceBoxBuy strong { color: #16a34a; }
+.priceBoxSell strong { color: #dc2626; }
+
+.notificationBanner { background: #c45e20; color: white; padding: 12px; border-radius: 12px; text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+
+.tradeGrid { display: grid; grid-template-columns: 280px 1fr; gap: 24px; }
+@media (max-width: 800px) { .tradeGrid { grid-template-columns: 1fr; } }
+
+.controlPanel { background: #fafaf9; border: 1px solid #f3f4f6; border-radius: 20px; padding: 24px; }
+.panelSection { margin-bottom: 20px; }
+.label { display: block; font-size: 13px; font-weight: 700; color: #4b5563; margin-bottom: 8px; }
+
+.selectInput, .amountInput { width: 100%; background: #ffffff; border: 1px solid #e5e7eb; color: #111827; padding: 12px 14px; border-radius: 12px; font-size: 14px; font-weight: 600; outline: none; transition: 0.2s; }
+.selectInput:focus, .amountInput:focus { border-color: #c45e20; }
+
+.amountBox { display: flex; }
+.amountBox .amountInput { border-radius: 0; border-left: none; border-right: none; text-align: center; font-size: 16px; }
+.amountBtn { background: #ffffff; border: 1px solid #e5e7eb; color: #4b5563; padding: 0 16px; cursor: pointer; font-size: 20px; font-weight: bold; transition: 0.2s; }
+.amountBtn:first-child { border-radius: 12px 0 0 12px; }
+.amountBtn:last-child { border-radius: 0 12px 12px 0; }
+.amountBtn:hover { background: #f9fafb; color: #c45e20; }
+
+.actionButtons { display: flex; gap: 10px; margin-top: 16px; }
+.buyBtn, .sellBtn { flex: 1; padding: 14px; border: none; border-radius: 14px; cursor: pointer; color: white; display: flex; flex-direction: column; align-items: center; transition: all 0.2s; }
+.buyBtn { background: #16a34a; }
+.sellBtn { background: #dc2626; }
+.buyBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(22, 163, 74, 0.2); }
+.sellBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(220, 38, 38, 0.2); }
+.btnTitle { font-size: 15px; font-weight: 700; }
+.btnSub { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+
+.warningText { font-size: 11px; color: #d97706; margin-top: 12px; text-align: center; font-weight: 600; }
+
+.infoPanel { background: #fafaf9; border: 1px solid #f3f4f6; border-radius: 20px; padding: 24px; overflow-x: auto; }
+.panelHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.panelTitle { font-size: 16px; font-weight: 700; color: #111827; margin: 0; }
+.bulkActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.bulkBtn, .bulkBtnProfit, .bulkBtnLoss { padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; font-size: 12px; font-weight: 600; color: #4b5563; cursor: pointer; transition: 0.2s; }
+.bulkBtn:hover { border-color: #c45e20; color: #c45e20; }
+.bulkBtnProfit:hover { border-color: #16a34a; color: #16a34a; }
+.bulkBtnLoss:hover { border-color: #dc2626; color: #dc2626; }
+
+.emptyState { text-align: center; padding: 40px; color: #9ca3af; font-size: 13px; font-weight: 600; }
+.posTable { width: 100%; border-collapse: collapse; font-size: 13px; font-weight: 500; }
+.posTable th { text-align: left; padding: 12px; border-bottom: 1px solid #e5e7eb; color: #9ca3af; font-size: 11px; text-transform: uppercase; font-weight: 700; }
+.posTable td { padding: 16px 12px; border-bottom: 1px solid #f3f4f6; color: #111827; }
+.badgeBuy { color: #16a34a; background: #f0fdf4; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid #bbf7d0; }
+.badgeSell { color: #dc2626; background: #fef2f2; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid #fecaca; }
+.pnlPct { font-size: 11px; font-weight: 600; margin-top: 4px; }
+.closeBtn { background: #ffffff; border: 1px solid #e5e7eb; color: #9ca3af; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+.closeBtn:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+@media (max-width: 480px) {
+  .tradeSection { padding: 0 16px; }
+  .tradeContainer { padding: 24px 16px; border-radius: 18px; }
+  .accountStats { gap: 16px; }
+  .priceBoxBuy, .priceBoxSell { min-width: 100px; padding: 8px 12px; }
 }
