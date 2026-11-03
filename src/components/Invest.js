@@ -1,29 +1,63 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useAccount } from './Account'; 
 import styles from './Invest.module.css';
 
-const Invest = () => {
+const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const { user, login, logout } = useAccount();
-  const [invested, setInvested] = useState(false);
 
   const handleLogout = () => {
     logout();
     setInvested(false); 
+    setActiveTab('invest'); // Kembali ke tab invest jika logout
   };
 
   const handleInvest = () => {
     setInvested(true);
-    alert(`Terima kasih ${user.name || 'Investor'}, investasi sebesar 75 Ton berhasil diproses!`);
+    alert(`Terima kasih ${user.name || 'Investor'}, investasi sebesar 75 Ton berhasil diproses! Sekarang Anda dapat mengakses Terminal Trade.`);
   };
 
   return (
     <section className={styles.investSection}>
       <div className={styles.investCard}>
+        
+        {/* Tombol Switch Tab di Bagian Atas */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px' }}>
+          <button 
+            onClick={() => setActiveTab('invest')}
+            style={{
+              padding: '8px 16px', fontWeight: 'bold', borderRadius: '8px', cursor: 'pointer',
+              background: activeTab === 'invest' ? '#c45e20' : '#f3f4f6',
+              color: activeTab === 'invest' ? '#fff' : '#4b5563', border: 'none'
+            }}
+          >
+            Peluang Investasi
+          </button>
+
+          <button 
+            onClick={() => {
+              if (!invested) {
+                alert("Anda harus melakukan investasi / konfirmasi terlebih dahulu di tab Investasi untuk membuka Terminal Trade!");
+                return;
+              }
+              setActiveTab('trade');
+            }}
+            style={{
+              padding: '8px 16px', fontWeight: 'bold', borderRadius: '8px', cursor: invested ? 'pointer' : 'not-allowed',
+              background: activeTab === 'trade' ? '#c45e20' : '#f3f4f6',
+              color: activeTab === 'trade' ? '#fff' : '#9ca3af', border: 'none',
+              opacity: invested ? 1 : 0.6
+            }}
+          >
+            MT5 Terminal Trade {!invested ? '🔒' : ''}
+          </button>
+        </div>
+
+        {/* Konten Investasi */}
         <span className={styles.eyebrow}>Peluang Investasi</span>
         <span className={styles.subtitle}>
-          Amankan alokasi kuota komoditas ekspor Anda sekarang.
+          Amankan alokasi kuota komoditas ekspor Anda sekarang untuk membuka akses Terminal Trading.
         </span>
 
         <div className={styles.actionWrapper}>
@@ -56,7 +90,7 @@ const Invest = () => {
                 onClick={handleInvest} 
                 className={`${styles.investBtn} ${invested ? styles.successBtn : ''}`}
               >
-                {invested ? '✓ INVESTASI BERHASIL' : 'INVESTASI 75 TON'}
+                {invested ? '✓ INVESTASI BERHASIL (AKSES TRADE DIBUKA)' : 'INVESTASI 75 TON'}
               </button>
             </div>
           )}
