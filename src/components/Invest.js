@@ -2,16 +2,15 @@
 
 import React, { useState } from 'react';
 import { useAccount } from './Account'; 
+import Login from './Login';
 import styles from './Invest.module.css';
 
 const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
-  const { user, loginGoogle, loginMicrosoft, loginApple, logout } = useAccount();
+  const { user, logout } = useAccount();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
 
   const handleLogout = () => {
     logout();
@@ -25,28 +24,16 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     alert(`Terima kasih ${user.name || 'Investor'}, investasi sebesar 75 Ton berhasil diproses!`);
   };
 
-  // Validasi Password Terminal Trade ("coconut shell charcoal")
   const handleTradeAccessCheck = (e) => {
     e.preventDefault();
     if (passwordInput.trim().toLowerCase() === "coconut shell charcoal") {
       setPasswordError(false);
       setPasswordInput("");
       setShowPasswordModal(false);
-      setActiveTab('trade'); // Buka akses Terminal Trade
+      setActiveTab('trade');
     } else {
       setPasswordError(true);
     }
-  };
-
-  const handleResetPassword = (e) => {
-    e.preventDefault();
-    if (!resetEmail) {
-      alert("Masukkan email akun Anda terlebih dahulu.");
-      return;
-    }
-    alert(`Instruksi reset password telah dikirim ke ${resetEmail}. Silakan periksa kotak masuk Anda.`);
-    setShowResetModal(false);
-    setResetEmail("");
   };
 
   const handleMenuClick = (action) => {
@@ -54,11 +41,8 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     switch (action) {
       case 'beranda':
         const berandaEl = document.getElementById('beranda');
-        if (berandaEl) {
-          berandaEl.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        if (berandaEl) berandaEl.scrollIntoView({ behavior: 'smooth' });
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
         break;
       case 'profil':
         alert(user ? `Profil: ${user.name} (${user.email})` : "Silakan login terlebih dahulu.");
@@ -118,42 +102,14 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           </div>
         )}
 
-        {/* Konten Utama dengan Efek Blur saat Modal Terbuka */}
-        <div style={{ filter: (showPasswordModal || showResetModal) ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
+        {/* Konten Utama */}
+        <div style={{ filter: showPasswordModal ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
           <span className={styles.eyebrow}>Investasi</span>
 
           <div className={styles.actionWrapper}>
             {!user ? (
-              /* SEBELUM LOGIN: Teks Investasi & Tombol Login Responsif (Samping / Vertikal) */
-              <div style={{ marginTop: '16px' }}>
-                <span className={styles.subtitle} style={{ display: 'block', marginBottom: '16px' }}>
-                  Amankan alokasi kuota komoditas ekspor Anda sekarang.
-                </span>
-
-                <div className={styles.loginButtonsContainer}>
-                  <button onClick={() => loginGoogle({ name: "Google User", email: "user@gmail.com" })} className={styles.loginBtnItem}>
-                    Google
-                  </button>
-                  <button onClick={loginMicrosoft} className={styles.loginBtnItem} style={{ background: '#2f2f2f', color: '#fff' }}>
-                    Microsoft
-                  </button>
-                  <button onClick={loginApple} className={styles.loginBtnItem} style={{ background: '#000000', color: '#fff' }}>
-                    Apple
-                  </button>
-                </div>
-
-                {/* Tombol Lupa Akun / Reset Password */}
-                <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                  <button 
-                    onClick={() => setShowResetModal(true)}
-                    style={{ background: 'transparent', border: 'none', color: '#c45e20', fontSize: '13px', fontWeight: '600', cursor: 'pointer', textDecoration: 'underline' }}
-                  >
-                    Lupa Akun / Reset Password?
-                  </button>
-                </div>
-              </div>
+              <Login />
             ) : (
-              /* SETELAH LOGIN: Profil, Tombol Switch di bawah profil, & Aksi Investasi */
               <div className={styles.userDashboard}>
                 <div className={styles.userInfo}>
                   <img src={user.picture || 'https://via.placeholder.com/40'} alt="Profile" className={styles.avatar} />
@@ -226,51 +182,15 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           </div>
         )}
 
-        {/* Modal Lupa Akun / Reset Password */}
-        {showResetModal && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 6, display: 'flex', 
-            alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.75)',
-            borderRadius: '24px'
-          }}>
-            <form onSubmit={handleResetPassword} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'center', maxWidth: 360, padding: 16, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.1)' }}>
-              <div style={{ width: '100%', textAlign: 'center', marginBottom: '4px' }}>
-                <h4 style={{ margin: 0, color: '#111827', fontSize: '16px' }}>Reset Password</h4>
-                <p style={{ margin: '4px 0 12px 0', color: '#6b7280', fontSize: '12px' }}>Masukkan email akun Anda</p>
-              </div>
-              <input
-                type="email"
-                autoFocus
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                placeholder="email@domain.com"
-                required
-                style={{ flex: '1 1 220px', minWidth: 0, padding: '10px 12px', border: '1px solid #e0e3eb', borderRadius: 8, fontSize: 14, outline: 'none', background: '#fff', color: '#111' }}
-              />
-              <button type="submit" style={{ padding: '10px 16px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>KIRIM</button>
-              <button type="button" onClick={() => setShowResetModal(false)} style={{ padding: '10px 16px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>BATAL</button>
-            </form>
-          </div>
-        )}
-
       </div>
     </section>
   );
 };
 
 const menuItemStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  width: '100%',
-  padding: '8px 12px',
-  border: 'none',
-  borderRadius: '8px',
-  background: 'transparent',
-  fontSize: '13px',
-  fontWeight: '600',
-  color: '#4b5563',
-  cursor: 'pointer',
-  textAlign: 'left'
+  display: 'flex', alignItems: 'center', width: '100%', padding: '8px 12px',
+  border: 'none', borderRadius: '8px', background: 'transparent',
+  fontSize: '13px', fontWeight: '600', color: '#4b5563', cursor: 'pointer', textAlign: 'left'
 };
 
 export default Invest;
