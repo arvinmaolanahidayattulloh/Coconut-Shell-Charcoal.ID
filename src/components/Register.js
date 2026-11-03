@@ -9,8 +9,7 @@ import {
   useProviderAuth,
   loadUsers,
   saveUsers,
-  sameText,
-  isValidWa
+  sameText
 } from './AuthShared';
 
 const PROVIDERS = ['Google', 'Microsoft', 'Apple'];
@@ -40,22 +39,59 @@ const Register = ({ open, onClose, onRegistered }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]); 
 
-  // --- 1. PILIH PROVIDER (GOOGLE ASLI) ---
+  // --- 1. PILIH PROVIDER & LANGSUNG KIRIM OTP EMAIL NYATA VIA RESEND ---
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
       const account = await runProvider(providerName);
-      setData({ provider: providerName, email: account?.email || '' });
-      setStep('username'); 
+      const userEmail = account?.email || '';
+      if (!userEmail) {
+        throw new Error('Email akun tidak ditemukan.');
+      }
+
+      setData({ provider: providerName, email: userEmail });
+      
+      setIsLoading(true);
+      // Kirim OTP Email otomatis setelah memilih akun
+      const res = await fetch('/api/send-otp-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Gagal mengirim email OTP');
+
+      if (result.test_otp) {
+        setData((prev) => ({ ...prev, serverEmailOtp: result.test_otp }));
+      }
+
+      alert(`Email verifikasi telah dikirim ke ${userEmail}`);
+      setOtpInput('');
+      setStep('otp_email'); 
     } catch (err) {
       console.error(`[REG-PROVIDER] ${providerName}:`, err);
-      alert(`Pemilihan akun ${providerName} gagal: ${err?.message || err}`);
+      alert(`Gagal: ${err?.message || err}`);
     } finally {
       setBusyProvider(null);
+      setIsLoading(false);
     }
   };
 
-  // --- 2. SUBMIT USERNAME ---
+  // --- 2. SUBMIT OTP EMAIL & LANJUT BUAT USERNAME ---
+  const handleOtpEmailSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!data.serverEmailOtp || otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
+      alert('Kode OTP Email salah! Periksa kembali email Anda.'); 
+      return; 
+    }
+    
+    setOtpInput('');
+    setStep('username'); 
+  };
+
+  // --- 3. SUBMIT USERNAME ---
   const handleUsernameSubmit = (e) => {
     e.preventDefault();
     if (loadUsers().some((u) => sameText(u.username, values.username))) {
@@ -66,14 +102,14 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('password'); 
   };
 
-  // --- 3. SUBMIT PASSWORD ---
+  // --- 4. SUBMIT PASSWORD ---
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setData((prev) => ({ ...prev, password: values.password }));
     setStep('wa'); 
   };
 
-  // --- 4. SUBMIT WHATSAPP & KIRIM OTP EMAIL NYATA VIA RESEND ---
+  // --- 5. SUBMIT WHATSAPP & KIRIM OTP WA VIA FONNTE ---
   const handleWaSubmit = async (e) => {
     e.preventDefault();
     const cleanNumber = values.whatsapp.replace(/^0+/, '');
@@ -84,49 +120,10 @@ const Register = ({ open, onClose, onRegistered }) => {
     
     setIsLoading(true);
     try {
-      const res = await fetch('/api/send-otp-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: data.email }),
-      });
-      
-      const result = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(result.error || 'Gagal mengirim email OTP');
-      }
-
-      if (result.test_otp) {
-        setData((prev) => ({ ...prev, serverEmailOtp: result.test_otp }));
-      }
-
-      alert(`Email verifikasi asli telah dikirim ke ${data.email}`);
-      setOtpInput('');
-      setStep('otp_email'); 
-    } catch (err) {
-      console.error(err);
-      alert(`Gagal mengirim OTP Email: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // --- 5. SUBMIT OTP EMAIL & LANJUT KIRIM OTP WA VIA FONNTE ---
-  const handleOtpEmailSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!data.serverEmailOtp || otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
-      alert('Kode OTP Email salah! Periksa kembali email Anda.'); 
-      return; 
-    }
-    
-    setIsLoading(true);
-    try {
-      // Panggil API Fonnte untuk mengirim OTP WhatsApp asli
       const res = await fetch('/api/send-otp-wa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: data.whatsapp }),
+        body: JSON.stringify({ phone: fullWaNumber }),
       });
       
       const result = await res.json();
@@ -136,7 +133,7 @@ const Register = ({ open, onClose, onRegistered }) => {
         setData((prev) => ({ ...prev, serverWaOtp: result.test_otp_wa }));
       }
 
-      alert(`Kode OTP WhatsApp telah dikirim ke nomor ${data.whatsapp}`);
+      alert(`Kode OTP WhatsApp telah dikirim ke nomor ${fullWaNumber}`);
       setOtpInput('');
       setStep('otp_wa');
     } catch (err) {
@@ -179,7 +176,7 @@ const Register = ({ open, onClose, onRegistered }) => {
       <div className={styles.overlay}>
         <div className={styles.card}>
           <h4 className={styles.title}>Daftar Akun</h4>
-          <p className={styles.desc}>Pilih platform, lalu pilih akun Anda</p>
+          <p className={styles.desc}>Pilih platform untuk memulai verifikasi email</p>
 
           <div className={styles.providerStack}>
             {PROVIDERS.map((p) => (
@@ -187,11 +184,11 @@ const Register = ({ open, onClose, onRegistered }) => {
                 key={p}
                 type="button"
                 onClick={() => handleSelectProvider(p)}
-                disabled={busyProvider !== null}
+                disabled={busyProvider !== null || isLoading}
                 className={styles.providerBtn}
               >
                 <ProviderIcon name={p} size={22} />
-                <span>{busyProvider === p ? 'Membuka pilihan akun...' : `Daftar dengan ${p}`}</span>
+                <span>{busyProvider === p || isLoading ? 'Memproses...' : `Daftar dengan ${p}`}</span>
               </button>
             ))}
           </div>
@@ -202,14 +199,46 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
+  if (step === 'otp_email') {
+    return (
+      <AuthModal
+        title="Verifikasi OTP Email"
+        desc={
+          <>
+            Kode telah dikirim ke <b>{data.email}</b> via Resend.<br />
+            <span style={{ fontSize: '12px', color: '#c45e20', fontWeight: 'bold' }}>
+              Cek Kotak Masuk (Inbox) atau folder Spam Anda.
+            </span>
+          </>
+        }
+        onSubmit={handleOtpEmailSubmit}
+        submitLabel="VERIFIKASI EMAIL"
+        onBack={() => { setStep('provider'); setOtpInput(''); }}
+        backLabel="KEMBALI"
+      >
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          placeholder="••••••"
+          value={otpInput}
+          onChange={(e) => setOtpInput(e.target.value)}
+          required
+          className={styles.inputField}
+          style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
+        />
+      </AuthModal>
+    );
+  }
+
   if (step === 'username') {
     return (
       <AuthModal
         title="Buat Username"
-        desc={<>Akun terpilih: <b>{data.email}</b></>}
+        desc={<>Email terverifikasi: <b>{data.email}</b></>}
         onSubmit={handleUsernameSubmit}
         submitLabel="LANJUT"
-        onBack={() => setStep('provider')}
+        onBack={() => setStep('otp_email')}
         backLabel="KEMBALI"
       >
         <input type="text" placeholder="Masukkan Username" {...bind('username')} />
@@ -236,9 +265,9 @@ const Register = ({ open, onClose, onRegistered }) => {
     return (
       <AuthModal
         title="Nomor WhatsApp"
-        desc="Pilih negara dan masukkan nomor WhatsApp Anda"
+        desc="Pilih negara dan masukkan nomor WhatsApp untuk verifikasi akhir"
         onSubmit={handleWaSubmit}
-        submitLabel={isLoading ? "MENGIRIM EMAIL OTP..." : "KIRIM OTP EMAIL"}
+        submitLabel={isLoading ? "MENGIRIM WA OTP..." : "KIRIM OTP WHATSAPP"}
         onBack={() => setStep('password')}
         backLabel="KEMBALI"
       >
@@ -265,39 +294,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     );
   }
 
-  if (step === 'otp_email') {
-    return (
-      <AuthModal
-        title="Verifikasi OTP Email"
-        desc={
-          <>
-            Kode telah dikirim ke <b>{data.email}</b> via Resend.<br />
-            <span style={{ fontSize: '12px', color: '#c45e20', fontWeight: 'bold' }}>
-              {isLoading ? 'Sedang mengirim OTP WhatsApp...' : 'Cek Inbox / Spam folder Anda.'}
-            </span>
-          </>
-        }
-        onSubmit={handleOtpEmailSubmit}
-        submitLabel={isLoading ? "MENGIRIM WA OTP..." : "VERIFIKASI EMAIL"}
-        onBack={() => { setStep('wa'); setOtpInput(''); }}
-        backLabel="KEMBALI"
-      >
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={6}
-          placeholder="••••••"
-          value={otpInput}
-          onChange={(e) => setOtpInput(e.target.value)}
-          required
-          disabled={isLoading}
-          className={styles.inputField}
-          style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }}
-        />
-      </AuthModal>
-    );
-  }
-
   if (step === 'otp_wa') {
     return (
       <AuthModal
@@ -305,7 +301,7 @@ const Register = ({ open, onClose, onRegistered }) => {
         desc={<>Kode verifikasi telah dikirim ke WA <b>{data.whatsapp}</b> via Fonnte.</>}
         onSubmit={handleOtpWaSubmit}
         submitLabel="SELESAI DAFTAR"
-        onBack={() => { setStep('otp_email'); setOtpInput(''); }}
+        onBack={() => { setStep('wa'); setOtpInput(''); }}
         backLabel="KEMBALI"
       >
         <input
