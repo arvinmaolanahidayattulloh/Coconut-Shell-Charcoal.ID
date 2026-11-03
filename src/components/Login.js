@@ -78,13 +78,14 @@ const Login = () => {
 
   return (
     <div className={styles.loginContainer}>
-      {/* 1. Hanya 1 Judul: Investasi CSCID */}
+      {/* Judul Utama Tunggal */}
       <h2 className={styles.cardTitle}>Investasi CSCID</h2>
 
-      <span className={styles.subtitle}>
+      <p className={styles.subtitle}>
         Amankan alokasi kuota komoditas ekspor Anda sekarang.
-      </span>
+      </p>
 
+      {/* Gambar di Tengah */}
       <div className={styles.imageWrapper}>
         <img 
           src="/NephiPhelia.png" 
@@ -93,11 +94,13 @@ const Login = () => {
         />
       </div>
 
+      {/* Baris Tombol: Daftar di Kiri, Masuk di Kanan */}
       <div className={styles.authButtonsRow}>
         <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
         <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
       </div>
 
+      {/* Baris Tautan: Lupa Akun di Kiri, Reset Password di Kanan */}
       <div className={styles.linksRow}>
         <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
         <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
@@ -111,8 +114,7 @@ const Login = () => {
               desc="Masukkan username dan password Anda"
               onSubmit={handleLoginSubmit}
               submitLabel="MASUK"
-              onBack={closeAll} // Tetap ada handler tutup
-              hideBackBtn={true} // Tanpa tombol kembali
+              hideBackBtn={true}
               footer={
                 <>
                   <div className={styles.dividerWrapper}>atau masuk dengan</div>
