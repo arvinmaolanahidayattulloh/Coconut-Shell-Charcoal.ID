@@ -98,7 +98,7 @@ export default function Home() {
 
                 <PriceChart setLivePrice={setLivePrice} />
                 
-                {/* Switch Tampilan Berdasarkan Tab yang Aktif */}
+                {/* Switch Tampilan Berdasarkan Tab yang Aktif (Hanya render 1 saja) */}
                 {activeTab === 'invest' ? (
                   <Invest 
                     invested={invested} 
@@ -108,7 +108,6 @@ export default function Home() {
                   />
                 ) : (
                   <div>
-                    {/* Tombol kembali ke tab invest jika ingin switch */}
                     <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto', padding: '0 24px' }}>
                       <button 
                         onClick={() => setActiveTab('invest')}
@@ -120,8 +119,6 @@ export default function Home() {
                     <Trade livePrice={livePrice} />
                   </div>
                 )}
-                
-                <Invest /> {/* Opsional, jika ingin bagian bawah tetap menampilkan info invest, atau bisa dihapus jika diganti switch total */}
 
                 <AdBanner slot="1003" format="horizontal" className="adSection" />
 
