@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AccountProvider } from "@/components/Account";
-import { PriceProvider } from "@/context/PriceContext"; // <-- 1. Import PriceProvider
+// ❌ HAPUS IMPORT PriceProvider: import { PriceProvider } from "@/context/PriceContext"; 
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Partners from "@/components/Partners";
@@ -20,6 +20,9 @@ import { LeftPanel, RightPanel } from "@/components/SidePanels";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
+  
+  // ✅ 1. Tambahkan state harga live di sini sebagai pusat data
+  const [livePrice, setLivePrice] = useState(1250.50);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,7 +56,7 @@ export default function Home() {
   return (
     <GoogleOAuthProvider clientId="677126002730-5m6a6uge42bvk9aglki09dqkoi467tfs.apps.googleusercontent.com">
       <AccountProvider>
-        <PriceProvider> {/* <-- 2. Bungkus PriceProvider di sini */}
+        {/* ❌ 2. Bungkus PriceProvider dihapus dari sini */}
           <Header />
 
           <div className="pageFlexLayout">
@@ -91,9 +94,11 @@ export default function Home() {
 
                 <CTA />
 
-                <PriceChart />
+                {/* ✅ 3. Kirim fungsi pengubah harga ke Chart */}
+                <PriceChart setLivePrice={setLivePrice} />
                 
-                <Trade />
+                {/* ✅ 4. Kirim data harga live ke Terminal Trade */}
+                <Trade livePrice={livePrice} />
                 
                 <Invest />
 
@@ -107,7 +112,6 @@ export default function Home() {
               </main>
             </div>
           </div>
-        </PriceProvider> {/* <-- Penutup PriceProvider */}
       </AccountProvider>
     </GoogleOAuthProvider>
   );
