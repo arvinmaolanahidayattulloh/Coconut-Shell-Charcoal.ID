@@ -1,8 +1,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const AccountContext = createContext();
+
+// Menggunakan Client ID asli Anda
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "677126002730-5m6a6uge42bvk9aglki09dqkoi467tfs.apps.googleusercontent.com";
 
 export function AccountProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -29,7 +33,7 @@ export function AccountProvider({ children }) {
     localStorage.setItem("csc_user", JSON.stringify(userInfo));
   };
 
-  // Login Microsoft
+  // Login Microsoft (Simulasi)
   const loginMicrosoft = () => {
     const mockUser = {
       name: "Microsoft User",
@@ -41,7 +45,7 @@ export function AccountProvider({ children }) {
     localStorage.setItem("csc_user", JSON.stringify(mockUser));
   };
 
-  // Login Apple
+  // Login Apple (Simulasi)
   const loginApple = () => {
     const mockUser = {
       name: "Apple User",
@@ -59,9 +63,11 @@ export function AccountProvider({ children }) {
   };
 
   return (
-    <AccountContext.Provider value={{ user, loginGoogle, loginMicrosoft, loginApple, logout }}>
-      {children}
-    </AccountContext.Provider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <AccountContext.Provider value={{ user, loginGoogle, loginMicrosoft, loginApple, logout }}>
+        {children}
+      </AccountContext.Provider>
+    </GoogleOAuthProvider>
   );
 }
 
