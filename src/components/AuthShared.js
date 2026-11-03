@@ -1,22 +1,20 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAccount } from './Account';
+import { useGoogleLogin } from '@react-oauth/google';
 import styles from './AuthShared.module.css';
 
 // ============================================================
 // AuthShared.jsx — dipakai bersama oleh Login.jsx & Register.jsx
 // ============================================================
 
-// [CONST-START] Konstanta
 export const OTP_EMAIL_SIM = '654321';
 export const OTP_WA_SIM = '123456';
 export const USERS_KEY = 'csc_registered_users';
 export const EMPTY_INPUT = { username: '', password: '', whatsapp: '', email: '', otp: '' };
 const otpStyle = { textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' };
-// [CONST-END]
 
-// [HELPERS-START] Penyimpanan & validasi
 export const loadUsers = () => {
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch { return []; }
 };
@@ -24,9 +22,7 @@ export const saveUsers = (users) => localStorage.setItem(USERS_KEY, JSON.stringi
 export const sameText = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
 export const normalizeWa = (v) => (v || '').replace(/\D/g, '').replace(/^62/, '0');
 export const isValidWa = (v) => { const d = normalizeWa(v); return d.length >= 9 && d.length <= 14; };
-// [HELPERS-END]
 
-// [ICONS-START] Logo penyedia auth
 export const ProviderIcon = ({ name, size = 20 }) => {
   const common = { width: size, height: size, className: styles.providerIcon, 'aria-hidden': true };
 
@@ -69,9 +65,7 @@ export const ProviderIcon = ({ name, size = 20 }) => {
     </svg>
   );
 };
-// [ICONS-END]
 
-// [MODAL-WRAPPER-START] Pembungkus modal form
 export const AuthModal = ({ title, desc, onSubmit, submitLabel, onBack, backLabel = 'BATAL', footer = null, children }) => (
   <div className={styles.modalOverlay}>
     <form onSubmit={onSubmit} className={styles.modalForm}>
@@ -86,9 +80,7 @@ export const AuthModal = ({ title, desc, onSubmit, submitLabel, onBack, backLabe
     </form>
   </div>
 );
-// [MODAL-WRAPPER-END]
 
-// [FORM-HOOK-START] State form
 export const useAuthForm = () => {
   const [values, setValues] = useState(EMPTY_INPUT);
   const bind = (key, extra = {}) => ({
@@ -101,29 +93,54 @@ export const useAuthForm = () => {
   const reset = () => setValues(EMPTY_INPUT);
   return { values, bind, reset };
 };
-// [FORM-HOOK-END]
 
-// [PROVIDER-HOOK-START] Pemanggil provider terpusat
+// [PROVIDER-HOOK-START] Terintegrasi dengan Popup Asli Google Cloud
 export const useProviderAuth = () => {
-  const { loginGoogle, loginMicrosoft, loginApple } = useAccount();
+  const { loginGoogle } = useAccount();
   const [busyProvider, setBusyProvider] = useState(null);
+  const promiseRef = useRef({ resolve: null, reject: null });
 
-  // FUNGSI INI SEKARANG HANYA MENGAMBIL DATA PROFIL TANPA TRIGGER LOGIN
-  const runProvider = async (providerName) => {
-    // Simulasi loading OAuth / pemanggilan API Google, dll
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    
-    return {
-      name: `${providerName} User`,
-      email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id`,
-    };
+  const triggerGooglePopup = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const data = await res.json();
+        
+        if (promiseRef.current.resolve) {
+          promiseRef.current.resolve({ name: data.name, email: data.email, picture: data.picture });
+        }
+      } catch (err) {
+        if (promiseRef.current.reject) promiseRef.current.reject(err);
+      }
+    },
+    onError: (error) => {
+      if (promiseRef.current.reject) promiseRef.current.reject(error);
+    }
+  });
+
+  const runProvider = (providerName) => {
+    return new Promise((resolve, reject) => {
+      if (providerName === 'Google') {
+        promiseRef.current = { resolve, reject };
+        triggerGooglePopup(); 
+      } else {
+        // Simulasi jika Microsoft / Apple ditekan
+        setTimeout(() => {
+          resolve({
+            name: `${providerName} User`,
+            email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id`,
+          });
+        }, 800);
+      }
+    });
   };
 
-  return { loginGoogle, loginMicrosoft, loginApple, runProvider, busyProvider, setBusyProvider };
+  return { loginGoogle, runProvider, busyProvider, setBusyProvider };
 };
 // [PROVIDER-HOOK-END]
 
-// [OTP-FLOW-START] OTP Email → OTP WhatsApp
 export const OtpFlow = ({ email, whatsapp, onSuccess, onCancel }) => {
   const [step, setStep] = useState('email'); 
   const [otp, setOtp] = useState('');
@@ -167,4 +184,3 @@ export const OtpFlow = ({ email, whatsapp, onSuccess, onCancel }) => {
     </AuthModal>
   );
 };
-// [OTP-FLOW-END]
