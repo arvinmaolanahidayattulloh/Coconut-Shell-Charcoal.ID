@@ -22,12 +22,14 @@ const Login = () => {
   const closeAll = () => openMode(null);
   const goLogin = () => openMode('login_username');
 
-  // Auto-login setelah registrasi selesai
+  // Auto-login setelah registrasi selesai (MENERIMA FOTO PROFIL)
   const handleAutoLoginAfterRegister = (registeredData) => {
     closeAll();
     loginGoogle({
-      name: registeredData.username,
+      // Anda bisa mengganti registeredData.username dengan registeredData.name jika ingin menggunakan nama asli dari Google.
+      name: registeredData.name || registeredData.username, 
       email: registeredData.email,
+      picture: registeredData.picture || '' // Menarik foto asli dari register
     });
   };
 
@@ -37,7 +39,12 @@ const Login = () => {
       (u) => sameText(u.username, values.username) && u.password === values.password
     );
     if (found || (values.username === 'admin' && values.password === 'admin')) {
-      loginGoogle({ name: values.username, email: found?.email || `${values.username}@coconutshellcharcoal.id` });
+      // Saat manual login via username, foto profil akan menggunakan bawaan default jika tidak disetel
+      loginGoogle({ 
+        name: found?.username || values.username, 
+        email: found?.email || `${values.username}@coconutshellcharcoal.id`,
+        picture: found?.picture || '' // Mengambil foto dari DB jika tersimpan
+      });
       closeAll();
     } else {
       alert('Username atau Password salah!');
@@ -51,7 +58,7 @@ const Login = () => {
       loginGoogle({ 
         name: account?.name || `User ${providerName}`, 
         email: account?.email || '',
-        picture: account?.picture || ''
+        picture: account?.picture || '' // Mengambil foto asli langsung
       });
       closeAll();
     } catch (err) {
@@ -87,14 +94,12 @@ const Login = () => {
 
   return (
     <div className={styles.loginContainer}>
-      {/* Judul Tunggal */}
       <h2 className={styles.cardTitle}>Investasi CSCID</h2>
 
       <p className={styles.subtitle}>
         Amankan alokasi kuota komoditas ekspor Anda sekarang.
       </p>
 
-      {/* Gambar di Tengah Tanpa Background */}
       <div className={styles.imageWrapper}>
         <img 
           src="/NephiPhelia.png" 
@@ -103,19 +108,16 @@ const Login = () => {
         />
       </div>
 
-      {/* Tombol: Daftar di Kiri, Masuk di Kanan */}
       <div className={styles.authButtonsRow}>
         <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
         <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
       </div>
 
-      {/* Tautan: Lupa Akun di Kiri, Reset Password di Kanan */}
       <div className={styles.linksRow}>
         <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
         <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
       </div>
 
-      {/* Modal Login Username */}
       {authMode === 'login_username' && (
         <div className={styles.modalBackdrop} onClick={closeAll}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
@@ -162,7 +164,7 @@ const Login = () => {
       {/* Komponen Register */}
       <Register open={authMode === 'register'} onClose={closeAll} onRegistered={handleAutoLoginAfterRegister} />
 
-      {/* Komponen Recovery (Lupa Akun / Reset Password) */}
+      {/* Komponen Recovery */}
       <Recovery
         mode={authMode === 'forgot' ? 'forgot' : authMode === 'reset' ? 'reset' : null}
         onClose={closeAll}
