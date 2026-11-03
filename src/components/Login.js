@@ -4,6 +4,24 @@ import React, { useState } from 'react';
 import { useAccount } from './Account';
 import styles from './Login.module.css';
 
+// [CONST-START] Konstanta (OTP masih simulasi, ganti dengan backend saat produksi)
+const OTP_EMAIL_SIM = '654321';
+const OTP_WA_SIM = '123456';
+const USERS_KEY = 'csc_registered_users';
+const EMPTY_INPUT = { username: '', password: '', whatsapp: '', email: '', otp: '' };
+const otpStyle = { textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' };
+// [CONST-END]
+
+// [HELPERS-START] Penyimpanan & validasi
+const loadUsers = () => {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch { return []; }
+};
+const saveUsers = (users) => localStorage.setItem(USERS_KEY, JSON.stringify(users));
+const sameText = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+const normalizeWa = (v) => (v || '').replace(/\D/g, '').replace(/^62/, '0');
+const isValidWa = (v) => { const d = normalizeWa(v); return d.length >= 9 && d.length <= 14; };
+// [HELPERS-END]
+
 // [ICONS-START] Logo penyedia auth (SVG inline, tanpa dependensi)
 const ProviderIcon = ({ name, size = 20 }) => {
   const common = { width: size, height: size, className: styles.providerIcon, 'aria-hidden': true };
@@ -50,59 +68,88 @@ const ProviderIcon = ({ name, size = 20 }) => {
 };
 // [ICONS-END]
 
+// [MODAL-WRAPPER-START] Pembungkus modal form (dipakai semua modal form)
+const AuthModal = ({ title, desc, onSubmit, submitLabel, onBack, backLabel = 'BATAL', footer = null, children }) => (
+  <div className={styles.modalOverlay}>
+    <form onSubmit={onSubmit} className={styles.modalForm}>
+      <h4 className={styles.modalTitle}>{title}</h4>
+      <p className={styles.modalDesc}>{desc}</p>
+      {children}
+      <div className={styles.modalActionsRow}>
+        <button type="submit" className={styles.btnSubmit}>{submitLabel}</button>
+        <button type="button" onClick={onBack} className={styles.btnCancel}>{backLabel}</button>
+      </div>
+      {footer}
+    </form>
+  </div>
+);
+// [MODAL-WRAPPER-END]
+
 const Login = () => {
   const { loginGoogle, loginMicrosoft, loginApple } = useAccount();
-  const [authMode, setAuthMode] = useState(null); // 'login_username', 'reg_provider', 'reg_form', 'reg_wa', 'otp_wa', 'reset_password', 'forgot_username', 'otp_email', 'new_password'
+  // authMode: login_username | reg_provider | reg_form | reg_wa | otp_email | otp_wa
+  //           forgot_email | forgot_wa | reset_username | reset_email | reset_wa | new_password
+  const [authMode, setAuthMode] = useState(null);
 
-  // [STATE-START] Form State
-  const [authInput, setAuthInput] = useState({ username: '', password: '', whatsapp: '', email: '', otp: '' });
-  const [tempData, setTempData] = useState({});
-  const [busyProvider, setBusyProvider] = useState(null); // nama provider yang sedang diproses
+  // [STATE-START]
+  const [authInput, setAuthInput] = useState(EMPTY_INPUT);
+  const [tempData, setTempData] = useState({}); // { flow: 'register'|'forgot'|'reset', ... }
+  const [busyProvider, setBusyProvider] = useState(null);
   // [STATE-END]
 
-  // [LOGIN-START] 1. KLIK MASUK
-  const handleOpenLogin = () => {
-    setAuthMode('login_username');
+  // [UTIL-START] helper UI
+  const bind = (key, extra = {}) => ({
+    value: authInput[key],
+    onChange: (e) => setAuthInput((prev) => ({ ...prev, [key]: e.target.value })),
+    required: true,
+    className: styles.inputField,
+    ...extra,
+  });
+  const closeAll = () => { setAuthInput(EMPTY_INPUT); setTempData({}); setAuthMode(null); };
+  const goLogin = () => { setAuthInput(EMPTY_INPUT); setTempData({}); setAuthMode('login_username'); };
+  const goStep = (mode, clearOtp = false) => {
+    if (clearOtp) setAuthInput((prev) => ({ ...prev, otp: '' }));
+    setAuthMode(mode);
   };
+  // [UTIL-END]
+
+  // [LOGIN-START] 1. MASUK USERNAME & PASSWORD
+  const handleOpenLogin = () => { setAuthInput(EMPTY_INPUT); setTempData({}); setAuthMode('login_username'); };
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    const savedUsers = JSON.parse(localStorage.getItem('csc_registered_users') || '[]');
-    const found = savedUsers.find(u => u.username === authInput.username && u.password === authInput.password);
-
-    if (found || (authInput.username === "admin" && authInput.password === "admin")) {
-      loginGoogle({ name: authInput.username, email: `${authInput.username}@coconutshellcharcoal.id` });
-      setAuthMode(null);
-      setAuthInput({ username: '', password: '', whatsapp: '', email: '', otp: '' });
+    const found = loadUsers().find(
+      (u) => sameText(u.username, authInput.username) && u.password === authInput.password
+    );
+    if (found || (authInput.username === 'admin' && authInput.password === 'admin')) {
+      loginGoogle({ name: authInput.username, email: found?.email || `${authInput.username}@coconutshellcharcoal.id` });
+      closeAll();
     } else {
-      alert("Username atau Password salah!");
+      alert('Username atau Password salah!');
     }
   };
   // [LOGIN-END]
 
-  // [PROVIDER-HELPER-START] pemanggil provider terpusat (maintenance: perbaiki integrasi provider di sini saja)
-  const providerLoginMap = {
-    Microsoft: loginMicrosoft,
-    Google: loginGoogle,
-    Apple: loginApple,
-  };
+  // [PROVIDER-HELPER-START] pemanggil provider terpusat (perbaiki integrasi provider di sini saja)
+  const providerLoginMap = { Microsoft: loginMicrosoft, Google: loginGoogle, Apple: loginApple };
 
   const runProvider = async (providerName) => {
     const fn = providerLoginMap[providerName];
     if (typeof fn !== 'function') {
       throw new Error(`Fungsi login${providerName} tidak ditemukan di useAccount()`);
     }
+    const fallbackProfile = {
+      name: `${providerName} User`,
+      email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id`,
+    };
     try {
       const res = await fn();
-      if (res && typeof res === 'object') return res;
-      return { name: `${providerName} User`, email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id` };
+      return res && typeof res === 'object' ? res : fallbackProfile;
     } catch (err) {
-      // Fungsi di Account kemungkinan butuh argumen profil (seperti pemanggilan di handleLoginSubmit)
       if (err instanceof TypeError) {
-        console.warn(`[PROVIDER] ${providerName} dipanggil tanpa argumen gagal, coba dengan profil:`, err);
-        const profile = { name: `${providerName} User`, email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id` };
-        await fn(profile);
-        return profile;
+        console.warn(`[PROVIDER] ${providerName} tanpa argumen gagal, coba dengan profil:`, err);
+        await fn(fallbackProfile);
+        return fallbackProfile;
       }
       throw err;
     }
@@ -114,7 +161,7 @@ const Login = () => {
     setBusyProvider(providerName);
     try {
       await runProvider(providerName);
-      setAuthMode(null);
+      closeAll();
     } catch (err) {
       console.error(`[LOGIN-SOCIAL] ${providerName}:`, err);
       alert(`Login ${providerName} gagal: ${err?.message || err}`);
@@ -125,7 +172,7 @@ const Login = () => {
 
   const handleLoginPasskey = async () => {
     if (!window.PublicKeyCredential) {
-      alert("Browser/perangkat ini belum mendukung Passkey.");
+      alert('Browser/perangkat ini belum mendukung Passkey.');
       return;
     }
     setBusyProvider('Passkey');
@@ -137,29 +184,26 @@ const Login = () => {
       });
       if (cred) {
         loginGoogle({ name: 'passkey_user', email: 'passkey_user@coconutshellcharcoal.id' });
-        setAuthMode(null);
+        closeAll();
       }
     } catch (err) {
       console.error('[LOGIN-SOCIAL] Passkey:', err);
-      alert("Passkey dibatalkan atau tidak ditemukan.");
+      alert('Passkey dibatalkan atau tidak ditemukan.');
     } finally {
       setBusyProvider(null);
     }
   };
   // [LOGIN-SOCIAL-END]
 
-  // [REGISTER-START] 2. KLIK DAFTAR: provider → pilih akun → username & password → WA → OTP
-  const handleOpenRegister = () => {
-    setAuthMode('reg_provider');
-  };
+  // [REGISTER-START] 2. DAFTAR: akun provider → username → password → WA → OTP Email → OTP WA → Login
+  const handleOpenRegister = () => { setAuthInput(EMPTY_INPUT); setTempData({ flow: 'register' }); setAuthMode('reg_provider'); };
 
-  // [REG-PROVIDER-START] pilih provider → pilih akun → lanjut buat kredensial
   const handleSelectProviderForReg = async (providerName) => {
     setBusyProvider(providerName);
     try {
       const account = await runProvider(providerName);
-      setTempData({ provider: providerName, account: account || null });
-      setAuthMode('reg_form'); // lanjut: Username & Password → WA → OTP
+      setTempData({ flow: 'register', provider: providerName, account, email: account?.email || '' });
+      setAuthMode('reg_form');
     } catch (err) {
       console.error(`[REG-PROVIDER] ${providerName}:`, err);
       alert(`Pemilihan akun ${providerName} gagal: ${err?.message || err}`);
@@ -167,95 +211,115 @@ const Login = () => {
       setBusyProvider(null);
     }
   };
-  // [REG-PROVIDER-END]
 
   const handleRegFormSubmit = (e) => {
     e.preventDefault();
-    if (!authInput.username || !authInput.password) {
-      alert("Username dan Password wajib diisi!");
+    if (loadUsers().some((u) => sameText(u.username, authInput.username))) {
+      alert('Username sudah dipakai, pilih username lain.');
       return;
     }
-    setTempData(prev => ({ ...prev, username: authInput.username, password: authInput.password }));
-    setAuthMode('reg_wa'); // Lanjut ke input No. WhatsApp
+    setTempData((prev) => ({ ...prev, username: authInput.username.trim(), password: authInput.password }));
+    setAuthMode('reg_wa');
   };
 
   const handleRegWaSubmit = (e) => {
     e.preventDefault();
-    if (!authInput.whatsapp) {
-      alert("No. WhatsApp wajib diisi!");
-      return;
-    }
-    setTempData(prev => ({ ...prev, whatsapp: authInput.whatsapp, type: 'register' }));
-    alert(`Kode OTP pendaftaran telah dikirim ke WhatsApp ${authInput.whatsapp}. (Simulasi OTP: 123456)`);
-    setAuthMode('otp_wa');
+    if (!isValidWa(authInput.whatsapp)) { alert('Nomor WhatsApp tidak valid.'); return; }
+    setTempData((prev) => ({ ...prev, whatsapp: authInput.whatsapp }));
+    goStep('otp_email', true);
+  };
+  // [REGISTER-END]
+
+  // [OTP-START] Verifikasi OTP bersama (dipakai Daftar, Lupa Akun, Reset Password)
+  const handleVerifyEmailOtp = (e) => {
+    e.preventDefault();
+    if (authInput.otp !== OTP_EMAIL_SIM) { alert('Kode OTP Email salah!'); return; }
+    goStep('otp_wa', true);
   };
 
   const handleVerifyWaOtp = (e) => {
     e.preventDefault();
-    if (authInput.otp === "123456" || authInput.otp.length === 6) {
-      if (tempData.type === 'register') {
-        const savedUsers = JSON.parse(localStorage.getItem('csc_registered_users') || '[]');
-        savedUsers.push(tempData);
-        localStorage.setItem('csc_registered_users', JSON.stringify(savedUsers));
+    if (authInput.otp !== OTP_WA_SIM) { alert('Kode OTP WhatsApp salah!'); return; }
 
-        alert("Verifikasi WhatsApp Berhasil! Akun Anda telah terdaftar.");
-        loginGoogle({ name: tempData.username, email: `${tempData.username}@coconutshellcharcoal.id` });
-        setAuthMode(null);
-      } else if (tempData.type === 'reset_pass') {
-        alert("OTP benar! Silakan buat password baru Anda.");
-        setAuthMode('new_password');
-        return;
-      }
-      setAuthInput({ username: '', password: '', whatsapp: '', email: '', otp: '' });
-    } else {
-      alert("Kode OTP salah! (Gunakan 123456)");
+    if (tempData.flow === 'register') {
+      const users = loadUsers();
+      users.push({
+        provider: tempData.provider,
+        email: tempData.email,
+        username: tempData.username,
+        password: tempData.password, // TODO produksi: hash di server, jangan simpan polos
+        whatsapp: tempData.whatsapp,
+      });
+      saveUsers(users);
+      alert('Pendaftaran berhasil! Silakan masuk dengan username dan password Anda.');
+      goLogin();
+    } else if (tempData.flow === 'forgot') {
+      // TODO produksi: kirim email lewat backend
+      alert(`Username Anda telah dikirim ke email ${tempData.email}. (Simulasi: username = ${tempData.username})`);
+      goLogin();
+    } else if (tempData.flow === 'reset') {
+      setAuthInput({ ...EMPTY_INPUT });
+      setAuthMode('new_password');
     }
   };
-  // [REGISTER-END]
+  // [OTP-END]
 
-  // [RESET-START] 3. FITUR LUPA / RESET
-  const handleForgotPassSubmit = (e) => {
+  // [FORGOT-START] 3. LUPA AKUN: email → WA → OTP Email → OTP WA → username dikirim via email
+  const handleOpenForgot = () => { setAuthInput(EMPTY_INPUT); setTempData({ flow: 'forgot' }); setAuthMode('forgot_email'); };
+
+  const handleForgotEmailSubmit = (e) => {
     e.preventDefault();
-    if (!authInput.whatsapp) {
-      alert("Masukkan No. WhatsApp Anda.");
-      return;
-    }
-    setTempData({ whatsapp: authInput.whatsapp, type: 'reset_pass' });
-    alert(`OTP Reset Password dikirim ke WhatsApp ${authInput.whatsapp}. (Simulasi OTP: 123456)`);
-    setAuthMode('otp_wa');
+    setTempData((prev) => ({ ...prev, email: authInput.email.trim() }));
+    setAuthMode('forgot_wa');
+  };
+
+  const handleForgotWaSubmit = (e) => {
+    e.preventDefault();
+    const found = loadUsers().find(
+      (u) => sameText(u.email, tempData.email) && normalizeWa(u.whatsapp) === normalizeWa(authInput.whatsapp)
+    );
+    if (!found) { alert('Email dan No. WhatsApp tidak cocok dengan akun terdaftar.'); return; }
+    setTempData((prev) => ({ ...prev, whatsapp: authInput.whatsapp, username: found.username }));
+    goStep('otp_email', true);
+  };
+  // [FORGOT-END]
+
+  // [RESET-START] 4. RESET PASSWORD: username → email → WA → OTP Email → OTP WA → password baru
+  const handleOpenReset = () => { setAuthInput(EMPTY_INPUT); setTempData({ flow: 'reset' }); setAuthMode('reset_username'); };
+
+  const handleResetUsernameSubmit = (e) => {
+    e.preventDefault();
+    setTempData((prev) => ({ ...prev, username: authInput.username.trim() }));
+    setAuthMode('reset_email');
+  };
+
+  const handleResetEmailSubmit = (e) => {
+    e.preventDefault();
+    setTempData((prev) => ({ ...prev, email: authInput.email.trim() }));
+    setAuthMode('reset_wa');
+  };
+
+  const handleResetWaSubmit = (e) => {
+    e.preventDefault();
+    const found = loadUsers().find(
+      (u) =>
+        sameText(u.username, tempData.username) &&
+        sameText(u.email, tempData.email) &&
+        normalizeWa(u.whatsapp) === normalizeWa(authInput.whatsapp)
+    );
+    if (!found) { alert('Username, Email, dan No. WhatsApp tidak cocok dengan akun terdaftar.'); return; }
+    setTempData((prev) => ({ ...prev, whatsapp: authInput.whatsapp }));
+    goStep('otp_email', true);
   };
 
   const handleNewPasswordSubmit = (e) => {
     e.preventDefault();
-    if (!authInput.password) {
-      alert("Masukkan password baru.");
-      return;
-    }
-    alert("Password berhasil diubah! Silakan login kembali.");
-    setAuthMode('login_username');
-    setAuthInput({ username: '', password: '', whatsapp: '', email: '', otp: '' });
-  };
-
-  const handleForgotUsernameSubmit = (e) => {
-    e.preventDefault();
-    if (!authInput.email) {
-      alert("Masukkan Email terdaftar Anda.");
-      return;
-    }
-    setTempData({ email: authInput.email });
-    alert(`Kode OTP verifikasi telah dikirim ke Email ${authInput.email}. (Simulasi OTP: 654321)`);
-    setAuthMode('otp_email');
-  };
-
-  const handleVerifyEmailOtp = (e) => {
-    e.preventDefault();
-    if (authInput.otp === "654321" || authInput.otp.length === 6) {
-      alert(`Verifikasi Email Berhasil! Username Anda telah dikirimkan melalui email ke ${tempData.email}.`);
-      setAuthMode('login_username');
-      setAuthInput({ username: '', password: '', whatsapp: '', email: '', otp: '' });
-    } else {
-      alert("Kode OTP Email salah! (Gunakan 654321)");
-    }
+    const users = loadUsers().map((u) =>
+      sameText(u.username, tempData.username) ? { ...u, password: authInput.password } : u
+    );
+    saveUsers(users);
+    alert('Password berhasil diubah! Silakan login kembali.');
+    goLogin();
   };
   // [RESET-END]
 
@@ -267,70 +331,63 @@ const Login = () => {
 
       {/* Tombol Utama (Masuk & Daftar) */}
       <div className={styles.authButtonsRow}>
-        <button onClick={handleOpenLogin} className={styles.primaryAuthBtn}>
-          Masuk
-        </button>
-        <button onClick={handleOpenRegister} className={styles.secondaryAuthBtn}>
-          Daftar
-        </button>
+        <button onClick={handleOpenLogin} className={styles.primaryAuthBtn}>Masuk</button>
+        <button onClick={handleOpenRegister} className={styles.secondaryAuthBtn}>Daftar</button>
       </div>
 
-      {/* Tautan Bantuan (Reset Pass & Lupa Akun) */}
+      {/* Tautan Bantuan */}
       <div className={styles.linksRow}>
-        <button onClick={() => setAuthMode('reset_password')} className={styles.linkBtn}>
-          Reset Password (OTP WA)
-        </button>
-        <button onClick={() => setAuthMode('forgot_username')} className={styles.linkBtn}>
-          Lupa Akun? (Cek Email)
-        </button>
+        <button onClick={handleOpenReset} className={styles.linkBtn}>Reset Password</button>
+        <button onClick={handleOpenForgot} className={styles.linkBtn}>Lupa Akun?</button>
       </div>
 
-      {/* ================= MODAL 1: LOGIN USERNAME + PASSKEY/PROVIDER ================= */}
+      {/* ============ MODAL: MASUK (username+password, Passkey, Microsoft/Google/Apple) ============ */}
       {authMode === 'login_username' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleLoginSubmit} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Masuk Akun</h4>
-            <p className={styles.modalDesc}>Masukkan username dan password Anda</p>
-            <input type="text" placeholder="Username" value={authInput.username} onChange={e => setAuthInput({...authInput, username: e.target.value})} required className={styles.inputField} />
-            <input type="password" placeholder="Password" value={authInput.password} onChange={e => setAuthInput({...authInput, password: e.target.value})} required className={styles.inputField} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>MASUK</button>
-              <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
-            </div>
+        <AuthModal
+          title="Masuk Akun"
+          desc="Masukkan username dan password Anda"
+          onSubmit={handleLoginSubmit}
+          submitLabel="MASUK"
+          onBack={closeAll}
+          footer={
+            /* [LOGIN-SOCIAL-UI-START] */
+            <>
+              <div className={styles.dividerWrapper} style={{ width: '100%' }}>atau masuk dengan</div>
 
-            {/* [LOGIN-SOCIAL-UI-START] */}
-            <div className={styles.dividerWrapper} style={{ width: '100%' }}>atau masuk dengan</div>
+              <button type="button" onClick={handleLoginPasskey} disabled={busyProvider !== null} className={styles.passkeyBtn}>
+                <ProviderIcon name="Passkey" />
+                {busyProvider === 'Passkey' ? 'Memverifikasi...' : 'Masuk dengan Passkey'}
+              </button>
 
-            <button type="button" onClick={handleLoginPasskey} disabled={busyProvider !== null} className={styles.passkeyBtn}>
-              <ProviderIcon name="Passkey" />
-              {busyProvider === 'Passkey' ? 'Memverifikasi...' : 'Masuk dengan Passkey'}
-            </button>
-
-            <div className={styles.socialGrid}>
-              {['Microsoft', 'Google', 'Apple'].map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => handleLoginProvider(p)}
-                  disabled={busyProvider !== null}
-                  className={`${styles.providerBtn} ${styles.providerBtnStack}`}
-                  aria-label={`Masuk dengan ${p}`}
-                >
-                  <ProviderIcon name={p} />
-                  <span>{busyProvider === p ? '...' : p}</span>
-                </button>
-              ))}
-            </div>
-            {/* [LOGIN-SOCIAL-UI-END] */}
-          </form>
-        </div>
+              <div className={styles.socialGrid}>
+                {['Microsoft', 'Google', 'Apple'].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => handleLoginProvider(p)}
+                    disabled={busyProvider !== null}
+                    className={`${styles.providerBtn} ${styles.providerBtnStack}`}
+                    aria-label={`Masuk dengan ${p}`}
+                  >
+                    <ProviderIcon name={p} />
+                    <span>{busyProvider === p ? '...' : p}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+            /* [LOGIN-SOCIAL-UI-END] */
+          }
+        >
+          <input type="text" placeholder="Username" {...bind('username')} />
+          <input type="password" placeholder="Password" {...bind('password')} />
+        </AuthModal>
       )}
 
-      {/* ================= MODAL 2: PILIH PROVIDER REGISTRASI ================= */}
+      {/* ============ DAFTAR 1: PILIH AKUN PROVIDER ============ */}
       {authMode === 'reg_provider' && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Pilih Metode Pendaftaran</h4>
+            <h4 className={styles.modalTitle}>Daftar Akun</h4>
             <p className={styles.modalDesc}>Pilih platform, lalu pilih akun Anda</p>
 
             {/* [REG-PROVIDER-UI-START] */}
@@ -351,119 +408,146 @@ const Login = () => {
             {/* [REG-PROVIDER-UI-END] */}
 
             <div className={styles.modalActionsRow} style={{ marginTop: 12 }}>
-              <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel} style={{ width: '100%' }}>KEMBALI</button>
+              <button type="button" onClick={closeAll} className={styles.btnCancel} style={{ width: '100%' }}>KEMBALI</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= MODAL 3: BUAT USERNAME & PASSWORD (REG) ================= */}
+      {/* ============ DAFTAR 2: USERNAME & PASSWORD ============ */}
       {authMode === 'reg_form' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleRegFormSubmit} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Buat Kredensial Akun</h4>
-            <p className={styles.modalDesc}>
-              Metode terpilih: <b>{tempData.provider}</b>
-              {tempData.account?.email ? <> ({tempData.account.email})</> : null}
-            </p>
-            <input type="text" placeholder="Buat Username" value={authInput.username} onChange={e => setAuthInput({...authInput, username: e.target.value})} required className={styles.inputField} />
-            <input type="password" placeholder="Buat Password" value={authInput.password} onChange={e => setAuthInput({...authInput, password: e.target.value})} required className={styles.inputField} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>NEXT</button>
-              <button type="button" onClick={() => setAuthMode('reg_provider')} className={styles.btnCancel}>KEMBALI</button>
-            </div>
-          </form>
-        </div>
+        <AuthModal
+          title="Buat Username & Password"
+          desc={<>Akun terpilih: <b>{tempData.provider}</b>{tempData.email ? <> ({tempData.email})</> : null}</>}
+          onSubmit={handleRegFormSubmit}
+          submitLabel="NEXT"
+          onBack={() => setAuthMode('reg_provider')}
+          backLabel="KEMBALI"
+        >
+          <input type="text" placeholder="Buat Username" {...bind('username')} />
+          <input type="password" placeholder="Buat Password (min. 6 karakter)" {...bind('password', { minLength: 6 })} />
+        </AuthModal>
       )}
 
-      {/* ================= MODAL 4: MASUKKAN NO. WHATSAPP (REG) ================= */}
+      {/* ============ DAFTAR 3: NO. WHATSAPP ============ */}
       {authMode === 'reg_wa' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleRegWaSubmit} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Nomor WhatsApp</h4>
-            <p className={styles.modalDesc}>Masukkan nomor WhatsApp untuk verifikasi</p>
-            <input type="tel" placeholder="No. WhatsApp (0812...)" value={authInput.whatsapp} onChange={e => setAuthInput({...authInput, whatsapp: e.target.value})} required className={styles.inputField} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>NEXT & KIRIM OTP</button>
-              <button type="button" onClick={() => setAuthMode('reg_form')} className={styles.btnCancel}>KEMBALI</button>
-            </div>
-          </form>
-        </div>
+        <AuthModal
+          title="Nomor WhatsApp"
+          desc="Masukkan nomor WhatsApp untuk verifikasi"
+          onSubmit={handleRegWaSubmit}
+          submitLabel="KIRIM OTP"
+          onBack={() => setAuthMode('reg_form')}
+          backLabel="KEMBALI"
+        >
+          <input type="tel" placeholder="No. WhatsApp (0812...)" {...bind('whatsapp')} />
+        </AuthModal>
       )}
 
-      {/* ================= MODAL 5: VERIFIKASI OTP WHATSAPP ================= */}
-      {authMode === 'otp_wa' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleVerifyWaOtp} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Verifikasi OTP WhatsApp</h4>
-            <p className={styles.modalDesc}>Simulasi kode OTP: <b>123456</b></p>
-            <input type="text" maxLength={6} placeholder="123456" value={authInput.otp} onChange={e => setAuthInput({...authInput, otp: e.target.value})} required className={styles.inputField} style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>VERIFIKASI</button>
-              <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
-            </div>
-          </form>
-        </div>
+      {/* ============ LUPA AKUN 1: EMAIL ============ */}
+      {authMode === 'forgot_email' && (
+        <AuthModal
+          title="Lupa Akun"
+          desc="Masukkan email terdaftar Anda"
+          onSubmit={handleForgotEmailSubmit}
+          submitLabel="NEXT"
+          onBack={closeAll}
+        >
+          <input type="email" placeholder="email@domain.com" {...bind('email')} />
+        </AuthModal>
       )}
 
-      {/* ================= MODAL 6: RESET PASSWORD (VIA WA) ================= */}
-      {authMode === 'reset_password' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleForgotPassSubmit} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Reset Password</h4>
-            <p className={styles.modalDesc}>Masukkan No. WhatsApp terdaftar</p>
-            <input type="tel" placeholder="No. WhatsApp" value={authInput.whatsapp} onChange={e => setAuthInput({...authInput, whatsapp: e.target.value})} required className={styles.inputField} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>KIRIM OTP</button>
-              <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
-            </div>
-          </form>
-        </div>
+      {/* ============ LUPA AKUN 2: NO. WHATSAPP ============ */}
+      {authMode === 'forgot_wa' && (
+        <AuthModal
+          title="Nomor WhatsApp"
+          desc="Masukkan nomor WhatsApp yang terdaftar"
+          onSubmit={handleForgotWaSubmit}
+          submitLabel="KIRIM OTP"
+          onBack={() => setAuthMode('forgot_email')}
+          backLabel="KEMBALI"
+        >
+          <input type="tel" placeholder="No. WhatsApp (0812...)" {...bind('whatsapp')} />
+        </AuthModal>
       )}
 
-      {/* ================= MODAL 7: PASSWORD BARU ================= */}
-      {authMode === 'new_password' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleNewPasswordSubmit} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Password Baru</h4>
-            <p className={styles.modalDesc}>Masukkan sandi baru untuk akun Anda</p>
-            <input type="password" placeholder="Password Baru" value={authInput.password} onChange={e => setAuthInput({...authInput, password: e.target.value})} required className={styles.inputField} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>SIMPAN</button>
-              <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
-            </div>
-          </form>
-        </div>
+      {/* ============ RESET PASSWORD 1: USERNAME ============ */}
+      {authMode === 'reset_username' && (
+        <AuthModal
+          title="Reset Password"
+          desc="Masukkan username akun Anda"
+          onSubmit={handleResetUsernameSubmit}
+          submitLabel="NEXT"
+          onBack={closeAll}
+        >
+          <input type="text" placeholder="Username" {...bind('username')} />
+        </AuthModal>
       )}
 
-      {/* ================= MODAL 8: LUPA AKUN / USERNAME (VIA EMAIL) ================= */}
-      {authMode === 'forgot_username' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleForgotUsernameSubmit} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>Lupa Akun</h4>
-            <p className={styles.modalDesc}>Masukkan email terdaftar Anda</p>
-            <input type="email" placeholder="email@domain.com" value={authInput.email} onChange={e => setAuthInput({...authInput, email: e.target.value})} required className={styles.inputField} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>KIRIM OTP</button>
-              <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
-            </div>
-          </form>
-        </div>
+      {/* ============ RESET PASSWORD 2: EMAIL ============ */}
+      {authMode === 'reset_email' && (
+        <AuthModal
+          title="Email Terdaftar"
+          desc="Masukkan email yang terdaftar"
+          onSubmit={handleResetEmailSubmit}
+          submitLabel="NEXT"
+          onBack={() => setAuthMode('reset_username')}
+          backLabel="KEMBALI"
+        >
+          <input type="email" placeholder="email@domain.com" {...bind('email')} />
+        </AuthModal>
       )}
 
-      {/* ================= MODAL 9: OTP EMAIL ================= */}
+      {/* ============ RESET PASSWORD 3: NO. WHATSAPP ============ */}
+      {authMode === 'reset_wa' && (
+        <AuthModal
+          title="Nomor WhatsApp"
+          desc="Masukkan nomor WhatsApp yang terdaftar"
+          onSubmit={handleResetWaSubmit}
+          submitLabel="KIRIM OTP"
+          onBack={() => setAuthMode('reset_email')}
+          backLabel="KEMBALI"
+        >
+          <input type="tel" placeholder="No. WhatsApp (0812...)" {...bind('whatsapp')} />
+        </AuthModal>
+      )}
+
+      {/* ============ OTP EMAIL (bersama: Daftar / Lupa Akun / Reset) ============ */}
       {authMode === 'otp_email' && (
-        <div className={styles.modalOverlay}>
-          <form onSubmit={handleVerifyEmailOtp} className={styles.modalForm}>
-            <h4 className={styles.modalTitle}>OTP Email</h4>
-            <p className={styles.modalDesc}>Simulasi kode OTP: <b>654321</b></p>
-            <input type="text" maxLength={6} placeholder="654321" value={authInput.otp} onChange={e => setAuthInput({...authInput, otp: e.target.value})} required className={styles.inputField} style={{ textAlign: 'center', letterSpacing: '6px', fontSize: '18px', fontWeight: 'bold' }} />
-            <div className={styles.modalActionsRow}>
-              <button type="submit" className={styles.btnSubmit}>KIRIM USERNAME</button>
-              <button type="button" onClick={() => setAuthMode(null)} className={styles.btnCancel}>BATAL</button>
-            </div>
-          </form>
-        </div>
+        <AuthModal
+          title="Verifikasi OTP Email"
+          desc={<>Kode dikirim ke <b>{tempData.email}</b>.<br />Simulasi kode: <b>{OTP_EMAIL_SIM}</b></>}
+          onSubmit={handleVerifyEmailOtp}
+          submitLabel="VERIFIKASI"
+          onBack={closeAll}
+        >
+          <input type="text" inputMode="numeric" maxLength={6} placeholder="••••••" {...bind('otp', { style: otpStyle })} />
+        </AuthModal>
+      )}
+
+      {/* ============ OTP WHATSAPP (bersama: Daftar / Lupa Akun / Reset) ============ */}
+      {authMode === 'otp_wa' && (
+        <AuthModal
+          title="Verifikasi OTP WhatsApp"
+          desc={<>Kode dikirim ke WhatsApp <b>{tempData.whatsapp}</b>.<br />Simulasi kode: <b>{OTP_WA_SIM}</b></>}
+          onSubmit={handleVerifyWaOtp}
+          submitLabel="VERIFIKASI"
+          onBack={closeAll}
+        >
+          <input type="text" inputMode="numeric" maxLength={6} placeholder="••••••" {...bind('otp', { style: otpStyle })} />
+        </AuthModal>
+      )}
+
+      {/* ============ RESET PASSWORD 4: PASSWORD BARU ============ */}
+      {authMode === 'new_password' && (
+        <AuthModal
+          title="Password Baru"
+          desc="Masukkan sandi baru untuk akun Anda"
+          onSubmit={handleNewPasswordSubmit}
+          submitLabel="SIMPAN"
+          onBack={closeAll}
+        >
+          <input type="password" placeholder="Password Baru (min. 6 karakter)" {...bind('password', { minLength: 6 })} />
+        </AuthModal>
       )}
     </div>
   );
