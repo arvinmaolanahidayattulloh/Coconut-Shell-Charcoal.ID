@@ -42,7 +42,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   }, [open]); 
 
-  // --- 1. PILIH PROVIDER & LANGSUNG KIRIM OTP EMAIL NYATA VIA RESEND ---
+  // --- 1. PILIH PROVIDER & CEK APAKAH SUDAH TERDAFTAR ---
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
@@ -50,6 +50,18 @@ const Register = ({ open, onClose, onRegistered }) => {
       const userEmail = account?.email || '';
       if (!userEmail) throw new Error('Email akun tidak ditemukan.');
 
+      // CEK APAKAH EMAIL SUDAH TERDAFTAR SEBELUMNYA
+      const existingUsers = loadUsers();
+      const isAlreadyRegistered = existingUsers.some((u) => sameText(u.email, userEmail));
+
+      if (isAlreadyRegistered) {
+        alert(`Akun dengan email ${userEmail} sudah terdaftar! Silakan langsung Masuk.`);
+        // Langsung selesaikan register dan arahkan ke auto-login / tutup modal
+        onRegistered({ email: userEmail, username: userEmail.split('@')[0] });
+        return;
+      }
+
+      // Jika belum terdaftar, lanjut kirim OTP Email via Resend
       setData({ provider: providerName, email: userEmail });
       
       setIsLoading(true);
@@ -115,7 +127,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     // Validasi S&K sebelum kirim OTP WhatsApp
     if (!isAgreed) {
       setShakeError(true);
-      setTimeout(() => setShakeError(false), 600); // Bergetar selama 600ms
+      setTimeout(() => setShakeError(false), 600);
       return;
     }
 
@@ -167,14 +179,12 @@ const Register = ({ open, onClose, onRegistered }) => {
     users.push(newUser);
     saveUsers(users);
     
-    // Meneruskan data user baru agar langsung masuk (login) otomatis
     onRegistered(newUser); 
   };
 
   if (!open) return null;
 
   return (
-    /* Klik di luar area modal untuk menutup */
     <div className={styles.modalBackdrop} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
         
@@ -193,7 +203,7 @@ const Register = ({ open, onClose, onRegistered }) => {
                   className={styles.providerBtn}
                 >
                   <ProviderIcon name={p} size={22} />
-                  <span>{busyProvider === p || isLoading ? 'Memproses...' : `Daftar dengan ${p}`}</span>
+                  <span>{busyProvider === p || isLoading ? 'Memeriksa...' : `Daftar dengan ${p}`}</span>
                 </button>
               ))}
             </div>
@@ -274,7 +284,6 @@ const Register = ({ open, onClose, onRegistered }) => {
               />
             </div>
 
-            {/* Syarat & Ketentuan dengan efek getar merah jika belum dicentang */}
             <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
                 <input 
@@ -316,4 +325,4 @@ const Register = ({ open, onClose, onRegistered }) => {
   );
 };
 
-export default Register;
+exports default Register;
