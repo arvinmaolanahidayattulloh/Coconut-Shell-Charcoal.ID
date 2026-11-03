@@ -15,7 +15,6 @@ import {
   OTP_WA_SIM
 } from './AuthShared';
 
-// Google dipindah ke urutan paling atas
 const PROVIDERS = ['Google', 'Microsoft', 'Apple'];
 
 const Register = ({ open, onClose, onRegistered }) => {
@@ -25,8 +24,10 @@ const Register = ({ open, onClose, onRegistered }) => {
   // State langkah: provider -> username -> password -> wa -> otp_email -> otp_wa
   const [step, setStep] = useState('provider');
   const [data, setData] = useState({}); 
-  const [otpInput, setOtpInput] = useState(''); // State khusus untuk input OTP
+  const [otpInput, setOtpInput] = useState('');
 
+  // [PERBAIKAN SANGAT PENTING DI SINI]
+  // Menghapus 'reset' dari dependency array agar form tidak hilang saat berpindah step
   useEffect(() => {
     if (open) { 
       reset(); 
@@ -34,7 +35,8 @@ const Register = ({ open, onClose, onRegistered }) => {
       setStep('provider'); 
       setOtpInput(''); 
     }
-  }, [open, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]); 
 
   // --- 1. PILIH PROVIDER ---
   const handleSelectProvider = async (providerName) => {
@@ -42,7 +44,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     try {
       const account = await runProvider(providerName);
       setData({ provider: providerName, email: account?.email || '' });
-      setStep('username'); // Lanjut ke layar Username
+      setStep('username'); // Sukses dari Google, langsung buka layar Username
     } catch (err) {
       console.error(`[REG-PROVIDER] ${providerName}:`, err);
       alert(`Pemilihan akun ${providerName} gagal: ${err?.message || err}`);
@@ -91,7 +93,6 @@ const Register = ({ open, onClose, onRegistered }) => {
     e.preventDefault();
     if (otpInput !== OTP_WA_SIM) { alert('Kode OTP WhatsApp salah!'); return; }
     
-    // Simpan ke database/lokal
     const users = loadUsers();
     users.push({
       provider: data.provider,
@@ -103,14 +104,14 @@ const Register = ({ open, onClose, onRegistered }) => {
     saveUsers(users);
     
     alert('Pendaftaran berhasil! Silakan masuk dengan username dan password Anda.');
-    onRegistered(); // Menutup modal daftar dan membuka modal masuk
+    onRegistered(); 
   };
 
   if (!open) return null;
 
   // ================= RENDER LAYAR =================
 
-  // 1. LAYAR PILIH AKUN GOOGLE
+  // 1. LAYAR PILIH AKUN
   if (step === 'provider') {
     return (
       <div className={styles.overlay}>
@@ -176,7 +177,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     return (
       <AuthModal
         title="Nomor WhatsApp"
-        desc="Masukkan nomor WhatsApp untuk verifikasi keamanan"
+        desc="Masukkan nomor WhatsApp untuk verifikasi"
         onSubmit={handleWaSubmit}
         submitLabel="KIRIM OTP EMAIL"
         onBack={() => setStep('password')}
