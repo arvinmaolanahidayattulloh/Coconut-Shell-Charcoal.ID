@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AccountProvider } from "@/components/Account";
-import { PriceProvider } from "@/context/PriceContext"; // <-- 1. Import PriceProvider
+import { PriceProvider } from "@/context/PriceContext";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Partners from "@/components/Partners";
@@ -20,6 +20,11 @@ import { LeftPanel, RightPanel } from "@/components/SidePanels";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
+  const [livePrice, setLivePrice] = useState(1250.50);
+
+  // State untuk sistem Switch Tab Invest & Trade
+  const [invested, setInvested] = useState(false);
+  const [activeTab, setActiveTab] = useState("invest"); // 'invest' atau 'trade'
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,7 +58,7 @@ export default function Home() {
   return (
     <GoogleOAuthProvider clientId="677126002730-5m6a6uge42bvk9aglki09dqkoi467tfs.apps.googleusercontent.com">
       <AccountProvider>
-        <PriceProvider> {/* <-- 2. Bungkus PriceProvider di sini agar usePrice() terbaca */}
+        <PriceProvider>
           <Header />
 
           <div className="pageFlexLayout">
@@ -91,11 +96,32 @@ export default function Home() {
 
                 <CTA />
 
-                <PriceChart />
+                <PriceChart setLivePrice={setLivePrice} />
                 
-                <Trade />
+                {/* Switch Tampilan Berdasarkan Tab yang Aktif */}
+                {activeTab === 'invest' ? (
+                  <Invest 
+                    invested={invested} 
+                    setInvested={setInvested} 
+                    activeTab={activeTab} 
+                    setActiveTab={setActiveTab} 
+                  />
+                ) : (
+                  <div>
+                    {/* Tombol kembali ke tab invest jika ingin switch */}
+                    <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto', padding: '0 24px' }}>
+                      <button 
+                        onClick={() => setActiveTab('invest')}
+                        style={{ padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        ← Kembali ke Menu Investasi
+                      </button>
+                    </div>
+                    <Trade livePrice={livePrice} />
+                  </div>
+                )}
                 
-                <Invest />
+                <Invest /> {/* Opsional, jika ingin bagian bawah tetap menampilkan info invest, atau bisa dihapus jika diganti switch total */}
 
                 <AdBanner slot="1003" format="horizontal" className="adSection" />
 
@@ -107,7 +133,7 @@ export default function Home() {
               </main>
             </div>
           </div>
-        </PriceProvider> {/* <-- 3. Penutup PriceProvider */}
+        </PriceProvider>
       </AccountProvider>
     </GoogleOAuthProvider>
   );
