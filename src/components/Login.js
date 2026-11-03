@@ -14,25 +14,21 @@ import {
 } from './AuthShared';
 
 // ============================================================
-// Login.jsx — titik masuk: Masuk, Passkey, provider
-// Daftar  → Register.jsx (dipanggil dari sini)
-// Lupa Akun & Reset Password → Recovery.jsx (dipanggil dari sini)
+// Login.jsx — titik masuk utama
 // ============================================================
 
 const Login = () => {
+  // Tambahkan loginMicrosoft & loginApple jika Anda membutuhkannya nanti
   const { loginGoogle, runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
 
-  // authMode: null | login_username | register | forgot | reset
   const [authMode, setAuthMode] = useState(null);
 
-  // [NAV-START] navigasi antar modal
   const openMode = (mode) => { reset(); setAuthMode(mode); };
   const closeAll = () => openMode(null);
   const goLogin = () => openMode('login_username');
-  // [NAV-END]
 
-  // [LOGIN-START] 1. MASUK USERNAME & PASSWORD
+  // [LOGIN-START] MASUK USERNAME & PASSWORD
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     const found = loadUsers().find(
@@ -51,7 +47,15 @@ const Login = () => {
   const handleLoginProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
-      await runProvider(providerName);
+      // 1. Ambil data dari provider
+      const account = await runProvider(providerName);
+      
+      // 2. MANUAL LOGIN: Ubah state global (karena runProvider sekarang tidak trigger auto-login)
+      loginGoogle({ 
+        name: account?.name || `User ${providerName}`, 
+        email: account?.email || '' 
+      });
+      
       closeAll();
     } catch (err) {
       console.error(`[LOGIN-SOCIAL] ${providerName}:`, err);
@@ -68,7 +72,6 @@ const Login = () => {
     }
     setBusyProvider('Passkey');
     try {
-      // TODO: challenge harus dari server & hasilnya diverifikasi di server
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const cred = await navigator.credentials.get({
         publicKey: { challenge, timeout: 60000, userVerification: 'preferred' },
@@ -92,19 +95,17 @@ const Login = () => {
         Amankan alokasi kuota komoditas ekspor Anda sekarang.
       </span>
 
-      {/* Tombol Utama (Masuk & Daftar) */}
       <div className={styles.authButtonsRow}>
         <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
         <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
       </div>
 
-      {/* Tautan Bantuan */}
       <div className={styles.linksRow}>
         <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
         <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
       </div>
 
-      {/* ============ MODAL: MASUK (username+password, Passkey, Microsoft/Google/Apple) ============ */}
+      {/* MODAL MASUK */}
       {authMode === 'login_username' && (
         <AuthModal
           title="Masuk Akun"
@@ -113,7 +114,6 @@ const Login = () => {
           submitLabel="MASUK"
           onBack={closeAll}
           footer={
-            /* [LOGIN-SOCIAL-UI-START] */
             <>
               <div className={styles.dividerWrapper}>atau masuk dengan</div>
 
@@ -138,7 +138,6 @@ const Login = () => {
                 ))}
               </div>
             </>
-            /* [LOGIN-SOCIAL-UI-END] */
           }
         >
           <input type="text" placeholder="Username" {...bind('username')} />
@@ -146,10 +145,10 @@ const Login = () => {
         </AuthModal>
       )}
 
-      {/* ============ DAFTAR (komponen terpisah: Register.jsx) ============ */}
+      {/* DAFTAR */}
       <Register open={authMode === 'register'} onClose={closeAll} onRegistered={goLogin} />
 
-      {/* ============ LUPA AKUN & RESET PASSWORD (komponen terpisah: Recovery.jsx) ============ */}
+      {/* LUPA AKUN & RESET PASSWORD */}
       <Recovery
         mode={authMode === 'forgot' ? 'forgot' : authMode === 'reset' ? 'reset' : null}
         onClose={closeAll}
