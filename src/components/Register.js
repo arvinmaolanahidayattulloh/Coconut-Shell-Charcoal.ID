@@ -42,6 +42,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   }, [open]); 
 
+  // --- 1. PILIH PROVIDER & LANGSUNG KIRIM OTP EMAIL NYATA VIA RESEND ---
   const handleSelectProvider = async (providerName) => {
     setBusyProvider(providerName);
     try {
@@ -76,6 +77,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
+  // --- 2. SUBMIT OTP EMAIL & LANJUT BUAT USERNAME ---
   const handleOtpEmailSubmit = (e) => {
     e.preventDefault();
     if (!data.serverEmailOtp || otpInput.trim() !== data.serverEmailOtp.toString().trim()) { 
@@ -86,6 +88,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('username'); 
   };
 
+  // --- 3. SUBMIT USERNAME ---
   const handleUsernameSubmit = (e) => {
     e.preventDefault();
     if (loadUsers().some((u) => sameText(u.username, values.username))) {
@@ -96,18 +99,20 @@ const Register = ({ open, onClose, onRegistered }) => {
     setStep('password'); 
   };
 
+  // --- 4. SUBMIT PASSWORD ---
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setData((prev) => ({ ...prev, password: values.password }));
     setStep('wa'); 
   };
 
+  // --- 5. SUBMIT WHATSAPP & KIRIM OTP WA VIA FONNTE ---
   const handleWaSubmit = async (e) => {
     e.preventDefault();
     const cleanNumber = values.whatsapp.replace(/^0+/, '');
     if (cleanNumber.length < 8) { alert('Nomor WhatsApp tidak valid.'); return; }
     
-    // Validasi S&K sebelum kirim OTP WhatsApp terakhir
+    // Validasi S&K sebelum kirim OTP WhatsApp
     if (!isAgreed) {
       setShakeError(true);
       setTimeout(() => setShakeError(false), 600); // Bergetar selama 600ms
@@ -142,6 +147,7 @@ const Register = ({ open, onClose, onRegistered }) => {
     }
   };
 
+  // --- 6. SUBMIT OTP WHATSAPP & AUTO LOGIN SELESAI ---
   const handleOtpWaSubmit = (e) => {
     e.preventDefault();
     if (!data.serverWaOtp || otpInput.trim() !== data.serverWaOtp.toString().trim()) { 
@@ -149,18 +155,20 @@ const Register = ({ open, onClose, onRegistered }) => {
       return; 
     }
     
-    const users = loadUsers();
-    users.push({
+    const newUser = {
       provider: data.provider,
       email: data.email,
       username: data.username,
       password: data.password, 
       whatsapp: data.whatsapp,
-    });
+    };
+
+    const users = loadUsers();
+    users.push(newUser);
     saveUsers(users);
     
-    alert('Pendaftaran berhasil! Akun Anda telah aktif.');
-    onRegistered(); 
+    // Meneruskan data user baru agar langsung masuk (login) otomatis
+    onRegistered(newUser); 
   };
 
   if (!open) return null;
@@ -266,7 +274,7 @@ const Register = ({ open, onClose, onRegistered }) => {
               />
             </div>
 
-            {/* Tombol Persetujuan S&K dengan efek getar merah jika belum dicentang */}
+            {/* Syarat & Ketentuan dengan efek getar merah jika belum dicentang */}
             <div className={`${styles.termsWrapper} ${shakeError ? styles.shakeRed : ''}`}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', color: shakeError ? '#dc2626' : '#374151', fontWeight: shakeError ? 'bold' : 'normal' }}>
                 <input 
