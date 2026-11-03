@@ -1,0 +1,115 @@
+/* ============================================================
+   Register.module.css — gaya khusus langkah "pilih akun" di Register.jsx
+   (modal form, input, tombol NEXT/KEMBALI memakai AuthShared.module.css)
+   Tampilan overlay & card disamakan dengan modal bersama.
+   ============================================================ */
+
+/* [OVERLAY-START] */
+.overlay {
+  position: absolute; /* menempel ke .loginContainer (position:relative) */
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  border-radius: 24px;
+  padding: 16px;
+  animation: regFadeIn 0.2s ease-out;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 380px;
+  padding: 28px 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.12);
+}
+
+.title {
+  margin: 0 0 2px 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+.desc {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 12px 0;
+  text-align: center;
+  line-height: 1.4;
+}
+
+@keyframes regFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* [OVERLAY-END] */
+
+/* [PROVIDER-START] Tombol provider berlogo (baris penuh, logo di kiri) */
+.providerStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.providerBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.providerBtn:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.providerBtn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.backBtn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  color: #4b5563;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.backBtn:hover {
+  background: #e5e7eb;
+}
+/* [PROVIDER-END] */
