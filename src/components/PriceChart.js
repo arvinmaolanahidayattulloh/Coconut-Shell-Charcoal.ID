@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
-import { usePrice } from "@/context/PriceContext";
+import { usePrice } from "@/context/PriceContext"; // <-- Integrasi Context harga live
 import styles from "./PriceChart.module.css";
+// ... impor bawaan lainnya ...
 
 const OZ = 31.1034768;
 const GRAMS = 5;
@@ -17,6 +18,7 @@ const SAR_BASE = 5000;
 const WIB = 7 * 3600;
 const DAY = 86400;
 
+// SHA-256 dari password "coconut shell charcoal"
 const PW_HASH = "113066f60804d8bc313ae94d90e236ca5e672ce32398546529e509cd5a4b2f9a";
 
 async function sha256(s) {
@@ -24,6 +26,7 @@ async function sha256(s) {
   return Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
+// URUTAN INTERVAL (Infinite paling atas)
 const IV = {
   "inf":   { type: "inf",  label: "∞", bin: "1m" },
   "t1":    { type: "tick", count: 1,    label: "1 Tick" },
@@ -59,7 +62,9 @@ const BASE = {
   "4h":  { type: "min", step: 14400 },
   "12h": { type: "min", step: 43200 },
   "1d":  { type: "min", step: DAY },
-  "3d":  { type: "min", step: 259200 }
+  "3d":  { type: "min", step: 3 * DAY },
+  "1w":  { type: "min", step: 7 * DAY, off: 4 * DAY },
+  "1M":  { type: "cal", unit: "month" }
 };
 
 const BS_STEP = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "12h": 43200, "1d": 86400, "3d": 259200 };
@@ -187,6 +192,7 @@ function mergeCsc(f, g, b, calc) {
   return out;
 }
 
+// EA — PENCETAK HARGA DI BAWAH 1 MENIT
 const EA_BODY = 0.00003;
 const EA_MAXROWS = 7200;
 
@@ -331,16 +337,20 @@ function Smooth({ value, render, ms }) {
   return <>{render(v)}</>;
 }
 
+// [PATCH:CENTER-PRICE] autoscale: harga terakhir selalu di tengah, zoom vertikal tetap
 const makeCenterProvider = (followRef, spanRatioRef, lastRef) => (orig) => {
   const res = orig();
   const last = lastRef.current;
   if (!followRef.current || !spanRatioRef.current || !last) return res;
+  // x0.7 karena scaleMargins top/bottom 0.15 menyisakan 70% tinggi
   const half = (Math.abs(last) * spanRatioRef.current * 0.7) / 2;
   return { priceRange: { minValue: last - half, maxValue: last + half }, margins: res ? res.margins : undefined };
 };
+// [/PATCH:CENTER-PRICE]
 
 export default function PriceChart() {
-  const { setLivePrice } = usePrice();
+  const { setLivePrice } = usePrice(); // <-- Mengambil fungsi setLivePrice dari context
+
   const [unlocked, setUnlocked] = useState(false);
   const [pw, setPw] = useState("");
   const [pwErr, setPwErr] = useState(false);
@@ -384,8 +394,10 @@ export default function PriceChart() {
   const refreshRef = useRef(() => {});
   const fitRef = useRef(() => {});
 
-  const followRef = useRef(false);
-  const spanRatioRef = useRef(null);
+  // [PATCH:CENTER-PRICE] state mode "ikuti harga di tengah"
+  const followRef = useRef(false);      // aktif setelah tombol + ditekan
+  const spanRatioRef = useRef(null);    // lebar zoom vertikal, relatif terhadap harga terakhir
+  // [/PATCH:CENTER-PRICE]
 
   const dsRef = useRef({
     gold: { raw: [], sec: [], inf: [] },
@@ -411,6 +423,7 @@ export default function PriceChart() {
   typeRef.current = type;
   decRef.current = dec;
 
+  // ───────── Password ─────────
   useEffect(() => {
     try { if (sessionStorage.getItem("csc_unlock") === "1") setUnlocked(true); } catch (e) {}
   }, []);
@@ -423,7 +436,9 @@ export default function PriceChart() {
         try { sessionStorage.setItem("csc_unlock", "1"); } catch (err) {}
         setPwErr(false);
         setUnlocked(true);
-        if (pendingMode && pendingMode !== "csc_unlock") setMode(pendingMode);
+        if (pendingMode && pendingMode !== "csc_unlock") {
+          setMode(pendingMode);
+        }
         setPendingMode(null);
         setPw("");
       } else {
@@ -449,6 +464,7 @@ export default function PriceChart() {
     }).catch(() => {});
   }, []);
 
+  // ───────── Buat Chart (Zoom Vertikal Murni Bebas) ─────────
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -464,7 +480,7 @@ export default function PriceChart() {
         secondsVisible: true,
         rightOffset: 0,
         fixLeftEdge: false,
-        fixRightEdge: true,
+        fixRightEdge: true,       // Mentok kanan tanpa ruang kosong masa depan
         shiftVisibleRangeOnNewBar: true,
         minBarSpacing: 0.5
       },
@@ -472,6 +488,7 @@ export default function PriceChart() {
       localization: { priceFormatter: p => fmt(p, decRef.current) }
     });
 
+    // [PATCH:CENTER-PRICE] provider autoscale dipasang di kedua series
     const provider = makeCenterProvider(followRef, spanRatioRef, lastRef);
 
     const candle = chart.addCandlestickSeries({
@@ -486,6 +503,7 @@ export default function PriceChart() {
       visible: false,
       autoscaleInfoProvider: provider
     });
+    // [/PATCH:CENTER-PRICE]
 
     chartRef.current = chart;
     seriesRef.current = { candle, area };
@@ -504,12 +522,14 @@ export default function PriceChart() {
     s.area.applyOptions({ visible: typeRef.current === "area" });
   }, []);
 
+  // Dipakai resize/fit: hanya menggeser chart ke ujung kanan tanpa mengubah zoom
   const scrollToLatest = useCallback(() => {
     const chart = chartRef.current;
     if (!chart) return;
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
+  // [PATCH:CENTER-PRICE] tombol +: geser ke candle terbaru + harga di tengah, zoom tidak berubah
   const centerOnPrice = useCallback(() => {
     const chart = chartRef.current;
     const s = typeRef.current === "area" ? seriesRef.current.area : seriesRef.current.candle;
@@ -523,15 +543,18 @@ export default function PriceChart() {
       followRef.current = true;
     }
     chart.priceScale("right").applyOptions({ autoScale: true });
+    // paksa hitung ulang autoscale
     seriesRef.current.candle.applyOptions({});
     seriesRef.current.area.applyOptions({});
     chart.timeScale().scrollToPosition(0, true);
   }, []);
 
+  // reset mode ikuti saat interval berganti (rentang candle berubah)
   useEffect(() => {
     followRef.current = false;
     if (chartRef.current) chartRef.current.priceScale("right").applyOptions({ autoScale: true });
   }, [iv]);
+  // [/PATCH:CENTER-PRICE]
 
   const compute = useCallback(() => {
     const cfg = IV[ivRef.current];
@@ -585,8 +608,9 @@ export default function PriceChart() {
       chart.applyOptions({ timeScale: { timeVisible: sub, secondsVisible: cfg.type === "inf" || cfg.type === "tick" || cfg.type === "sec" } });
     }
 
+    // [PATCH:CENTER-PRICE] lastRef diperbarui SEBELUM update series agar provider memakai harga terbaru
     lastRef.current = last.close;
-    setLivePrice(last.close); // Sync live price to Trade component context
+    // [/PATCH:CENTER-PRICE]
 
     if (incremental) {
       if (n === prev.len + 1) {
@@ -608,7 +632,13 @@ export default function PriceChart() {
     win.forEach(c => { if (c.high > hi) hi = c.high; if (c.low < lo) lo = c.low; });
     const f0 = win[0].open;
     const diff = last.close - f0;
+    
     setLegend(p => ({ ...p, val: last.close, chg: diff, pct: f0 ? (diff / f0) * 100 : 0, isUp: diff >= 0, high: hi, low: lo }));
+    
+    // Kirim harga live terbaru ke Trade component via context
+    if (setLivePrice && last.close) {
+      setLivePrice(last.close);
+    }
   }, [compute, setLivePrice]);
 
   refreshRef.current = refresh;
@@ -669,7 +699,9 @@ export default function PriceChart() {
     return () => clearTimeout(t);
   }, [isFull]);
 
-  useEffect(() => { applyVis(); }, [type, applyVis]);
+  useEffect(() => {
+    applyVis();
+  }, [type, applyVis]);
 
   useEffect(() => {
     applyVis();
@@ -681,8 +713,9 @@ export default function PriceChart() {
       setFade(false);
     }, 140);
     return () => clearTimeout(t);
-  }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh]);
+  }, [mode, containerMode, rate, rates, iv, cur, baseBin, applyVis, refresh, fitRef]);
 
+  // ───────── Ambil Riwayat Sampai Akar ─────────
   useEffect(() => {
     if (!rates) return;
     tokenRef.current += 1;
@@ -815,6 +848,7 @@ export default function PriceChart() {
     loadDataProgressive();
   }, [rates, baseBin, refresh]);
 
+  // ───────── Live: WebSocket + Animasi Ular & Interval Sangat Halus LERP ─────────
   useEffect(() => {
     if (!rates) return;
     let disposed = false;
@@ -912,11 +946,13 @@ export default function PriceChart() {
         const r = rng(hashStr(k) ^ lastInfTime);
 
         let p = prevRow.close + (target - prevRow.close) * 0.08 + gauss(r) * sigma * 0.4;
+
         const open = prevRow.close;
         const h = Math.max(open, p) + Math.abs(gauss(r) * sigma * 0.2);
         const l = Math.min(open, p) - Math.abs(gauss(r) * sigma * 0.2);
 
         d.inf.push({ time: lastInfTime, open, high: h, low: l, close: p });
+
         if (d.inf.length > 300) d.inf.shift();
       });
 
@@ -1000,13 +1036,14 @@ export default function PriceChart() {
                 CSC
               </button>
 
+              {/* Tombol ikon mode disembunyikan secara default, terbuka jika memasukkan password: Coconut Shell Charcoal */}
               {unlocked && (
                 <>
                   <button type="button" className={`${styles.modeBtn} ${mode === "usd" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("usd")} title="USD Mode">💵</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "yuan" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("yuan")} title="Yuan Mode">中</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "jpy" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("jpy")} title="Yen Mode">💴</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "sar" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("sar")} title="Riyal Mode">﷼</button>
-                  <button type="button" className={`${styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
+                  <button type="button" className={`${styles.noMarketModeBtn || styles.modeBtn} ${mode === "gold" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("gold")} title="Gold Mode">{marketClosed ? "🔒" : "🔐"}</button>
                   <button type="button" className={`${styles.modeBtn} ${mode === "btc" ? styles.modeBtnActive : ""}`} onClick={() => pickMode("btc")} title="Bitcoin Mode">⭐</button>
                 </>
               )}
@@ -1039,6 +1076,7 @@ export default function PriceChart() {
               )}
             </div>
 
+            {/* [PATCH:CENTER-PRICE] TOMBOL +: harga di tengah, chart ikut bergeser mengikuti candle, zoom tidak berubah */}
             <button
               type="button"
               className={`${styles.currencyBtn} ${styles.smallBtn}`}
@@ -1048,6 +1086,7 @@ export default function PriceChart() {
             >
               +
             </button>
+            {/* [/PATCH:CENTER-PRICE] */}
 
             <button
               type="button"
@@ -1063,7 +1102,7 @@ export default function PriceChart() {
         <div className={`${styles.chartContainer} ${isFull ? styles.chartInFull : ""}`}>
           <div
             className={`${styles.chartFade} ${fade ? styles.chartFadeOut : ""}`}
-            onDoubleClick={() => centerOnPrice()}
+            onDoubleClick={() => centerOnPrice() /* [PATCH:CENTER-PRICE] */}
             style={{
               position: "relative", width: "100%",
               ...(isFull ? { flex: 1, minHeight: 0 } : { height: "480px" }),
