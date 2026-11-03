@@ -1,21 +1,42 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAccount } from './Account'; 
 import styles from './Invest.module.css';
 
 const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const { user, login, logout } = useAccount();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
 
   const handleLogout = () => {
     logout();
     setInvested(false); 
-    setActiveTab('invest'); // Kembali ke tab invest jika logout
+    setActiveTab('invest');
   };
 
   const handleInvest = () => {
     setInvested(true);
-    alert(`Terima kasih ${user.name || 'Investor'}, investasi sebesar 75 Ton berhasil diproses! Sekarang Anda dapat mengakses Terminal Trade.`);
+    alert(`Terima kasih ${user.name || 'Investor'}, investasi sebesar 75 Ton berhasil diproses!`);
+  };
+
+  // Validasi Password Terminal Trade ("coconut shell charcoal")
+  const handleTradeAccessCheck = (e) => {
+    e.preventDefault();
+    if (!invested) {
+      alert("Anda harus melakukan investasi terlebih dahulu!");
+      return;
+    }
+
+    if (passwordInput.trim().toLowerCase() === "coconut shell charcoal") {
+      setPasswordError(false);
+      setPasswordInput("");
+      setShowPasswordModal(false);
+      setActiveTab('trade'); // Buka akses Terminal Trade
+    } else {
+      setPasswordError(true);
+    }
   };
 
   return (
@@ -23,7 +44,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       <div className={styles.investCard}>
         
         {/* Tombol Switch Tab di Bagian Atas */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px' }}>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => setActiveTab('invest')}
             style={{
@@ -38,10 +59,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           <button 
             onClick={() => {
               if (!invested) {
-                alert("Anda harus melakukan investasi / konfirmasi terlebih dahulu di tab Investasi untuk membuka Terminal Trade!");
+                alert("Anda harus menyelesaikan investasi 75 Ton terlebih dahulu!");
                 return;
               }
-              setActiveTab('trade');
+              // Jika sudah investasi, minta password sebelum masuk trade
+              setShowPasswordModal(true);
             }}
             style={{
               padding: '8px 16px', fontWeight: 'bold', borderRadius: '8px', cursor: invested ? 'pointer' : 'not-allowed',
@@ -50,9 +72,39 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
               opacity: invested ? 1 : 0.6
             }}
           >
-            MT5 Terminal Trade {!invested ? '🔒' : ''}
+            MT5 Terminal Trade {!invested ? '🔒' : '🔐'}
           </button>
         </div>
+
+        {/* Modal Pop-up Password Trade */}
+        {showPasswordModal && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', 
+            alignItems: 'center', justifyContent: 'center', zIndex: 999, padding: '16px'
+          }}>
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', maxWidth: '360px', width: '100%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#111827' }}>Keamanan Terminal</h3>
+              <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6b7280' }}>Masukkan sandi untuk mengakses Terminal Trade.</p>
+              
+              <form onSubmit={handleTradeAccessCheck}>
+                <input 
+                  type="password" 
+                  placeholder="Sandi (contoh: coconut shell charcoal)" 
+                  value={passwordInput}
+                  onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
+                  autoFocus
+                  style={{ width: '100%', padding: '10px 12px', border: `1px solid ${passwordError ? '#dc2626' : '#e5e7eb'}`, borderRadius: '8px', marginBottom: '12px', fontSize: '14px', outline: 'none' }}
+                />
+                {passwordError && <p style={{ color: '#dc2626', fontSize: '12px', margin: '0 0 12px 0' }}>Sandi salah! Petunjuk: coconut shell charcoal</p>}
+                
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="submit" style={{ flex: 1, background: '#c45e20', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>MASUK</button>
+                  <button type="button" onClick={() => setShowPasswordModal(false)} style={{ flex: 1, background: '#f3f4f6', color: '#4b5563', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>BATAL</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Konten Investasi */}
         <span className={styles.eyebrow}>Peluang Investasi</span>
@@ -90,7 +142,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                 onClick={handleInvest} 
                 className={`${styles.investBtn} ${invested ? styles.successBtn : ''}`}
               >
-                {invested ? '✓ INVESTASI BERHASIL (AKSES TRADE DIBUKA)' : 'INVESTASI 75 TON'}
+                {invested ? '✓ INVESTASI BERHASIL (KLIK TAB TRADE DI ATAS)' : 'INVESTASI 75 TON'}
               </button>
             </div>
           )}
