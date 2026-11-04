@@ -4,9 +4,11 @@ import React, { useState } from 'react';
 import { usePrice } from '@/context/PriceContext';
 import styles from './Trade.module.css';
 
-const Trade = ({ livePrice: propLivePrice }) => {
-  const contextPrice = usePrice();
-  const livePrice = propLivePrice || contextPrice?.livePrice || 1250.50;
+const Trade = () => {
+  // [PATCH:TRADE-REAL-PRICE] harga CSC asli (USD per ton) dari PriceContext; null sampai termuat
+  const { index } = usePrice();
+  const livePrice = index && index.usd > 0 ? index.usd : null;
+  const priceText = livePrice === null ? 'Memuat harga...' : '$' + livePrice.toFixed(2);
 
   const [balance, setBalance] = useState(10000.00);
   const [equity, setEquity] = useState(10000.00);
@@ -16,6 +18,7 @@ const Trade = ({ livePrice: propLivePrice }) => {
   const [positions, setPositions] = useState([]);
 
   const handleOpenOrder = (type) => {
+    if (livePrice === null) return;
     const newPosition = {
       id: Date.now(),
       type: type, // 'BUY' atau 'SELL'
@@ -39,7 +42,7 @@ const Trade = ({ livePrice: propLivePrice }) => {
       <div className={styles.tradeCard}>
         <div className={styles.tradeHeader}>
           <h2>MT5 Terminal Trade</h2>
-          <span className={styles.livePriceBadge}>Live Price: ${livePrice.toFixed(2)}</span>
+          <span className={styles.livePriceBadge}>Live Price: {priceText}</span>
         </div>
 
         {/* Panel Akun: Balance, Equity, Floating PnL */}
@@ -86,11 +89,11 @@ const Trade = ({ livePrice: propLivePrice }) => {
 
         {/* Tombol Eksekusi Buy / Sell */}
         <div className={styles.executionButtons}>
-          <button onClick={() => handleOpenOrder('BUY')} className={styles.buyBtn}>
-            BUY / LONG @ ${livePrice.toFixed(2)}
+          <button onClick={() => handleOpenOrder('BUY')} className={styles.buyBtn} disabled={livePrice === null}>
+            BUY / LONG @ {priceText}
           </button>
-          <button onClick={() => handleOpenOrder('SELL')} className={styles.sellBtn}>
-            SELL / SHORT @ ${livePrice.toFixed(2)}
+          <button onClick={() => handleOpenOrder('SELL')} className={styles.sellBtn} disabled={livePrice === null}>
+            SELL / SHORT @ {priceText}
           </button>
         </div>
 
