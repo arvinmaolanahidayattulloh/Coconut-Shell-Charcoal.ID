@@ -568,3 +568,80 @@
     margin-bottom: 16px;
   }
 }
+
+
+/* ─── Harga Realtime (gaya mengikuti chart) ─────── */
+.livePrice {
+  margin-bottom: 28px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.livePriceHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+  animation: livePulse 1.8s infinite;
+}
+
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.livePriceMain {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease;
+}
+
+.livePriceChange {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease;
+}
+
+.up { color: #16a34a; }
+.down { color: #dc2626; }
+
+.livePriceLoading {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+@media (max-width: 640px) {
+  .livePriceMain {
+    font-size: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveDot { animation: none; }
+}
