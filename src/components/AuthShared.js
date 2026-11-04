@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useAccount } from './Account';
 import { useGoogleLogin } from '@react-oauth/google';
 import styles from './AuthShared.module.css';
-import { loginMicrosoft, loginApple, verifyWithServer } from '@/lib/auth/providers';
+import { loginMicrosoft, loginApple, verifyWithServer } from '@/lib/csc/auth/providers';
 
 // ============================================================
 // AuthShared.jsx — dipakai bersama oleh Login.jsx & Register.jsx

@@ -2,7 +2,7 @@
 // Memverifikasi login Google / Microsoft / Apple di server, lalu mengembalikan identitas yang sah:
 // { name, email, picture }. Tidak pernah mengembalikan identitas tanpa token yang terbukti asli.
 import { NextResponse } from "next/server";
-import { verifyIdToken } from "@/lib/auth/oidc";
+import { verifyIdToken } from "@/lib/csc/auth/oidc";
 
 export const dynamic = "force-dynamic";
 
