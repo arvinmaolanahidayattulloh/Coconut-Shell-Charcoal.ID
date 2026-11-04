@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAccount } from './Account'; // Sesuaikan dengan path context Anda
-import styles from './Profile.module.css'; // Opsional jika menggunakan CSS Module tambahan
+import { useAccount } from '../Account'; // Sesuaikan lokasi impor Account jika perlu
 
-const Profile = () => {
+const InvestProfileContent = ({ setActiveTab }) => {
   const { user, logout } = useAccount();
 
-  // State Simulasi Data Pengguna (Bisa diganti dengan data dari backend/context)
   const [profileData, setProfileData] = useState({
     nickname: user?.name || "Arvin Maolana",
     username: user?.username || "arvin_cscid",
@@ -17,7 +15,6 @@ const Profile = () => {
     isPasskeyEnabled: true,
   });
 
-  // Handler untuk aksi edit
   const handleEditField = (field, currentValue) => {
     const newValue = prompt(`Masukkan ${field} baru:`, currentValue);
     if (newValue !== null && newValue.trim() !== "") {
@@ -27,7 +24,6 @@ const Profile = () => {
   };
 
   const handleChangePassword = () => {
-    // Logika membuka modal ubah password
     alert("Tautan reset atau form ubah kata sandi akan ditampilkan di sini.");
   };
 
@@ -56,6 +52,7 @@ const Profile = () => {
       if (finalCheck === "HAPUS") {
         alert("Akun sedang diproses untuk dihapus. Anda akan dialihkan keluar.");
         logout();
+        setActiveTab('invest'); // Kembali ke form setelah dihapus
       }
     }
   };
@@ -65,15 +62,13 @@ const Profile = () => {
   };
 
   return (
-    <section style={{ padding: '20px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+    <section style={{ padding: '20px', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
         
-        {/* Header Profil */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#c45e20', margin: 0 }}>Profil Saya</h2>
         </div>
 
-        {/* Kartu Info Utama */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
             <img 
@@ -91,7 +86,6 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Seksi Data Pribadi */}
         <div style={sectionTitleStyle}>Data Pribadi</div>
         <div style={cardStyle}>
           <SettingRow 
@@ -119,7 +113,6 @@ const Profile = () => {
           />
         </div>
 
-        {/* Seksi Keamanan */}
         <div style={sectionTitleStyle}>Keamanan Akun</div>
         <div style={cardStyle}>
           <SettingRow 
@@ -144,7 +137,6 @@ const Profile = () => {
           />
         </div>
 
-        {/* Seksi Bantuan & Zona Bahaya */}
         <div style={sectionTitleStyle}>Lainnya</div>
         <div style={cardStyle}>
           <div 
@@ -170,7 +162,7 @@ const Profile = () => {
 
         <div style={{ textAlign: 'center', marginTop: '30px', marginBottom: '20px' }}>
           <button 
-            onClick={logout} 
+            onClick={() => { logout(); setActiveTab('invest'); }} 
             style={{ padding: '12px 32px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
           >
             Keluar dari Akun
@@ -182,8 +174,6 @@ const Profile = () => {
     </section>
   );
 };
-
-// --- Komponen Bantuan (UI Sub-Components) ---
 
 const SettingRow = ({ label, value, onClick, isAction }) => (
   <div onClick={onClick} style={rowInteractiveStyle}>
@@ -221,8 +211,6 @@ const ToggleRow = ({ label, description, isActive, onToggle }) => (
 
 const Divider = () => <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />;
 
-// --- Objek Styling ---
-
 const cardStyle = {
   background: '#ffffff',
   borderRadius: '16px',
@@ -251,4 +239,4 @@ const rowInteractiveStyle = {
   transition: 'opacity 0.2s'
 };
 
-export default Profile;
+export default InvestProfileContent;
