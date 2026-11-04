@@ -169,8 +169,13 @@ function modeMult(mode, r, rate) {
   }
 }
 
+// [PATCH:CSC-START] indeks baru mulai saat KETIGA komponen sudah ada datanya.
+// Sebelumnya bar pertama komponen yang listing lebih lambat dibekukan ke masa lalu
+// (open/high/low sama), sehingga muncul candle dengan wick panjang seragam sebelum 2020.
 function mergeCsc(f, g, b, calc) {
   const out = [];
+  if (!f.length || !g.length || !b.length) return out;
+  const start = Math.max(f[0].time, g[0].time, b[0].time);
   let i = 0, j = 0, k = 0;
   let lf = f[0], lg = g[0], lb = b[0];
   while (i < f.length || j < g.length || k < b.length) {
@@ -181,6 +186,7 @@ function mergeCsc(f, g, b, calc) {
     if (tf === t) lf = f[i++];
     if (tg === t) lg = g[j++];
     if (tb === t) lb = b[k++];
+    if (t < start) continue;
     out.push({
       time: t,
       open: calc(lf.open, lg.open, lb.open),
@@ -191,6 +197,21 @@ function mergeCsc(f, g, b, calc) {
   }
   return out;
 }
+// [/PATCH:CSC-START]
+
+// [PATCH:CSC-INDEX] harga CSC per TON dalam USD (rumus sama dengan mode CSC, tanpa 40ft,
+// tanpa mata uang tampilan). Dipakai halaman Invest lewat PriceContext.
+function cscUsdPerTon(r, fx, au, bt) {
+  return (
+    fx * USD_BASE +
+    fx * YUAN_BASE * toUsd(r, "CNY", 0.1501) +
+    fx * JPY_BASE * toUsd(r, "JPY", 0.0067) +
+    fx * SAR_BASE * toUsd(r, "SAR", 0.2666) +
+    au * (GRAMS / OZ) +
+    bt * BTC_FACTOR
+  ) / 6;
+}
+// [/PATCH:CSC-INDEX]
 
 // EA — PENCETAK HARGA DI BAWAH 1 MENIT
 const EA_BODY = 0.00003;
@@ -348,7 +369,7 @@ const makeCenterProvider = (followRef, spanRatioRef, lastRef) => (orig) => {
 // [/PATCH:CENTER-PRICE]
 
 export default function PriceChart() {
-  const { setLivePrice } = usePrice(); // <-- Mengambil fungsi dari PriceContext
+  const { setLivePrice, setIndex } = usePrice(); // <-- Mengambil fungsi dari PriceContext
 
   const [unlocked, setUnlocked] = useState(false);
   const [pw, setPw] = useState("");
@@ -403,7 +424,8 @@ export default function PriceChart() {
   });
 
   const tokenRef = useRef(0);
-  const livePrices = useRef({ gold: null, btcBn: null, eurusdt: 1.08 });
+  const livePrices = useRef({ gold: null, btcBn: null, eurusdt: 1.08, eurLive: false });
+  const indexTsRef = useRef(0); // [PATCH:CSC-INDEX] throttle publish index
   const wsRef = useRef({ binance: null });
   const accRef = useRef({ gold: null, btc: null, usd: null });
 
@@ -576,7 +598,31 @@ export default function PriceChart() {
     return aggregate(rows, cfg);
   }, []);
 
+  // [PATCH:CSC-INDEX] kirim harga CSC asli (USD & IDR per ton) ke PriceContext, maksimal 1x per detik.
+  // Hanya terisi bila kurs asli dan harga pasar asli sudah ada; tidak ada harga sementara.
+  const publishIndex = useCallback(() => {
+    const nowMs = Date.now();
+    if (nowMs - indexTsRef.current < 1000) return;
+    const r = ratesRef.current;
+    if (!r || !(r.IDR > 0)) return;
+    const lp = livePrices.current;
+    const lastOf = (k) => {
+      const a = dsRef.current[k].raw;
+      return a.length ? a[a.length - 1].close : null;
+    };
+    const au = lp.gold || lastOf("gold");
+    const bt = lp.btcBn || lastOf("btc");
+    const fx = lp.eurLive ? lp.eurusdt / 1.08 : lastOf("usd");
+    if (!(au > 0) || !(bt > 0) || !(fx > 0)) return;
+    const usd = cscUsdPerTon(r, fx, au, bt);
+    if (!isFinite(usd) || usd <= 0) return;
+    indexTsRef.current = nowMs;
+    if (setIndex) setIndex({ usd, idr: usd * r.IDR });
+  }, [setIndex]);
+  // [/PATCH:CSC-INDEX]
+
   const refresh = useCallback((full) => {
+    publishIndex(); // [PATCH:CSC-INDEX]
     const s = seriesRef.current;
     const chart = chartRef.current;
     if (!chart || !s.candle) return;
@@ -627,7 +673,7 @@ export default function PriceChart() {
     if (setLivePrice && last.close) {
       setLivePrice(last.close);
     }
-  }, [compute, setLivePrice]);
+  }, [compute, setLivePrice, publishIndex]);
 
   refreshRef.current = refresh;
   fitRef.current = scrollToLatest;
@@ -858,7 +904,7 @@ export default function PriceChart() {
           };
           if (d.s === "BTCUSDT") { livePrices.current.btcBn = px; touch("btc", px); }
           if (d.s === "PAXGUSDT") { livePrices.current.gold = px; touch("gold", px); }
-          if (d.s === "EURUSDT") { livePrices.current.eurusdt = px; touch("usd", px / 1.08); }
+          if (d.s === "EURUSDT") { livePrices.current.eurusdt = px; livePrices.current.eurLive = true; touch("usd", px / 1.08); }
         };
         ws.onclose = () => { if (!disposed) setTimeout(connectBinance, 3000); };
         wsRef.current.binance = ws;
