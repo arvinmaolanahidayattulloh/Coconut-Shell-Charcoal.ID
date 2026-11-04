@@ -1,0 +1,34 @@
+"use client";
+// [FILE: src/components/Invoice.jsx]
+import styles from "./Order.module.css";
+import { formatUang } from "@/lib/csc/harga";
+
+// [SECTION: INVOICE-A4] rasio 210:297, font memakai cqw agar skala ikut lebar
+export default function Invoice({ o }) {
+  const baris = [
+    ["No. Invoice", o.id], ["Tanggal", o.tanggal], ["Jenis", o.jenis],
+    ["Penerima", o.nama], ["WhatsApp", o.wa], ["Alamat Tujuan", o.alamat],
+    ["Broker / Mitra", o.mitra], ["Penanggung Jawab", o.pj],
+    ["Produk", `${o.produk} — Grade ${o.grade}`],
+    ["Jumlah", `${o.qty} ${o.satuan}`],
+    ["Harga Satuan", `${formatUang(o.harga.satuan, o.harga.mataUang)} / ${o.satuan}`],
+    ["Metode Bayar", o.metode.toUpperCase()],
+    ["Bukti Bayar", o.buktiNama || "—"],
+  ];
+  return (
+    <div className={styles.invoiceWrap}>
+      <div className={styles.invoice}>
+        <h3>INVOICE</h3>
+        <p className={styles.invSub}>Coconut Shell Charcoal Indonesia</p>
+        {baris.map(([k, v]) => (
+          <div key={k} className={styles.invRow}><span>{k}</span><b>{v}</b></div>
+        ))}
+        <div className={`${styles.invRow} ${styles.invTotal}`}>
+          <span>TOTAL</span><b>{formatUang(o.harga.total, o.harga.mataUang)}</b>
+        </div>
+        <p className={styles.invNote}>Harga dibulatkan. Menunggu validasi Chief Executive Officer.</p>
+      </div>
+    </div>
+  );
+}
+// [/SECTION: INVOICE-A4]
