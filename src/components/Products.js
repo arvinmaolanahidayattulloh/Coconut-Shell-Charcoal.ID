@@ -12,7 +12,7 @@ const PRODUCTS = [
     name: "Natural",
     subName: "Coconut Shell Charcoal",
     badge: "Best Seller",
-    priceKey: "csc", // harga realtime dari indeks CSC (PriceContext)
+    markup: 0, // harga dasar = indeks CSC realtime (PriceContext)
     image: "/products/Natural.jpg",
     specs: [
       { label: "Kadar Air", value: "4,37%", progress: 20.37 },
@@ -26,8 +26,7 @@ const PRODUCTS = [
     name: "Karbon Aktif",
     subName: "Coconut Shell Charcoal",
     badge: "Product",
-    priceKey: null,
-    priceNote: "Harga mengikuti spesifikasi dan volume pesanan. Hubungi kami untuk penawaran terbaru.",
+    markup: 0.25,
     image: "/products/Carbon-Active.png",
     specs: [
       { label: "Kadar Air", value: "4,5%", progress: 20 },
@@ -41,8 +40,7 @@ const PRODUCTS = [
     name: "Briket",
     subName: "Charcoal Briquettes",
     badge: "Costume",
-    priceKey: null,
-    priceNote: "Harga mengikuti spesifikasi dan volume pesanan. Hubungi kami untuk penawaran terbaru.",
+    markup: 0.5,
     image: "/products/Briquettes.jpg",
     specs: [
       { label: "Nilai Kalori", value: "7.200+ kcal/kg", progress: 92 },
@@ -52,31 +50,91 @@ const PRODUCTS = [
   }
 ];
 
-const fmtUSD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
-const fmtIDR = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+// Format sama dengan chart: id-ID, "Rp" tanpa spasi, tanpa desimal.
+const fmtNum = (v, dec) =>
+  new Intl.NumberFormat("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v);
+const sign = (v) => (v >= 0 ? "+" : "-");
 
-// Harga realtime: dibaca dari PriceContext (diisi PriceChart, maks. 1x per detik).
-// Tidak ada harga sementara: sebelum data asli tiba, tampil status memuat.
-function LivePrice({ product }) {
+// Harga realtime + perubahan harian dari indeks CSC.
+// - harga   : PriceContext (diisi PriceChart, maks. 1x per detik)
+// - acuan   : candle harian CSC terbaru dari /api/csc (harga buka hari ini, UTC);
+//             bila gagal, memakai harga pertama yang diterima sejak halaman dibuka.
+// - flash   : warna harga berubah sebentar (hijau naik / merah turun), lalu kembali normal.
+function useLiveCsc() {
   const { index } = usePrice();
+  const [openUsd, setOpenUsd] = useState(null);
+  const [flash, setFlash] = useState(null); // "up" | "down" | null
+  const firstRef = useRef(null);
+  const prevRef = useRef(null);
+  const timerRef = useRef(null);
 
-  if (!product.priceKey) {
-    return <p className={styles.detailsDesc}>{product.priceNote}</p>;
-  }
+  useEffect(() => {
+    let dead = false;
+    const load = async () => {
+      try {
+        const r = await fetch("/api/csc?iv=1d&limit=1");
+        if (!r.ok) return;
+        const j = await r.json();
+        const o = j?.candles?.[0]?.o;
+        if (!dead && o > 0) setOpenUsd(o);
+      } catch (e) {
+        // abaikan: pakai acuan sesi
+      }
+    };
+    load();
+    const id = setInterval(load, 10 * 60 * 1000);
+    return () => { dead = true; clearInterval(id); };
+  }, []);
 
   const ready = !!index && index.usd > 0 && index.idr > 0;
+  const idr = ready ? index.idr : null;
+  const usd = ready ? index.usd : null;
+
+  if (ready && firstRef.current === null) firstRef.current = usd;
+
+  useEffect(() => {
+    if (idr === null) return;
+    const now = Math.round(idr);
+    const prev = prevRef.current;
+    prevRef.current = now;
+    if (prev === null || now === prev) return;
+    setFlash(now > prev ? "up" : "down");
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setFlash(null), 700);
+  }, [idr]);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  if (!ready) return { ready: false };
+
+  const base = openUsd || firstRef.current; // acuan dalam USD
+  const pct = base > 0 ? ((usd - base) / base) * 100 : 0;
+  const chgIdr = base > 0 ? idr - idr * (base / usd) : 0; // perubahan dalam Rupiah
+  return { ready: true, idr, pct, chgIdr, flash };
+}
+
+function LivePrice({ product, live }) {
+  const k = 1 + (product.markup || 0); // Karbon Aktif +25%, Briket +50% dari harga dasar
 
   return (
     <div className={styles.livePrice}>
       <div className={styles.livePriceHead}>
         <span className={styles.liveDot} aria-hidden="true" />
         <span className={styles.liveLabel}>Harga Realtime</span>
-        <span className={styles.liveUnit}>per Ton</span>
       </div>
-      {ready ? (
+      {live.ready ? (
         <>
-          <div className={styles.livePriceMain}>{fmtIDR.format(index.idr)}</div>
-          <div className={styles.livePriceSub}>{fmtUSD.format(index.usd)} / ton</div>
+          <div
+            className={`${styles.livePriceMain} ${
+              live.flash === "up" ? styles.up : live.flash === "down" ? styles.down : ""
+            }`}
+          >
+            Rp{fmtNum(live.idr * k, 0)}
+          </div>
+          <div className={`${styles.livePriceChange} ${live.pct >= 0 ? styles.up : styles.down}`}>
+            {live.pct >= 0 ? "▲" : "▼"} Rp{fmtNum(Math.abs(live.chgIdr * k), 0)} ({sign(live.pct)}
+            {fmtNum(Math.abs(live.pct), 2)}%)
+          </div>
         </>
       ) : (
         <div className={styles.livePriceLoading}>Memuat harga realtime…</div>
@@ -86,6 +144,7 @@ function LivePrice({ product }) {
 }
 
 export default function Products() {
+  const live = useLiveCsc();
   const [activeIndex, setActiveIndex] = useState(0);
   const [windowWidth, setWindowWidth] = useState(1200);
   const [isHovered, setIsHovered] = useState(false);
@@ -194,7 +253,7 @@ export default function Products() {
           Katalog Produk
         </h2>
         <p className={styles.sectionDesc}>
-          Harga acuan Natural Coconut Shell Charcoal diperbarui realtime. Geser atau klik kartu untuk informasi selengkapnya.
+          Harga diperbarui realtime mengikuti indeks pasar. Geser atau klik kartu untuk informasi selengkapnya.
         </p>
       </RevealWrapper>
 
@@ -382,7 +441,7 @@ export default function Products() {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ delay: 0.05, duration: 0.25 }}
                   >
-                    <LivePrice product={activeProduct} />
+                    <LivePrice product={activeProduct} live={live} />
                   </motion.div>
                 </AnimatePresence>
               </div>
