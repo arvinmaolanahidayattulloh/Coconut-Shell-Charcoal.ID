@@ -3,7 +3,15 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-const AccountContext = createContext();
+// [PATCH:ACCOUNT-SAFE] nilai bawaan agar useAccount() tidak pernah undefined (aman saat prerender)
+const AccountContext = createContext({
+  user: null,
+  loginGoogle: () => {},
+  loginMicrosoft: () => {},
+  loginApple: () => {},
+  logout: () => {},
+});
+// [/PATCH:ACCOUNT-SAFE]
 
 // Menggunakan Client ID asli Anda
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "677126002730-5m6a6uge42bvk9aglki09dqkoi467tfs.apps.googleusercontent.com";
