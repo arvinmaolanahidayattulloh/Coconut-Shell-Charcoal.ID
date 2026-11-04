@@ -335,8 +335,8 @@
 
 .detailsGrid {
   display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 56px;
+  grid-template-columns: 1fr; /* satu kolom: harga + Buy di atas, spesifikasi di bawahnya */
+  gap: 32px;
   align-items: start;
 }
 
@@ -493,7 +493,7 @@
   }
 
   .detailsGrid {
-    gap: 40px;
+    gap: 32px;
   }
 
   .detailsTitle {
