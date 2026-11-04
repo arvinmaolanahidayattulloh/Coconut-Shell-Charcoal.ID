@@ -2,7 +2,12 @@
 
 import { createContext, useContext, useState } from "react";
 
-const PriceContext = createContext();
+// [PATCH:PRICE-SAFE] nilai bawaan agar usePrice() tidak pernah undefined (aman saat prerender)
+const PriceContext = createContext({
+  livePrice: 1250.50,
+  setLivePrice: () => {},
+});
+// [/PATCH:PRICE-SAFE]
 
 export function PriceProvider({ children }) {
   // Nilai default awal saat chart belum termuat
