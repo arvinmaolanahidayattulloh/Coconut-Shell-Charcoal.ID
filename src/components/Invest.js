@@ -54,13 +54,12 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const [passwordError, setPasswordError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const defaultMitra = partnersData && partnersData.length > 0 ? partnersData[0].name : 'PT. Tunas Kembar Abadi';
-
   const [isInvestingFlow, setIsInvestingFlow] = useState(false);
   const [invData, setInvData] = useState({
     ton: 1,
     currency: 'IDR',
-    mitra: defaultMitra,
+    mitra: '', // Default None
+    payment: 'bank',
     senderBank: '', 
     senderAccount: '',
     proofFile: null
@@ -69,9 +68,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const [invAgreed, setInvAgreed] = useState(false);
   const [invShake, setInvShake] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showContractPreview, setShowContractPreview] = useState(false);
 
-  // State OTP & Status Validasi CEO
-  const [showOtpModal, setShowOtpModal] = useState(false);
+  // State Verifikasi (Pilihan & OTP) & Status Investasi
+  const [verificationStep, setVerificationStep] = useState(0); // 0: hidden, 1: pilih metode, 2: input kode
+  const [verificationMethod, setVerificationMethod] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [investmentStatus, setInvestmentStatus] = useState(null); // null, 'pending', 'approved'
 
@@ -85,11 +86,10 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     })).filter(cat => cat.items.length > 0);
   }, [providerSearch]);
 
-  // Sinkronisasi stabil harga dari Indeks CSCID & Konversi Kurs Stabil (Fix Bug Mata Uang Lain)
+  // Sinkronisasi Harga Stabil dari Indeks CSCID (Fix Bug)
   const rawChartPrice = livePrice || 1250.50; 
   const USD_EXCHANGE_RATE = 15500; 
 
-  // Normalisasi stabil agar tidak mengalami lonjakan saat mata uang chart berubah
   const normalizedChartUSD = chartCurrency === 'IDR' ? rawChartPrice / USD_EXCHANGE_RATE : rawChartPrice;
   const normalizedChartIDR = chartCurrency === 'IDR' ? rawChartPrice : rawChartPrice * USD_EXCHANGE_RATE;
 
@@ -104,9 +104,9 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     ? `Rp ${Math.round(currentTotalCalculated).toLocaleString('id-ID')}`
     : `$ ${currentTotalCalculated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const selectedMitraData = partnersData?.find(p => p.name === invData.mitra) || partnersData?.[0];
+  const selectedMitraData = partnersData?.find(p => p.name === invData.mitra) || null;
 
-  // Nama Pengirim Otomatis Terisi dari Akun Terverifikasi
+  // Nama Pengirim Terkunci
   const automaticSenderName = user?.name || "Arvin Maolana Hidayattulloh";
 
   const handleLogout = () => {
@@ -134,9 +134,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     setMenuOpen(false);
     switch (action) {
       case 'beranda':
-        const berandaEl = document.getElementById('beranda');
-        if (berandaEl) berandaEl.scrollIntoView({ behavior: 'smooth' });
-        else window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById('beranda')?.scrollIntoView({ behavior: 'smooth' });
         break;
       case 'profil':
         alert(user ? `Profil Pengguna: ${user.name} (${user.email})` : "Silakan masuk terlebih dahulu.");
@@ -162,6 +160,10 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       setTimeout(() => setInvShake(false), 600);
       return;
     }
+    if (!invData.mitra) {
+      alert("Harap pilih perusahaan penyedia (Mitra) terlebih dahulu.");
+      return;
+    }
     if (!invData.senderBank) {
       alert("Harap pilih sumber bank atau e-wallet terlebih dahulu.");
       return;
@@ -175,27 +177,31 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       return;
     }
 
-    // Memunculkan permintaan OTP WhatsApp
-    setShowOtpModal(true);
+    // Tampilkan Pilihan Metode Verifikasi
+    setVerificationStep(1);
   };
 
-  const handleVerifyOtpAndProcess = (e) => {
+  const selectVerificationMethod = (method) => {
+    setVerificationMethod(method);
+    setVerificationStep(2); // Lanjut ke input kode
+  };
+
+  const handleFinalVerification = (e) => {
     e.preventDefault();
-    if (otpCode.length < 4) {
-      alert("Masukkan kode OTP WhatsApp yang valid.");
+    if (verificationMethod !== 'Passkey' && otpCode.length < 4) {
+      alert("Masukkan kode OTP/Autentikasi yang valid.");
       return;
     }
 
-    setShowOtpModal(false);
+    setVerificationStep(0);
     setInvestmentStatus('pending');
     setInvested(true);
     setIsInvestingFlow(false);
     setOtpCode('');
 
-    // Simulasi validasi CEO dan pengiriman rincian sukses via WhatsApp CS
     setTimeout(() => {
       setInvestmentStatus('approved');
-      alert("Validasi Chief Executive Officer Berhasil Disetujui! Rincian Investasi Berhasil telah dikirimkan oleh Customer Service via WhatsApp.");
+      alert("Validasi Chief Executive Officer Berhasil Disetujui!\n\nRincian Investasi Berhasil telah dikirimkan oleh Customer Service via WhatsApp.");
     }, 6000);
   };
 
@@ -223,7 +229,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           )}
         </div>
 
-        <div style={{ filter: showPasswordModal || showOtpModal ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
+        <div style={{ filter: showPasswordModal || verificationStep > 0 ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
           <div className={styles.actionWrapper}>
             {!user ? (
               <Login />
@@ -232,7 +238,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                 
                 {investmentStatus === 'pending' && (
                   <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', padding: '20px', borderRadius: '14px', marginBottom: '24px', textAlign: 'center' }}>
-                    <h4 style={{ color: '#b45309', margin: '0 0 8px 0', fontSize: '18px' }}>Status: Pending</h4>
+                    <h4 style={{ color: '#b45309', margin: '0 0 8px 0', fontSize: '18px' }}>Status: Pending (Menunggu Validasi)</h4>
                     <p style={{ margin: 0, fontSize: '14px', color: '#92400e' }}>Menunggu Validasi dari Chief Executive Officer. Mohon tunggu sebentar...</p>
                   </div>
                 )}
@@ -276,7 +282,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                     
                     <form onSubmit={handleInitialSubmit}>
                       
-                      {/* DESAIN BAGIAN TAGIHAN KOKOH & STABIL */}
+                      {/* RINCIAN TAGIHAN */}
                       <div style={{ background: 'linear-gradient(135deg, #fffbeb 100%, #fef3c7 0%)', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #fcd34d', boxShadow: '0 10px 25px -5px rgba(245,158,11,0.1)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #fde68a', paddingBottom: '12px' }}>
                           <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Rincian Tagihan Investasi CSCID</span>
@@ -317,7 +323,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         </div>
                       </div>
 
-                      {/* PEMILIHAN PERUSAHAAN PENYEDIA / MITRA */}
+                      {/* PILIH PERUSAHAAN PENYEDIA */}
                       <div style={{ marginBottom: '24px' }}>
                         <label style={labelStyle}>Pilih Perusahaan Penyedia</label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '6px' }}>
@@ -329,208 +335,265 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                                 onClick={() => setInvData({...invData, mitra: mitra.name})}
                                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', border: isSelected ? '2px solid #c45e20' : '1px solid #e2e8f0', background: isSelected ? '#fff7ed' : '#f9fafb', cursor: 'pointer', transition: 'all 0.2s' }}
                               >
-                                <img src={mitra.logo} alt={mitra.name} style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0', flexShrink: '0' }} />
+                                <img src={mitra.logo} alt={mitra.name} style={{ width: '40px', height: '40px', objectFit: 'contain', aspectRatio: '1/1', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0', flexShrink: 0 }} />
                                 <div style={{ flex: 1 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>{mitra.name}</h4>
                                     <span style={{ fontSize: '10px', background: '#e0f2fe', color: '#0369a1', fontWeight: 'bold', padding: '1px 6px', borderRadius: '4px' }}>Penyedia</span>
                                   </div>
-                                  <span style={{ fontSize: '11px', color: '#64748b' }}>NIB: {mitra.nib} • {mitra.bank}</span>
+                                  <span style={{ fontSize: '11px', color: '#64748b' }}>NIB: {mitra.nib}</span>
                                 </div>
                                 <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: isSelected ? '5px solid #c45e20' : '2px solid #cbd5e1', background: '#fff' }}></div>
                               </div>
                             );
                           })}
                         </div>
-                        
-                        {/* KARTU PROFIL PENANGGUNG JAWAB */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', background: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginTop: '12px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                          <img 
-                            src={selectedMitraData?.fotoPJ || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedMitraData?.direktur || 'Direktur')}&background=c45e20&color=fff&size=120`} 
-                            alt="Penanggung Jawab" 
-                            style={{ width: '80px', height: '80px', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover', border: '2px solid #fed7aa', flexShrink: 0 }} 
-                          />
-                          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '4px' }}>
-                              <h5 style={{ margin: '0 0 2px 0', fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>{selectedMitraData?.direktur || 'Arvin Maolana Hidayattulloh'}</h5>
-                              <span style={{ fontSize: '10px', color: '#047857', fontWeight: 'bold', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px' }}>Terverifikasi Resmi</span>
-                            </div>
-                            <span style={{ display: 'inline-block', fontSize: '11px', color: '#c45e20', fontWeight: '700', marginBottom: '6px' }}>
-                              {selectedMitraData?.jabatan || 'Direktur Utama'}
-                            </span>
-                            <div style={{ fontSize: '12px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span><b>NIK:</b> {selectedMitraData?.nik || '3304031108040002'}</span>
-                              <span><b>Email:</b> {selectedMitraData?.email || 'tunaskembarabadi@gmail.com'}</span>
-                              <span><b>WhatsApp:</b> {selectedMitraData?.phone || '0851-6815-2525'}</span>
-                            </div>
-                          </div>
-                        </div>
                       </div>
 
-                      {/* INFORMASI REKENING TUJUAN, LOGO PENYEDIA & GAMBAR QRIS / TRANSFER */}
-                      <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '12px' }}>
-                          <img 
-                            src={selectedMitraData?.logo || 'https://via.placeholder.com/40'} 
-                            alt={selectedMitraData?.name} 
-                            style={{ width: '28px', height: '28px', objectFit: 'contain', background: '#fff', borderRadius: '4px', border: '1px solid #cbd5e1' }} 
-                          />
-                          <h5 style={{ margin: 0, color: '#334155', fontSize: '14px' }}>
-                            Pembayaran / QRIS Perusahaan Penyedia Resmi
-                          </h5>
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div>
-                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Bank: <b>{selectedMitraData?.bank || 'Bank Central Asia'}</b></p>
-                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>No. Rekening: <b style={{ fontSize: '18px', color: '#0f172a' }}>{selectedMitraData?.noRekening || '8692824902'}</b></p>
-                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Atas Nama: <b>{selectedMitraData?.anRekening || invData.mitra}</b></p>
-                          </div>
+                      {/* INFORMASI PENYEDIA & PEMBAYARAN (HANYA MUNCUL JIKA MITRA DIPILIH) */}
+                      {selectedMitraData && (
+                        <div style={{ animation: 'fadeIn 0.4s ease' }}>
                           
-                          {/* GAMBAR QRIS / TRANSFER RESMI */}
-                          <div style={{ textAlign: 'center', background: '#fff', padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                          {/* KARTU PROFIL PENANGGUNG JAWAB */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', background: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '24px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
                             <img 
-                              src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_Code_example.svg" 
-                              alt="QRIS Transfer Resmi" 
-                              style={{ width: '110px', height: '110px', objectFit: 'contain' }} 
+                              src={selectedMitraData.fotoPJ || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedMitraData.direktur || 'Direktur')}&background=c45e20&color=fff&size=120`} 
+                              alt="Penanggung Jawab" 
+                              style={{ width: '80px', height: '80px', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover', border: '2px solid #fed7aa', flexShrink: 0 }} 
                             />
-                            <span style={{ display: 'block', fontSize: '10px', color: '#64748b', marginTop: '4px', fontWeight: 'bold' }}>Scan QRIS / Transfer</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <h3 style={{ margin: '0 0 12px 0', color: '#111827', fontSize: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
-                        Konfirmasi Data Pengirim
-                      </h3>
-                      
-                      {/* URUTAN BARU: SUMBER DAN NOMOR DULU, KEMUDIAN NAMA OTOMATIS */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                        
-                        {/* SUMBER (BANK / E-WALLET) */}
-                        <div style={{ position: 'relative' }}>
-                          <label style={labelStyle}>Sumber</label>
-                          <div 
-                            onClick={() => setProviderDropdownOpen(!providerDropdownOpen)}
-                            style={{ ...inputStyle, background: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                          >
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: invData.senderBank ? '#111827' : '#9ca3af' }}>
-                              {invData.senderBank || "Pilih Bank atau E-Wallet"}
-                            </span>
-                            <span style={{ fontSize: '10px', color: '#64748b' }}>▼</span>
+                            <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '4px' }}>
+                                <h5 style={{ margin: '0 0 2px 0', fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>{selectedMitraData.direktur || 'Arvin Maolana Hidayattulloh'}</h5>
+                                <span style={{ fontSize: '10px', color: '#047857', fontWeight: 'bold', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px' }}>Terverifikasi Resmi</span>
+                              </div>
+                              <span style={{ display: 'inline-block', fontSize: '11px', color: '#c45e20', fontWeight: '700', marginBottom: '6px' }}>
+                                {selectedMitraData.jabatan || 'Direktur Utama'}
+                              </span>
+                              <div style={{ fontSize: '12px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span><b>NIK:</b> {selectedMitraData.nik || '3304031108040002'}</span>
+                                <span><b>Email:</b> {selectedMitraData.email || 'tunaskembarabadi@gmail.com'}</span>
+                                <span><b>WhatsApp:</b> {selectedMitraData.phone || '0851-6815-2525'}</span>
+                              </div>
+                            </div>
                           </div>
 
-                          {providerDropdownOpen && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginTop: '4px', padding: '8px', maxHeight: '250px', overflowY: 'auto' }}>
-                              <input 
-                                type="text" 
-                                placeholder="Cari bank atau e-wallet..." 
-                                value={providerSearch} 
-                                onChange={(e) => setProviderSearch(e.target.value)}
-                                autoFocus
-                                style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', marginBottom: '6px', outline: 'none' }}
+                          {/* METODE PEMBAYARAN DENGAN LOGO */}
+                          <div style={{ marginBottom: '16px' }}>
+                            <label style={labelStyle}>Metode Pembayaran Tujuan</label>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                              <label style={{...radioContainerStyle, border: invData.payment === 'bank' ? '2px solid #c45e20' : '1px solid #e5e7eb', background: invData.payment === 'bank' ? '#fff7ed' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+                                <input type="radio" value="bank" checked={invData.payment === 'bank'} onChange={() => setInvData({...invData, payment: 'bank'})} style={{display: 'none'}} />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c5/Bank_Icon.svg" alt="Bank" style={{ width: '20px', height: '20px' }} />
+                                Transfer Bank
+                              </label>
+                              <label style={{...radioContainerStyle, border: invData.payment === 'qris' ? '2px solid #c45e20' : '1px solid #e5e7eb', background: invData.payment === 'qris' ? '#fff7ed' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+                                <input type="radio" value="qris" checked={invData.payment === 'qris'} onChange={() => setInvData({...invData, payment: 'qris'})} style={{display: 'none'}} />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" alt="QRIS" style={{ width: '40px', height: '16px', objectFit: 'contain' }} />
+                                QRIS
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* REKENING TUJUAN & GAMBAR QRIS/TRANSFER */}
+                          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '12px' }}>
+                              <img 
+                                src={selectedMitraData.logo || 'https://via.placeholder.com/40'} 
+                                alt={selectedMitraData.name} 
+                                style={{ width: '28px', height: '28px', aspectRatio: '1/1', objectFit: 'contain', background: '#fff', borderRadius: '4px', border: '1px solid #cbd5e1' }} 
                               />
-                              {filteredCategories.length > 0 ? (
-                                filteredCategories.map((group, idx) => (
-                                  <div key={idx} style={{ marginBottom: '6px' }}>
-                                    <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#c45e20', padding: '4px 6px', background: '#fff7ed', borderRadius: '4px', marginBottom: '4px' }}>
-                                      {group.category}
-                                    </div>
-                                    {group.items.map(p => (
-                                      <div 
-                                        key={p.name} 
-                                        onClick={() => { setInvData({...invData, senderBank: p.name}); setProviderDropdownOpen(false); setProviderSearch(''); }}
-                                        style={{ padding: '7px 10px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px', background: invData.senderBank === p.name ? '#ffedd5' : 'transparent', fontWeight: invData.senderBank === p.name ? 'bold' : 'normal' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = invData.senderBank === p.name ? '#ffedd5' : 'transparent'}
-                                      >
-                                        <img src={p.logo} alt={p.name} style={{ width: '28px', height: '20px', objectFit: 'contain', background: '#fff', padding: '1px', borderRadius: '3px', border: '1px solid #e2e8f0', flexShrink: 0 }} />
-                                        <span>{p.name}</span>
+                              <h5 style={{ margin: 0, color: '#334155', fontSize: '14px' }}>
+                                Rekening Resmi Tujuan Pembayaran
+                              </h5>
+                            </div>
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <div>
+                                <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Bank: <b>{selectedMitraData.bank || 'Bank Central Asia'}</b></p>
+                                <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>No. Rekening: <b style={{ fontSize: '18px', color: '#0f172a' }}>{selectedMitraData.noRekening || '8692824902'}</b></p>
+                                <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Atas Nama: <b>{selectedMitraData.anRekening || invData.mitra}</b></p>
+                              </div>
+                              
+                              {/* GAMBAR QRIS / TRANSFER */}
+                              <div style={{ textAlign: 'center', background: '#fff', padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                                <img 
+                                  src={invData.payment === 'qris' 
+                                    ? "https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_Code_example.svg" 
+                                    : "https://upload.wikimedia.org/wikipedia/commons/c/c5/Bank_Icon.svg"} 
+                                  alt="Transfer/QRIS" 
+                                  style={{ width: '90px', height: '90px', objectFit: 'contain', opacity: invData.payment === 'bank' ? 0.3 : 1 }} 
+                                />
+                                <span style={{ display: 'block', fontSize: '10px', color: '#64748b', marginTop: '6px', fontWeight: 'bold' }}>
+                                  {invData.payment === 'qris' ? 'Scan QRIS Resmi' : 'Transfer Manual'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <h3 style={{ margin: '0 0 12px 0', color: '#111827', fontSize: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
+                            Konfirmasi Data Pengirim
+                          </h3>
+                          
+                          {/* SUMBER DAN NOMOR */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                            
+                            <div style={{ position: 'relative' }}>
+                              <label style={labelStyle}>Sumber Bank / E-Wallet</label>
+                              <div 
+                                onClick={() => setProviderDropdownOpen(!providerDropdownOpen)}
+                                style={{ ...inputStyle, background: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                              >
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: invData.senderBank ? '#111827' : '#9ca3af' }}>
+                                  {invData.senderBank || "Pilih Sumber"}
+                                </span>
+                                <span style={{ fontSize: '10px', color: '#64748b' }}>▼</span>
+                              </div>
+
+                              {providerDropdownOpen && (
+                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginTop: '4px', padding: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                                  <input 
+                                    type="text" 
+                                    placeholder="Cari sumber..." 
+                                    value={providerSearch} 
+                                    onChange={(e) => setProviderSearch(e.target.value)}
+                                    autoFocus
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', marginBottom: '6px', outline: 'none' }}
+                                  />
+                                  {filteredCategories.length > 0 ? (
+                                    filteredCategories.map((group, idx) => (
+                                      <div key={idx} style={{ marginBottom: '6px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#c45e20', padding: '4px 6px', background: '#fff7ed', borderRadius: '4px', marginBottom: '4px' }}>
+                                          {group.category}
+                                        </div>
+                                        {group.items.map(p => (
+                                          <div 
+                                            key={p.name} 
+                                            onClick={() => { setInvData({...invData, senderBank: p.name}); setProviderDropdownOpen(false); setProviderSearch(''); }}
+                                            style={{ padding: '7px 10px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px', background: invData.senderBank === p.name ? '#ffedd5' : 'transparent', fontWeight: invData.senderBank === p.name ? 'bold' : 'normal' }}
+                                          >
+                                            <img src={p.logo} alt={p.name} style={{ width: '28px', height: '20px', objectFit: 'contain', background: '#fff', padding: '1px', borderRadius: '3px', border: '1px solid #e2e8f0', flexShrink: 0 }} />
+                                            <span>{p.name}</span>
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
-                                  </div>
-                                ))
-                              ) : (
-                                <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>Tidak ditemukan</div>
+                                    ))
+                                  ) : (
+                                    <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>Tidak ditemukan</div>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
 
-                        {/* NOMOR REKENING / NO HP BERDASARKAN SUMBER */}
-                        <div>
-                          <label style={labelStyle}>
-                            {invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'Nomor Handphone Akun' : 'Nomor Rekening Pengirim'}
-                          </label>
-                          <input 
-                            type="text" 
-                            placeholder={invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'Masukkan nomor handphone e-wallet' : 'Masukkan nomor rekening pengirim'} 
-                            required 
-                            value={invData.senderAccount} 
-                            onChange={(e) => setInvData({...invData, senderAccount: e.target.value})} 
-                            style={inputStyle} 
-                          />
-                        </div>
+                            <div>
+                              <label style={labelStyle}>
+                                {invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'Nomor HP Akun' : 'Nomor Rekening Pengirim'}
+                              </label>
+                              <input 
+                                type="text" 
+                                placeholder={invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'No. HP e-Wallet' : 'No. Rekening'} 
+                                required 
+                                value={invData.senderAccount} 
+                                onChange={(e) => setInvData({...invData, senderAccount: e.target.value})} 
+                                style={inputStyle} 
+                              />
+                            </div>
+                          </div>
 
-                      </div>
+                          {/* NAMA PENGIRIM OTOMATIS */}
+                          <div style={{ marginBottom: '16px' }}>
+                            <label style={labelStyle}>Nama Lengkap Pengirim</label>
+                            <input 
+                              type="text" 
+                              value={automaticSenderName} 
+                              disabled 
+                              style={{ ...inputStyle, background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', fontWeight: 'bold' }} 
+                            />
+                            <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>*Nama pengirim disesuaikan otomatis dengan akun terverifikasi.</span>
+                          </div>
 
-                      {/* NAMA PENGIRIM OTOMATIS (TIDAK BISA DIGANTI KARENA SUDAH JELAS DARI AKUN) */}
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={labelStyle}>Nama Lengkap Pengirim</label>
-                        <input 
-                          type="text" 
-                          value={automaticSenderName} 
-                          disabled 
-                          style={{ ...inputStyle, background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', fontWeight: 'bold' }} 
-                        />
-                        <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>*Nama pengirim terisi otomatis dari akun terverifikasi dan tidak dapat diubah.</span>
-                      </div>
-
-                      <div style={{ marginBottom: '24px' }}>
-                        <label style={labelStyle}>Unggah Bukti Transfer</label>
-                        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}>
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '8px' }}>
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                          </svg>
-                          <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
-                            {invData.proofFile ? <b style={{ color: '#c45e20' }}>✓ {invData.proofFile.name}</b> : "Klik atau seret file bukti transfer ke sini"}
-                          </span>
-                          <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Format yang didukung: JPG, PNG, atau PDF</span>
-                          <input type="file" accept="image/*,application/pdf" hidden required onChange={(e) => setInvData({...invData, proofFile: e.target.files[0]})} />
-                        </label>
-                      </div>
-
-                      <div className={invShake ? styles.shakeRed : ''} style={{ marginBottom: '16px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <input type="checkbox" checked={invAgreed} onChange={(e) => setInvAgreed(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#c45e20', marginTop: '2px' }} />
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '14px', cursor: 'pointer', color: invShake ? '#dc2626' : '#111827', fontWeight: 'bold' }} onClick={() => setInvAgreed(!invAgreed)}>
-                              Saya menyetujui seluruh syarat, ketentuan, dan risiko investasi.
+                          <div style={{ marginBottom: '24px' }}>
+                            <label style={labelStyle}>Unggah Bukti Transfer</label>
+                            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}>
+                              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '8px' }}>
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                              </svg>
+                              <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
+                                {invData.proofFile ? <b style={{ color: '#c45e20' }}>✓ {invData.proofFile.name}</b> : "Klik atau seret file bukti transfer ke sini"}
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Format: JPG, PNG, PDF</span>
+                              <input type="file" accept="image/*,application/pdf" hidden required onChange={(e) => setInvData({...invData, proofFile: e.target.files[0]})} />
                             </label>
-                            <button type="button" onClick={() => setShowTerms(!showTerms)} style={{ display: 'block', background: 'none', border: 'none', color: '#c45e20', fontSize: '13px', fontWeight: '700', marginTop: '6px', cursor: 'pointer', padding: 0 }}>
-                              {showTerms ? 'Sembunyikan Detail ▲' : 'Baca Detail ▼'}
+                          </div>
+
+                          <div className={invShake ? styles.shakeRed : ''} style={{ marginBottom: '16px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <input type="checkbox" checked={invAgreed} onChange={(e) => setInvAgreed(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#c45e20', marginTop: '2px' }} />
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: '14px', cursor: 'pointer', color: invShake ? '#dc2626' : '#111827', fontWeight: 'bold' }} onClick={() => setInvAgreed(!invAgreed)}>
+                                  Saya menyetujui seluruh syarat, ketentuan, dan risiko investasi.
+                                </label>
+                                <button type="button" onClick={() => setShowTerms(!showTerms)} style={{ display: 'block', background: 'none', border: 'none', color: '#c45e20', fontSize: '13px', fontWeight: '700', marginTop: '6px', cursor: 'pointer', padding: 0 }}>
+                                  {showTerms ? 'Sembunyikan Detail ▲' : 'Baca Detail ▼'}
+                                </button>
+                              </div>
+                            </div>
+                            {showTerms && (
+                              <div style={{ marginTop: '14px', padding: '14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', color: '#4b5563', maxHeight: '150px', overflowY: 'auto', lineHeight: '1.6' }}>
+                                <p style={{ margin: '0 0 8px 0' }}><b>1. Risiko Fluktuasi Pasar:</b> Nilai investasi komoditas dapat berubah sewaktu-waktu tergantung pada dinamika pasar global.</p>
+                                <p style={{ margin: '0 0 8px 0' }}><b>2. Regulasi Ekspor:</b> Proses distribusi komoditas dipengaruhi oleh regulasi internasional serta jalur logistik.</p>
+                                <p style={{ margin: '0' }}><b>3. Kebijakan Dana:</b> Dana yang dialokasikan tidak dapat ditarik kembali secara sepihak.</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* DOKUMEN KONTRAK PREVIEW DIPULIHKAN */}
+                          <div style={{ background: '#fff7ed', border: '1px solid #ea580c', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                              <div style={{ background: '#ea580c', color: '#fff', padding: '10px', borderRadius: '10px' }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                  <polyline points="14 2 14 8 20 8"></polyline>
+                                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                                  <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <h5 style={{ margin: '0 0 2px 0', color: '#9a3412', fontSize: '14px', fontWeight: 'bold' }}>Dokumen Kontrak & Invoice (PDF A4)</h5>
+                                <p style={{ margin: 0, color: '#c2410c', fontSize: '12px' }}>Format resmi siap cetak untuk pengesahan tanda tangan basah.</p>
+                              </div>
+                              <button type="button" onClick={() => setShowContractPreview(!showContractPreview)} style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                                {showContractPreview ? 'Tutup Preview' : 'Preview Teks'}
+                              </button>
+                            </div>
+
+                            {showContractPreview && (
+                              <div style={{ marginTop: '14px', background: '#fff', border: '1px solid #fdba74', borderRadius: '8px', padding: '16px', fontSize: '12px', color: '#334155', fontFamily: 'monospace', lineHeight: '1.5', maxHeight: '200px', overflowY: 'auto' }}>
+                                <center><b>SURAT PERJANJIAN INVESTASI & ALOKASI KOMODITAS</b></center>
+                                <center><b>{invData.mitra} (CSCID)</b></center>
+                                <br/>
+                                Pada hari ini, sistem mencatat pemesanan alokasi kuota komoditas ekspor sebesar <b>{invData.ton} Ton</b> melalui perusahaan penyedia <b>{invData.mitra}</b> dengan total nilai transaksi sebesar <b>{displayTotal}</b>.<br/><br/>
+                                <b>1. Klausul Utama:</b> Investor berhak atas bagi hasil dari penjualan ekspor komoditas sesuai alokasi kuota.<br/>
+                                <b>2. Rekening Resmi:</b> Seluruh dana wajib ditransfer ke rekening resmi atas nama {selectedMitraData.anRekening} ({selectedMitraData.bank}).<br/>
+                                <b>3. Keabsahan:</b> Dokumen ini sah dan mengikat secara hukum setelah ditandatangani di atas meterai oleh Investor dan Penanggung Jawab ({selectedMitraData.direktur}).
+                                <br/><br/>
+                                <i>[Area Validasi Tanda Tangan Basah & Meterai Resmi]</i>
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <button type="button" onClick={() => setIsInvestingFlow(false)} style={{ padding: '14px 20px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                              BATAL
+                            </button>
+                            <button type="submit" style={{ flex: 1, padding: '14px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(196,94,32,0.3)' }}>
+                              SELESAI & KONFIRMASI PEMBAYARAN
                             </button>
                           </div>
                         </div>
-
-                        {showTerms && (
-                          <div style={{ marginTop: '14px', padding: '14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', color: '#4b5563', maxHeight: '150px', overflowY: 'auto', lineHeight: '1.6' }}>
-                            <p style={{ margin: '0 0 8px 0' }}><b>1. Risiko Fluktuasi Pasar:</b> Nilai investasi komoditas dapat berubah sewaktu-waktu tergantung pada dinamika pasar global.</p>
-                            <p style={{ margin: '0 0 8px 0' }}><b>2. Regulasi Ekspor:</b> Proses distribusi komoditas dipengaruhi oleh regulasi internasional serta jalur logistik.</p>
-                            <p style={{ margin: '0' }}><b>3. Kebijakan Dana:</b> Dana yang telah dialokasikan ke dalam kuota komoditas tidak dapat ditarik kembali secara sepihak.</p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        <button type="button" onClick={() => setIsInvestingFlow(false)} style={{ padding: '14px 20px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-                          BATAL
-                        </button>
-                        <button type="submit" style={{ flex: 1, padding: '14px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(196,94,32,0.3)' }}>
-                          SELESAI & LANJUTKAN KE OTP WHATSAPP
-                        </button>
-                      </div>
+                      )}
                     </form>
                   </div>
                 )}
@@ -539,46 +602,59 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           </div>
         </div>
 
-        {/* MODAL OTP WHATSAPP */}
-        {showOtpModal && (
+        {/* MODAL VERIFIKASI MULTI-METODE (PILIH METODE & INPUT OTP) */}
+        {verificationStep > 0 && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(5px)', borderRadius: '24px' }}>
-            <form onSubmit={handleVerifyOtpAndProcess} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'center', maxWidth: 380, padding: 28, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
-              <div style={{ width: '100%', textAlign: 'center', marginBottom: '4px' }}>
-                <h4 style={{ margin: 0, color: '#111827', fontSize: '18px', fontWeight: 'bold' }}>Verifikasi OTP WhatsApp</h4>
-                <p style={{ margin: '6px 0 16px 0', color: '#6b7280', fontSize: '13px' }}>Masukkan 4 digit kode OTP yang dikirimkan ke nomor WhatsApp terdaftar Anda.</p>
-              </div>
-              <input 
-                type="text" 
-                maxLength="6"
-                autoFocus 
-                value={otpCode} 
-                onChange={(e) => setOtpCode(e.target.value)} 
-                placeholder="Contoh: 1234" 
-                style={{ width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: 18, textAlign: 'center', letterSpacing: '4px', outline: 'none', background: '#f9fafb', fontWeight: 'bold' }} 
-              />
-              <div style={{ display: 'flex', width: '100%', gap: '10px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setShowOtpModal(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>BATAL</button>
-                <button type="submit" style={{ flex: 1, padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>VERIFIKASI</button>
-              </div>
-            </form>
-          </div>
-        )}
+            <div style={{ width: '100%', maxWidth: 380, padding: 28, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+              
+              {verificationStep === 1 && (
+                <>
+                  <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ margin: 0, color: '#111827', fontSize: '18px', fontWeight: 'bold' }}>Verifikasi Keamanan</h4>
+                    <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '13px' }}>Pilih metode verifikasi untuk menyelesaikan investasi Anda.</p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button onClick={() => selectVerificationMethod('Passkey')} style={verifyBtnStyle}>🔑 Passkey (Biometrik / Sidik Jari)</button>
+                    <button onClick={() => selectVerificationMethod('Authenticator')} style={verifyBtnStyle}>🛡️ Aplikasi Authenticator</button>
+                    <button onClick={() => selectVerificationMethod('Email')} style={verifyBtnStyle}>✉️ OTP Email Resmi</button>
+                    <button onClick={() => selectVerificationMethod('WhatsApp')} style={{...verifyBtnStyle, background: '#ecfdf5', color: '#047857', border: '1px solid #10b981'}}>💬 OTP WhatsApp</button>
+                  </div>
+                  <button onClick={() => setVerificationStep(0)} style={{ width: '100%', marginTop: '16px', padding: '12px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>BATAL</button>
+                </>
+              )}
 
-        {/* Modal Sandi Terminal Trade */}
-        {showPasswordModal && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)', borderRadius: '24px' }}>
-            <form onSubmit={handleTradeAccessCheck} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'center', maxWidth: 360, padding: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
-              <div style={{ width: '100%', textAlign: 'center', marginBottom: '8px' }}>
-                <h4 style={{ margin: 0, color: '#111827', fontSize: '18px', fontWeight: 'bold' }}>Sandi Terminal Trade</h4>
-                <p style={{ margin: '6px 0 12px 0', color: '#6b7280', fontSize: '13px' }}>Masukkan kata sandi untuk mengakses terminal.</p>
-              </div>
-              <input type="password" autoFocus value={passwordInput} onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }} placeholder="Kata Sandi" autoComplete="off" style={{ flex: '1 1 220px', minWidth: 0, padding: '12px', border: `1px solid ${passwordError ? '#f23645' : '#e0e3eb'}`, borderRadius: '10px', fontSize: 14, outline: 'none', background: '#f9fafb', color: '#111', width: '100%' }} />
-              {passwordError && <span style={{ width: '100%', textAlign: 'center', color: '#f23645', fontSize: 12, marginTop: '-4px' }}>Kata sandi salah.</span>}
-              <div style={{ display: 'flex', width: '100%', gap: '10px', marginTop: '8px' }}>
-                <button type="button" onClick={() => setShowPasswordModal(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>BATAL</button>
-                <button type="submit" style={{ flex: 1, padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>BUKA</button>
-              </div>
-            </form>
+              {verificationStep === 2 && (
+                <form onSubmit={handleFinalVerification}>
+                  <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ margin: 0, color: '#111827', fontSize: '18px', fontWeight: 'bold' }}>Verifikasi {verificationMethod}</h4>
+                    <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '13px' }}>
+                      {verificationMethod === 'Passkey' 
+                        ? "Sistem sedang mengotentikasi perangkat Anda..." 
+                        : `Masukkan kode autentikasi yang dikirimkan via ${verificationMethod}.`}
+                    </p>
+                  </div>
+                  
+                  {verificationMethod !== 'Passkey' && (
+                    <input 
+                      type="text" 
+                      maxLength="6"
+                      autoFocus 
+                      value={otpCode} 
+                      onChange={(e) => setOtpCode(e.target.value)} 
+                      placeholder="XXXX" 
+                      style={{ width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: 18, textAlign: 'center', letterSpacing: '8px', outline: 'none', background: '#f9fafb', fontWeight: 'bold', marginBottom: '16px' }} 
+                    />
+                  )}
+
+                  <div style={{ display: 'flex', width: '100%', gap: '10px' }}>
+                    <button type="button" onClick={() => setVerificationStep(1)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>KEMBALI</button>
+                    <button type="submit" style={{ flex: 1, padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                      {verificationMethod === 'Passkey' ? 'OTORISASI Selesai' : 'VERIFIKASI'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         )}
 
@@ -587,6 +663,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   );
 };
 
+// Styling Objek Inline
 const menuBtnStyle = { background: '#ffffff', border: '1px solid #e5e7eb', padding: '8px 14px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', color: '#111827', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' };
 const menuDropdownStyle = { position: 'absolute', top: '46px', right: '0', background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 50, minWidth: '180px', padding: '6px' };
 const activeInvestBoxStyle = { padding: '20px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '12px', textAlign: 'center' };
@@ -594,6 +671,8 @@ const tambahInvestBtnStyle = { marginTop: '16px', padding: '12px 18px', backgrou
 const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px' };
 const inputStyle = { width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box', background: '#f9fafb', color: '#111827', outline: 'none' };
 const qtyBtnStyle = { padding: '12px 18px', background: '#e2e8f0', border: 'none', fontSize: '18px', fontWeight: 'bold', color: '#334155', cursor: 'pointer', transition: 'background 0.2s' };
+const radioContainerStyle = { flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: '#374151', transition: 'all 0.2s ease' };
 const menuItemStyle = { display: 'flex', alignItems: 'center', width: '100%', padding: '10px 12px', border: 'none', borderRadius: '8px', background: 'transparent', fontSize: '13px', fontWeight: '600', color: '#4b5563', cursor: 'pointer', textAlign: 'left' };
+const verifyBtnStyle = { display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', color: '#334155', cursor: 'pointer', transition: 'all 0.2s' };
 
 export default Invest;
