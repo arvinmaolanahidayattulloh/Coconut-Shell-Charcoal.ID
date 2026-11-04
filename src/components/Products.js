@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import RevealWrapper from "./RevealWrapper";
 import { usePrice } from "@/context/PriceContext";
+import { useAccount } from "./Account";
 import styles from "./Products.module.css";
 
 const PRODUCTS = [
@@ -113,6 +114,15 @@ function useLiveCsc() {
 }
 
 function LivePrice({ product, live }) {
+  const { user } = useAccount();
+  // Belum login: buka Register. Sudah login: lanjut ke bagian Kontak.
+  const onBuy = () => {
+    if (user) {
+      document.getElementById("kontak")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      window.dispatchEvent(new CustomEvent("open-register"));
+    }
+  };
   const k = 1 + (product.markup || 0); // Karbon Aktif +25%, Briket +50% dari harga dasar
   const chg = live.ready ? live.chgIdr * k : 0;
   const up = chg >= 0;
@@ -142,13 +152,13 @@ function LivePrice({ product, live }) {
         )}
       </div>
 
-      <a href="#kontak" className={styles.detailsCta}>
+      <button type="button" className={styles.detailsCta} onClick={onBuy}>
         Buy
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="3" y1="8" x2="13" y2="8"></line>
           <polyline points="9 4 13 8 9 12"></polyline>
         </svg>
-      </a>
+      </button>
     </div>
   );
 }
