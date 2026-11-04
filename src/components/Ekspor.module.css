@@ -1,0 +1,13 @@
+/* [FILE: src/components/Ekspor.module.css] */
+
+/* [SECTION: TEMA-EKSPOR] warna aksen Ekspor (biru) */
+.root {
+  --aksen: #1d6fd6;
+  padding-top: 12px;
+  border-top: 3px solid var(--aksen);
+}
+.root h4 {
+  margin: 0;
+  color: var(--aksen);
+}
+/* [/SECTION: TEMA-EKSPOR] */
