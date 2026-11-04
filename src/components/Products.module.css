@@ -589,6 +589,8 @@
 .livePrice .detailsCta {
   flex-shrink: 0;
   margin-left: auto;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .livePriceHead {
