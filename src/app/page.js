@@ -17,7 +17,6 @@ import { LeftPanel, RightPanel } from "@/components/SidePanels";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
-  const [livePrice, setLivePrice] = useState(1250.50);
 
   // State untuk sistem Switch Tab Invest & Trade
   const [invested, setInvested] = useState(false);
@@ -91,7 +90,7 @@ export default function Home() {
 
             <CTA />
 
-            <PriceChart setLivePrice={setLivePrice} />
+            <PriceChart />
 
             {/* Switch Tampilan Dinamis Berdasarkan Tab Aktif */}
             {activeTab === 'invest' ? (
@@ -111,7 +110,7 @@ export default function Home() {
                     ← Kembali ke Menu Investasi
                   </button>
                 </div>
-                <Trade livePrice={livePrice} />
+                <Trade />
               </div>
             )}
 
