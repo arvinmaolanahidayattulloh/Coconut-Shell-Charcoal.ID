@@ -14,7 +14,7 @@ const PAYMENT_CATEGORIES = [
       { name: "Bank Central Asia", logo: "https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia_logo.svg" },
       { name: "Bank Mandiri", logo: "https://upload.wikimedia.org/wikipedia/commons/a/ad/Bank_Mandiri_logo_2016.svg" },
       { name: "Bank Negara Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_BNI.svg" },
-      { name: "Bank Rakyat Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/9/9c/Logo_Bank_BRI.svg" },
+      { name: "Bank Rakyat Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/2/28/Logo_Bank_Rakyat_Indonesia.svg" },
       { name: "Bank Syariah Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a0/Bank_Syariah_Indonesia_logo.svg" },
       { name: "CIMB Niaga", logo: "https://upload.wikimedia.org/wikipedia/commons/b/b3/CIMB_Niaga_logo.svg" },
       { name: "Bank Permata", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/PermataBank_logo.svg" },
@@ -69,7 +69,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const [invAgreed, setInvAgreed] = useState(false);
   const [invShake, setInvShake] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [showContractPreview, setShowContractPreview] = useState(false);
 
   // State OTP & Status Validasi CEO
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -86,11 +85,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     })).filter(cat => cat.items.length > 0);
   }, [providerSearch]);
 
-  // Sinkronisasi stabil harga dari Index CSCID & Konversi Kurs Stabil
+  // Sinkronisasi stabil harga dari Indeks CSCID & Konversi Kurs Stabil (Fix Bug Mata Uang Lain)
   const rawChartPrice = livePrice || 1250.50; 
   const USD_EXCHANGE_RATE = 15500; 
 
-  // Normalisasi stabil agar tidak mengalami lonjakan aneh saat mata uang chart berubah
+  // Normalisasi stabil agar tidak mengalami lonjakan saat mata uang chart berubah
   const normalizedChartUSD = chartCurrency === 'IDR' ? rawChartPrice / USD_EXCHANGE_RATE : rawChartPrice;
   const normalizedChartIDR = chartCurrency === 'IDR' ? rawChartPrice : rawChartPrice * USD_EXCHANGE_RATE;
 
@@ -107,8 +106,8 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
 
   const selectedMitraData = partnersData?.find(p => p.name === invData.mitra) || partnersData?.[0];
 
-  // Nama Pengirim Otomatis Terisi dari Nama Akun/Profil Pengguna yang Valid
-  const automaticSenderName = user?.name || "Investor Terverifikasi";
+  // Nama Pengirim Otomatis Terisi dari Akun Terverifikasi
+  const automaticSenderName = user?.name || "Arvin Maolana Hidayattulloh";
 
   const handleLogout = () => {
     logout();
@@ -176,7 +175,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       return;
     }
 
-    // Memunculkan permintaan OTP WhatsApp sebelum finalisasi
+    // Memunculkan permintaan OTP WhatsApp
     setShowOtpModal(true);
   };
 
@@ -277,7 +276,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                     
                     <form onSubmit={handleInitialSubmit}>
                       
-                      {/* DESAIN BAGIAN TAGIHAN YANG KOKOH & STABIL */}
+                      {/* DESAIN BAGIAN TAGIHAN KOKOH & STABIL */}
                       <div style={{ background: 'linear-gradient(135deg, #fffbeb 100%, #fef3c7 0%)', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #fcd34d', boxShadow: '0 10px 25px -5px rgba(245,158,11,0.1)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #fde68a', paddingBottom: '12px' }}>
                           <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Rincian Tagihan Investasi CSCID</span>
@@ -320,14 +319,14 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
 
                       {/* PEMILIHAN PERUSAHAAN PENYEDIA / MITRA */}
                       <div style={{ marginBottom: '24px' }}>
-                        <label style={labelStyle}>Pilih Perusahaan Penyedia (Mitra PT)</label>
+                        <label style={labelStyle}>Pilih Perusahaan Penyedia</label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '6px' }}>
                           {partnersData?.map((mitra) => {
                             const isSelected = invData.mitra === mitra.name;
                             return (
                               <div 
                                 key={mitra.id}
-                                onClick={() => setInvData({...mitra: mitra.name})}
+                                onClick={() => setInvData({...invData, mitra: mitra.name})}
                                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', border: isSelected ? '2px solid #c45e20' : '1px solid #e2e8f0', background: isSelected ? '#fff7ed' : '#f9fafb', cursor: 'pointer', transition: 'all 0.2s' }}
                               >
                                 <img src={mitra.logo} alt={mitra.name} style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0', flexShrink: '0' }} />
@@ -368,11 +367,19 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         </div>
                       </div>
 
-                      {/* INFORMASI REKENING TUJUAN & GAMBAR QRIS / TRANSFER */}
+                      {/* INFORMASI REKENING TUJUAN, LOGO PENYEDIA & GAMBAR QRIS / TRANSFER */}
                       <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-                        <h5 style={{ margin: '0 0 12px 0', color: '#334155', fontSize: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-                          Rekening Resmi Tujuan Pembayaran
-                        </h5>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '12px' }}>
+                          <img 
+                            src={selectedMitraData?.logo || 'https://via.placeholder.com/40'} 
+                            alt={selectedMitraData?.name} 
+                            style={{ width: '28px', height: '28px', objectFit: 'contain', background: '#fff', borderRadius: '4px', border: '1px solid #cbd5e1' }} 
+                          />
+                          <h5 style={{ margin: 0, color: '#334155', fontSize: '14px' }}>
+                            Pembayaran / QRIS Perusahaan Penyedia Resmi
+                          </h5>
+                        </div>
+
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
                             <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Bank: <b>{selectedMitraData?.bank || 'Bank Central Asia'}</b></p>
