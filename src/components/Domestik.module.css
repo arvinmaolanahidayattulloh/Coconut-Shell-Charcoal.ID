@@ -1,0 +1,13 @@
+/* [FILE: src/components/Domestik.module.css] */
+
+/* [SECTION: TEMA-DOMESTIK] warna aksen Domestik (hijau) */
+.root {
+  --aksen: #2e9e5b;
+  padding-top: 12px;
+  border-top: 3px solid var(--aksen);
+}
+.root h4 {
+  margin: 0;
+  color: var(--aksen);
+}
+/* [/SECTION: TEMA-DOMESTIK] */
