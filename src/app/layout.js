@@ -1,4 +1,5 @@
 import "./globals.css";
+import Providers from "./Providers";
 
 export const metadata = {
   title: "Coconut Shell Charcoal Indonesia",
@@ -26,7 +27,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
