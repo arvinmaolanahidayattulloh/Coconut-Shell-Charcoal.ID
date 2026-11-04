@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './Login.module.css';
 import Register from './Register';
 import Recovery from './Recovery';
@@ -21,6 +21,17 @@ const Login = ({ children } = {}) => {
   const openMode = (mode) => { reset(); setAuthMode(mode); };
   const closeAll = () => openMode(null);
   const goLogin = () => openMode('login_username');
+
+  // Tombol lain (mis. "Buy" di Produk) membuka Register lewat event ini.
+  // Hanya instance mode panel (children = fungsi) yang mendengarkan.
+  const isPanel = typeof children === 'function';
+  useEffect(() => {
+    if (!isPanel) return;
+    const onOpen = () => { reset(); setAuthMode('register'); };
+    window.addEventListener('open-register', onOpen);
+    return () => window.removeEventListener('open-register', onOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPanel]);
 
   // Auto-login setelah registrasi selesai (MENERIMA FOTO PROFIL)
   const handleAutoLoginAfterRegister = (registeredData) => {
