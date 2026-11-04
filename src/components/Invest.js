@@ -2,53 +2,53 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount } from './Account'; 
-import { usePrice } from '@/context/PriceContext'; // Realtime Price Context CSC/Ton
+import { usePrice } from '@/context/PriceContext'; 
 import Login from './Login';
 import styles from './Invest.module.css';
 import { partnersData } from './Mitra'; 
 
-// Kategori Terstruktur Tanpa Perulangan Berlebihan
+// Kategori Bank & E-Wallet dengan Logo Gambar Nyata (Resmi)
 const PAYMENT_CATEGORIES = [
   {
     category: "Transfer Bank Resmi",
     items: [
-      { name: "Bank Central Asia", logo: "🏦" },
-      { name: "Bank Mandiri", logo: "🏦" },
-      { name: "Bank Negara Indonesia", logo: "🏦" },
-      { name: "Bank Rakyat Indonesia", logo: "🏦" },
-      { name: "Bank Syariah Indonesia", logo: "🏦" },
-      { name: "CIMB Niaga", logo: "🏦" },
-      { name: "Bank Permata", logo: "🏦" },
-      { name: "Bank Danamon", logo: "🏦" },
-      { name: "Bank Tabungan Negara", logo: "🏦" },
-      { name: "Bank Mega", logo: "🏦" },
-      { name: "OCBC NISP", logo: "🏦" },
-      { name: "Panin Bank", logo: "🏦" },
-      { name: "Bank Jago", logo: "🏦" },
-      { name: "SeaBank Indonesia", logo: "🏦" },
-      { name: "Bank Neo Commerce", logo: "🏦" },
-      { name: "BCA Syariah", logo: "🏦" },
-      { name: "Bank Muamalat", logo: "🏦" },
-      { name: "BTPN / Jenius", logo: "🏦" },
-      { name: "Maybank Indonesia", logo: "🏦" },
-      { name: "Bank Jabar Banten", logo: "🏦" },
-      { name: "Bank DKI", logo: "🏦" }
+      { name: "Bank Central Asia", logo: "https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia_logo.svg" },
+      { name: "Bank Mandiri", logo: "https://upload.wikimedia.org/wikipedia/commons/a/ad/Bank_Mandiri_logo_2016.svg" },
+      { name: "Bank Negara Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_BNI.svg" },
+      { name: "Bank Rakyat Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/9/9c/Logo_Bank_BRI.svg" },
+      { name: "Bank Syariah Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a0/Bank_Syariah_Indonesia_logo.svg" },
+      { name: "CIMB Niaga", logo: "https://upload.wikimedia.org/wikipedia/commons/b/b3/CIMB_Niaga_logo.svg" },
+      { name: "Bank Permata", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/PermataBank_logo.svg" },
+      { name: "Bank Danamon", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a6/Bank_Danamon_logo.svg" },
+      { name: "Bank Tabungan Negara", logo: "https://upload.wikimedia.org/wikipedia/commons/d/d1/Bank_BTN_logo.svg" },
+      { name: "Bank Mega", logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Bank_Mega_logo.svg" },
+      { name: "OCBC NISP", logo: "https://upload.wikimedia.org/wikipedia/commons/7/77/OCBC_logo_2023.svg" },
+      { name: "Panin Bank", logo: "https://upload.wikimedia.org/wikipedia/commons/8/8c/PaninBank_logo.svg" },
+      { name: "Bank Jago", logo: "https://upload.wikimedia.org/wikipedia/commons/3/36/Bank_Jago_logo.svg" },
+      { name: "SeaBank Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/d/de/SeaBank_Logo.svg" },
+      { name: "Bank Neo Commerce", logo: "https://upload.wikimedia.org/wikipedia/commons/2/23/Bank_Neo_Commerce_logo.svg" },
+      { name: "BCA Syariah", logo: "https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia_logo.svg" },
+      { name: "Bank Muamalat", logo: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Bank_Muamalat_Indonesia_logo.svg" },
+      { name: "BTPN / Jenius", logo: "https://upload.wikimedia.org/wikipedia/commons/f/fc/BTPN_logo_2019.svg" },
+      { name: "Maybank Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/8/8c/Maybank_logo.svg" },
+      { name: "Bank Jabar Banten", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Bank_BJB_logo.svg" },
+      { name: "Bank DKI", logo: "https://upload.wikimedia.org/wikipedia/commons/3/3a/Logo_Bank_DKI.svg" }
     ]
   },
   {
     category: "Dompet Digital (E-Wallet)",
     items: [
-      { name: "Dana", logo: "📱" },
-      { name: "Gopay", logo: "📱" },
-      { name: "OVO", logo: "📱" },
-      { name: "LinkAja", logo: "📱" }
+      { name: "Dana", logo: "https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" },
+      { name: "Gopay", logo: "https://upload.wikimedia.org/wikipedia/commons/8/86/Gopay_logo.svg" },
+      { name: "OVO", logo: "https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" },
+      { name: "LinkAja", logo: "https://upload.wikimedia.org/wikipedia/commons/8/89/LinkAja_logo.svg" }
     ]
   }
 ];
 
 const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const { user, logout } = useAccount();
-  const { livePrice } = usePrice(); // Harga real-time dari chart
+  const { livePrice, currency: chartCurrency } = usePrice();
   
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -64,7 +64,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     mitra: defaultMitra,
     payment: 'bank',
     senderName: '',
-    senderBank: '', // Default kosong / Pilih
+    senderBank: '', 
     senderAccount: '',
     proofFile: null
   });
@@ -74,11 +74,9 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const [showTerms, setShowTerms] = useState(false);
   const [showContractPreview, setShowContractPreview] = useState(false);
 
-  // State Search Bank & Dropdown
   const [providerSearch, setProviderSearch] = useState('');
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
 
-  // Filter kategori berdasarkan pencarian
   const filteredCategories = useMemo(() => {
     return PAYMENT_CATEGORIES.map(cat => ({
       category: cat.category,
@@ -86,12 +84,20 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     })).filter(cat => cat.items.length > 0);
   }, [providerSearch]);
 
-  // Kalkulasi Harga: Berdasarkan Chart Real-time CSC/Ton dikurangi 10% (-10%)
-  const chartPricePerTon = livePrice || 1250.50; // Nilai dasar dari Chart CSC/Ton
-  const USD_EXCHANGE_RATE = 15500;
-  
-  // Konversi chart ke IDR dikurangi 10%
-  const calculatedIdrPerTon = (chartPricePerTon * USD_EXCHANGE_RATE) * 0.90;
+  const rawChartPrice = livePrice || 1250.50; 
+  const USD_EXCHANGE_RATE = 15500; 
+  const isChartInIdr = chartCurrency === 'IDR' || rawChartPrice > 10000;
+
+  let unitPriceUSD = isChartInIdr ? (rawChartPrice / USD_EXCHANGE_RATE) * 0.90 : rawChartPrice * 0.90;
+  let unitPriceIDR = isChartInIdr ? rawChartPrice * 0.90 : (rawChartPrice * USD_EXCHANGE_RATE) * 0.90;
+
+  const currentTotalCalculated = invData.currency === 'IDR' 
+    ? invData.ton * unitPriceIDR 
+    : invData.ton * unitPriceUSD;
+
+  const displayTotal = invData.currency === 'IDR' 
+    ? `Rp ${currentTotalCalculated.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
+    : `$ ${currentTotalCalculated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const selectedMitraData = partnersData?.find(p => p.name === invData.mitra) || partnersData?.[0];
 
@@ -161,16 +167,10 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     alert(`Konfirmasi Pembayaran Berhasil!\n\nInvestor: ${invData.senderName}\nSumber: ${invData.senderBank} (${invData.senderAccount})\nAlokasi: ${invData.ton} Ton pada ${invData.mitra}`);
   };
 
-  const currentTotalCalculated = invData.ton * calculatedIdrPerTon;
-  const displayTotal = invData.currency === 'IDR' 
-    ? `Rp ${currentTotalCalculated.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
-    : `$ ${(currentTotalCalculated / USD_EXCHANGE_RATE).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
   return (
     <section className={styles.investSection} style={{ position: 'relative' }}>
       <div className={styles.investCard}>
         
-        {/* HEADER UTAMA: Judul & Menu Sejajar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#c45e20', margin: 0 }}>Investasi CSCID</h2>
           
@@ -209,13 +209,13 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                     {invested ? (
                       <div style={activeInvestBoxStyle}>
                         <h4 style={{ color: '#047857', margin: '0 0 8px 0', fontSize: '18px' }}>Investasi Aktif</h4>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#065f46' }}>Portofolio Anda: <b>{invData.ton} Ton</b> (Mitra: <b>{invData.mitra}</b>).</p>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#065f46' }}>Portofolio Anda: <b>{invData.ton} Ton</b> (Penyedia: <b>{invData.mitra}</b>).</p>
                         <button onClick={() => setIsInvestingFlow(true)} style={tambahInvestBtnStyle}>TAMBAH ALOKASI INVESTASI</button>
                       </div>
                     ) : (
                       <>
                         <span className={styles.subtitle} style={{ display: 'block', marginBottom: '16px', fontSize: '14px' }}>
-                          Amankan alokasi kuota komoditas ekspor Anda sekarang (Berdasarkan harga kalkulasi Chart CSC/Ton -10%).
+                          Amankan alokasi kuota komoditas ekspor Anda sekarang (Berdasarkan harga chart real-time dikurangi 10%).
                         </span>
                         <button onClick={() => setIsInvestingFlow(true)} className={styles.investBtn} style={{ width: '100%', padding: '14px', borderRadius: '12px' }}>
                           MULAI INVESTASI BARU
@@ -230,7 +230,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                     
                     <form onSubmit={handleProcessPayment}>
                       
-                      {/* QTY & MATA UANG */}
                       <div style={{ marginBottom: '16px', background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <label style={{ ...labelStyle, marginBottom: 0 }}>Volume Investasi (Ton)</label>
@@ -260,7 +259,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                           </div>
                           <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', minWidth: '40px' }}>Ton</span>
                         </div>
-                        <span style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '6px' }}>*Dihitung dari Kalkulasi Chart CSC/Ton dikurangi diskon khusus -10%</span>
+                        <span style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '6px' }}>*Dihitung otomatis dari harga chart real-time dikurangi diskon khusus -10%</span>
                       </div>
 
                       <div style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #fcd34d', boxShadow: '0 4px 12px rgba(245,158,11,0.1)' }}>
@@ -268,9 +267,9 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         <span style={{ fontSize: '26px', fontWeight: '900', color: '#b45309' }}>{displayTotal}</span>
                       </div>
 
-                      {/* PILIHAN MITRA & PROFIL PENANGGUNG JAWAB RESPONSIF */}
+                      {/* PILIHAN PENYEDIA / MITRA DENGAN LOGO */}
                       <div style={{ marginBottom: '24px' }}>
-                        <label style={labelStyle}>Pilih Mitra / Perusahaan Pelaksana (PT)</label>
+                        <label style={labelStyle}>Pilih Perusahaan Penyedia (Mitra PT)</label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '6px' }}>
                           {partnersData?.map((mitra) => {
                             const isSelected = invData.mitra === mitra.name;
@@ -280,9 +279,12 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                                 onClick={() => setInvData({...invData, mitra: mitra.name})}
                                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', border: isSelected ? '2px solid #c45e20' : '1px solid #e2e8f0', background: isSelected ? '#fff7ed' : '#f9fafb', cursor: 'pointer', transition: 'all 0.2s' }}
                               >
-                                <img src={mitra.logo} alt={mitra.name} style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0' }} />
+                                <img src={mitra.logo} alt={mitra.name} style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0', flexShrink: 0 }} />
                                 <div style={{ flex: 1 }}>
-                                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>{mitra.name}</h4>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>{mitra.name}</h4>
+                                    <span style={{ fontSize: '10px', background: '#e0f2fe', color: '#0369a1', fontWeight: 'bold', padding: '1px 6px', borderRadius: '4px' }}>Penyedia</span>
+                                  </div>
                                   <span style={{ fontSize: '11px', color: '#64748b' }}>NIB: {mitra.nib} • {mitra.bank}</span>
                                 </div>
                                 <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: isSelected ? '5px solid #c45e20' : '2px solid #cbd5e1', background: '#fff' }}></div>
@@ -291,8 +293,8 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                           })}
                         </div>
                         
-                        {/* Kartu Profil Penanggung Jawab: Fleksibel Berdampingan / Turun ke Bawah jika Layar Sempit */}
-                        <div className={styles.profileCardResponsive} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', background: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginTop: '12px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                        {/* Kartu Profil Penanggung Jawab Responsif */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', background: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginTop: '12px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
                           <img 
                             src={selectedMitraData?.fotoPJ || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedMitraData?.direktur || 'Direktur')}&background=c45e20&color=fff&size=120`} 
                             alt="Penanggung Jawab" 
@@ -357,7 +359,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         <input type="text" placeholder="Masukkan nama pemilik rekening" required value={invData.senderName} onChange={(e) => setInvData({...invData, senderName: e.target.value})} style={inputStyle} />
                       </div>
                       
-                      {/* PEMILIHAN BANK / E-WALLET DENGAN KATEGORI & PENCARIAN */}
+                      {/* PEMILIHAN BANK / E-WALLET DENGAN LOGO GAMBAR NYATA */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                         <div style={{ position: 'relative' }}>
                           <label style={labelStyle}>Bank / E-Wallet Pengirim</label>
@@ -391,11 +393,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                                       <div 
                                         key={p.name} 
                                         onClick={() => { setInvData({...invData, senderBank: p.name}); setProviderDropdownOpen(false); setProviderSearch(''); }}
-                                        style={{ padding: '7px 10px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', background: invData.senderBank === p.name ? '#ffedd5' : 'transparent', fontWeight: invData.senderBank === p.name ? 'bold' : 'normal' }}
+                                        style={{ padding: '7px 10px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px', background: invData.senderBank === p.name ? '#ffedd5' : 'transparent', fontWeight: invData.senderBank === p.name ? 'bold' : 'normal' }}
                                         onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = invData.senderBank === p.name ? '#ffedd5' : 'transparent'}
                                       >
-                                        <span>{p.logo}</span>
+                                        <img src={p.logo} alt={p.name} style={{ width: '28px', height: '20px', objectFit: 'contain', background: '#fff', padding: '1px', borderRadius: '3px', border: '1px solid #e2e8f0', flexShrink: 0 }} />
                                         <span>{p.name}</span>
                                       </div>
                                     ))}
@@ -478,9 +480,9 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                             <center><b>SURAT PERJANJIAN INVESTASI & ALOKASI KOMODITAS</b></center>
                             <center><b>{invData.mitra} (CSCID)</b></center>
                             <br/>
-                            Pada hari ini, sistem mencatat pemesanan alokasi kuota komoditas ekspor sebesar <b>{invData.ton} Ton</b> melalui mitra pelaksana <b>{invData.mitra}</b> dengan total nilai transaksi (setelah penyesuaian diskon khusus -10%) sebesar <b>{displayTotal}</b>.<br/><br/>
+                            Pada hari ini, sistem mencatat pemesanan alokasi kuota komoditas ekspor sebesar <b>{invData.ton} Ton</b> melalui perusahaan penyedia <b>{invData.mitra}</b> dengan total nilai transaksi (setelah penyesuaian diskon khusus -10%) sebesar <b>{displayTotal}</b>.<br/><br/>
                             <b>1. Klausul Utama:</b> Investor berhak atas bagi hasil dari penjualan ekspor komoditas sesuai dengan alokasi kuota yang berhasil diamankan.<br/>
-                            <b>2. Rekening Resmi:</b> Seluruh dana wajib ditransfer ke rekening resmi teratas nama {selectedMitraData?.anRekening} ({selectedMitraData?.bank}).<br/>
+                            <b>2. Rekening Resmi:</b> Seluruh dana wajib ditransfer ke rekening resmi atas nama {selectedMitraData?.anRekening} ({selectedMitraData?.bank}).<br/>
                             <b>3. Keabsahan:</b> Dokumen ini sah dan mengikat secara hukum setelah ditandatangani di atas meterai oleh Investor dan Penanggung Jawab ({selectedMitraData?.direktur}).
                             <br/><br/>
                             <i>[Area Validasi Tanda Tangan Basah & Meterai Resmi]</i>
@@ -504,7 +506,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           </div>
         </div>
 
-        {/* Modal Sandi Terminal Trade */}
         {showPasswordModal && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)', borderRadius: '24px' }}>
             <form onSubmit={handleTradeAccessCheck} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'center', maxWidth: 360, padding: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
@@ -527,7 +528,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   );
 };
 
-// Styling Objek Inline Profesional
 const menuBtnStyle = { background: '#ffffff', border: '1px solid #e5e7eb', padding: '8px 14px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', color: '#111827', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' };
 const menuDropdownStyle = { position: 'absolute', top: '46px', right: '0', background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 50, minWidth: '180px', padding: '6px' };
 const activeInvestBoxStyle = { padding: '20px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '12px', textAlign: 'center' };
