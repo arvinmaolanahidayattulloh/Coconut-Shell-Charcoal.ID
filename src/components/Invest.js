@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount } from './Account'; 
 import Login from './Login';
 import styles from './Invest.module.css';
 import { partnersData } from './Mitra'; 
 
-// Daftar Lengkap Bank di Indonesia
+// Daftar Bank Indonesia untuk Opsi Pencarian
 const INDONESIAN_BANKS = [
   "BCA (Bank Central Asia)", "Bank Mandiri", "BNI (Bank Negara Indonesia)", "BRI (Bank Rakyat Indonesia)",
   "BSI (Bank Syariah Indonesia)", "CIMB Niaga", "Bank Permata", "Bank Danamon", "BTN (Bank Tabungan Negara)",
@@ -31,14 +31,23 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     mitra: defaultMitra,
     payment: 'bank',
     senderName: '',
-    senderBank: '',
-    senderAccount: '', // Tambahan No Rekening Pengirim
+    senderBank: 'BCA (Bank Central Asia)',
+    senderAccount: '',
     proofFile: null
   });
   
   const [invAgreed, setInvAgreed] = useState(false);
   const [invShake, setInvShake] = useState(false);
-  const [showTerms, setShowTerms] = useState(false); 
+  const [showTerms, setShowTerms] = useState(false);
+  const [showContractPreview, setShowContractPreview] = useState(false); // Toggle Preview Dokumen
+
+  // State untuk Search Bank Pengirim
+  const [bankSearch, setBankSearch] = useState('');
+  const [bankDropdownOpen, setBankDropdownOpen] = useState(false);
+
+  const filteredBanks = useMemo(() => {
+    return INDONESIAN_BANKS.filter(b => b.toLowerCase().includes(bankSearch.toLowerCase()));
+  }, [bankSearch]);
 
   const PRICE_PER_TON_IDR = 10500000;
   const USD_EXCHANGE_RATE = 15500;
@@ -98,13 +107,13 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       return;
     }
     if (!invData.proofFile) {
-      alert("Harap upload bukti transfer Anda.");
+      alert("Harap upload bukti transfer pembayaran Anda.");
       return;
     }
 
     setInvested(true);
     setIsInvestingFlow(false);
-    alert(`Pembayaran berhasil dikonfirmasi!\n\nNama: ${invData.senderName}\nBank: ${invData.senderBank} (${invData.senderAccount})\nInvestasi sebesar ${invData.ton} Ton pada ${invData.mitra} akan segera diverifikasi oleh sistem.`);
+    alert(`Konfirmasi Pembayaran Berhasil!\n\nInvestor: ${invData.senderName}\nBank: ${invData.senderBank} (${invData.senderAccount})\nAlokasi: ${invData.ton} Ton pada ${invData.mitra}`);
   };
 
   const currentTotalIdr = invData.ton * PRICE_PER_TON_IDR;
@@ -155,8 +164,8 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                     {invested ? (
                       <div style={activeInvestBoxStyle}>
                         <h4 style={{ color: '#047857', margin: '0 0 8px 0', fontSize: '18px' }}>Investasi Aktif!</h4>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#065f46' }}>Anda memiliki portofolio <b>{invData.ton} Ton</b> pada <b>{invData.mitra}</b>.</p>
-                        <button onClick={() => setIsInvestingFlow(true)} style={tambahInvestBtnStyle}>TAMBAH INVESTASI</button>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#065f46' }}>Portofolio Anda: <b>{invData.ton} Ton</b> (Mitra: <b>{invData.mitra}</b>).</p>
+                        <button onClick={() => setIsInvestingFlow(true)} style={tambahInvestBtnStyle}>TAMBAH ALOKASI INVESTASI</button>
                       </div>
                     ) : (
                       <>
@@ -176,88 +185,116 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                     
                     <form onSubmit={handleProcessPayment}>
                       
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={labelStyle}>Jumlah Investasi (Ton)</label>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e5e7eb', borderRadius: '10px', background: '#f9fafb', flex: 1, overflow: 'hidden' }}>
+                      {/* --- DESAIN QTY / NOMINAL & INTERVAL MATA UANG --- */}
+                      <div style={{ marginBottom: '16px', background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <label style={{ ...labelStyle, marginBottom: 0 }}>Tentukan Volume Investasi</label>
+                          <div style={{ display: 'flex', background: '#e2e8f0', padding: '3px', borderRadius: '8px', gap: '2px' }}>
+                            {['IDR', 'USD'].map(curr => (
+                              <button 
+                                key={curr} 
+                                type="button" 
+                                onClick={() => setInvData({...invData, currency: curr})}
+                                style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', border: 'none', borderRadius: '6px', cursor: 'pointer', background: invData.currency === curr ? '#c45e20' : 'transparent', color: invData.currency === curr ? '#fff' : '#475569' }}
+                              >
+                                {curr}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '10px', background: '#fff', overflow: 'hidden', flex: 1 }}>
                             <button type="button" onClick={() => setInvData({...invData, ton: Math.max(1, invData.ton - 1)})} style={qtyBtnStyle}>-</button>
                             <input 
                               type="number" min="1" value={invData.ton} 
                               onChange={(e) => setInvData({...invData, ton: Math.max(1, parseInt(e.target.value) || 1)})}
-                              style={{ flex: 1, textAlign: 'center', fontSize: '16px', fontWeight: 'bold', border: 'none', background: 'transparent', outline: 'none', color: '#111827' }}
+                              style={{ flex: 1, textAlign: 'center', fontSize: '18px', fontWeight: '800', border: 'none', background: 'transparent', outline: 'none', color: '#0f172a' }}
                             />
                             <button type="button" onClick={() => setInvData({...invData, ton: invData.ton + 1})} style={qtyBtnStyle}>+</button>
                           </div>
-                          <select value={invData.currency} onChange={(e) => setInvData({...invData, currency: e.target.value})} style={{ width: '100px', ...inputStyle }}>
-                            <option value="IDR">IDR</option>
-                            <option value="USD">USD</option>
-                          </select>
+                          <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', minWidth: '40px' }}>Ton</span>
                         </div>
                       </div>
 
-                      <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '10px', marginBottom: '16px', border: '1px solid #fde68a' }}>
-                        <span style={{ display: 'block', fontSize: '13px', color: '#92400e', marginBottom: '4px' }}>Total Tagihan Pembayaran:</span>
-                        <span style={{ fontSize: '24px', fontWeight: '800', color: '#b45309' }}>{displayTotal}</span>
+                      <div style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #fcd34d', boxShadow: '0 4px 12px rgba(245,158,11,0.1)' }}>
+                        <span style={{ display: 'block', fontSize: '12px', color: '#92400e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Total Tagihan Bersih:</span>
+                        <span style={{ fontSize: '26px', fontWeight: '900', color: '#b45309' }}>{displayTotal}</span>
                       </div>
 
-                      {/* --- DESAIN MITRA & KARTU PROFIL PENANGGUNG JAWAB --- */}
-                      <div style={{ marginBottom: '20px' }}>
-                        <label style={labelStyle}>Mitra Perusahaan (PT)</label>
-                        <select value={invData.mitra} onChange={(e) => setInvData({...invData, mitra: e.target.value})} style={{...inputStyle, fontWeight: 'bold'}}>
-                          {partnersData && partnersData.length > 0 ? (
-                            partnersData.map((mitra) => <option key={mitra.id} value={mitra.name}>{mitra.name}</option>)
-                          ) : (
-                            <option value="PT. Tunas Kembar Abadi">PT. Tunas Kembar Abadi</option>
-                          )}
-                        </select>
+                      {/* --- PILIHAN MITRA / BROKER (PROFESSIONAL STYLE) --- */}
+                      <div style={{ marginBottom: '24px' }}>
+                        <label style={labelStyle}>Pilih Mitra / Perusahaan Pelaksana (PT)</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '6px' }}>
+                          {partnersData?.map((mitra) => {
+                            const isSelected = invData.mitra === mitra.name;
+                            return (
+                              <div 
+                                key={mitra.id}
+                                onClick={() => setInvData({...invData, mitra: mitra.name})}
+                                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', border: isSelected ? '2px solid #c45e20' : '1px solid #e2e8f0', background: isSelected ? '#fff7ed' : '#f9fafb', cursor: 'pointer', transition: 'all 0.2s' }}
+                              >
+                                <img src={mitra.logo} alt={mitra.name} style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0' }} />
+                                <div style={{ flex: 1 }}>
+                                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>{mitra.name}</h4>
+                                  <span style={{ fontSize: '11px', color: '#64748b' }}>NIB: {mitra.nib} • {mitra.bank}</span>
+                                </div>
+                                <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: isSelected ? '5px solid #c45e20' : '2px solid #cbd5e1', background: '#fff' }}></div>
+                              </div>
+                            );
+                          })}
+                        </div>
                         
-                        {/* Kartu Profil Penanggung Jawab */}
-                        <div style={{ display: 'flex', gap: '14px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '10px', alignItems: 'center' }}>
+                        {/* Kartu Profil Penanggung Jawab 1:1 Selaras Tema Web */}
+                        <div style={{ display: 'flex', gap: '16px', background: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginTop: '12px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
                           <img 
                             src={selectedMitraData?.fotoPJ || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedMitraData?.direktur || 'Direktur')}&background=c45e20&color=fff&size=120`} 
                             alt="Penanggung Jawab" 
-                            style={{ width: '85px', height: '85px', borderRadius: '12px', objectFit: 'cover', border: '2px solid #e5e7eb' }} 
+                            style={{ width: '80px', height: '80px', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover', border: '2px solid #fed7aa' }} 
                           />
                           <div style={{ flex: 1 }}>
-                            <h5 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#0f172a' }}>{selectedMitraData?.direktur || 'Penanggung Jawab'}</h5>
-                            <span style={{ display: 'inline-block', fontSize: '11px', color: '#c45e20', fontWeight: 'bold', background: '#ffedd5', padding: '3px 8px', borderRadius: '6px', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <h5 style={{ margin: '0 0 2px 0', fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>{selectedMitraData?.direktur || 'Arvin Maolana Hidayattulloh'}</h5>
+                              <span style={{ fontSize: '10px', color: '#047857', fontWeight: 'bold', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px' }}>Verified Official</span>
+                            </div>
+                            <span style={{ display: 'inline-block', fontSize: '11px', color: '#c45e20', fontWeight: '700', marginBottom: '6px' }}>
                               {selectedMitraData?.jabatan || 'Direktur Utama'}
                             </span>
-                            <div style={{ fontSize: '12px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <span>💳 <b>NIK:</b> {selectedMitraData?.nik || '-'}</span>
-                              <span>✉️ <b>Email:</b> {selectedMitraData?.email || '-'}</span>
-                              <span>📱 <b>WA:</b> {selectedMitraData?.phone || '-'}</span>
+                            <div style={{ fontSize: '12px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span><b>NIK:</b> {selectedMitraData?.nik || '3304031108040002'}</span>
+                              <span><b>Email:</b> {selectedMitraData?.email || 'tunaskembarabadi@gmail.com'}</span>
+                              <span><b>WhatsApp:</b> {selectedMitraData?.phone || '0851-6815-2525'}</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       <div style={{ marginBottom: '16px' }}>
-                        <label style={labelStyle}>Metode Pembayaran</label>
+                        <label style={labelStyle}>Metode Pembayaran Tujuan</label>
                         <div style={{ display: 'flex', gap: '10px' }}>
                           <label style={{...radioContainerStyle, border: invData.payment === 'bank' ? '2px solid #c45e20' : '1px solid #e5e7eb', background: invData.payment === 'bank' ? '#fff7ed' : '#fff'}}>
                             <input type="radio" name="pay" value="bank" checked={invData.payment === 'bank'} onChange={() => setInvData({...invData, payment: 'bank'})} style={{display: 'none'}} />
-                            💳 Transfer Bank
+                            💳 Transfer Bank PT
                           </label>
                           <label style={{...radioContainerStyle, border: invData.payment === 'qris' ? '2px solid #c45e20' : '1px solid #e5e7eb', background: invData.payment === 'qris' ? '#fff7ed' : '#fff'}}>
                             <input type="radio" name="pay" value="qris" checked={invData.payment === 'qris'} onChange={() => setInvData({...invData, payment: 'qris'})} style={{display: 'none'}} />
-                            📱 QRIS
+                            📱 QRIS Perusahaan
                           </label>
                         </div>
                       </div>
 
-                      <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+                      <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
                         {invData.payment === 'bank' ? (
                           <>
-                            <h5 style={{ margin: '0 0 8px 0', color: '#334155', fontSize: '14px' }}>Tujuan Transfer Bank</h5>
+                            <h5 style={{ margin: '0 0 8px 0', color: '#334155', fontSize: '14px' }}>Rekening Resmi Tujuan</h5>
                             <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Bank: <b>{selectedMitraData?.bank || 'BCA (Bank Central Asia)'}</b></p>
-                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>No. Rekening: <b style={{ fontSize: '18px', color: '#0f172a' }}>{selectedMitraData?.noRekening || '869 1234 5678'}</b></p>
+                            <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>No. Rekening: <b style={{ fontSize: '18px', color: '#0f172a' }}>{selectedMitraData?.noRekening || '8692824902'}</b></p>
                             <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Atas Nama: <b>{selectedMitraData?.anRekening || invData.mitra}</b></p>
                           </>
                         ) : (
                           <div style={{ textAlign: 'center' }}>
                             <h5 style={{ margin: '0 0 12px 0', color: '#334155', fontSize: '14px' }}>Scan QRIS Resmi</h5>
-                            <div style={{ width: '140px', height: '140px', background: '#cbd5e1', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '2px dashed #94a3b8' }}>
+                            <div style={{ width: '130px', height: '130px', background: '#cbd5e1', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '2px dashed #94a3b8' }}>
                               <span style={{ fontSize: '12px', color: '#64748b' }}>[Mockup QRIS]</span>
                             </div>
                             <p style={{ margin: '12px 0 0 0', fontSize: '14px', color: '#475569' }}>A.n <b>{selectedMitraData?.anRekening || invData.mitra}</b></p>
@@ -266,30 +303,61 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                       </div>
 
                       <h3 style={{ margin: '0 0 12px 0', color: '#111827', fontSize: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
-                        Data Konfirmasi Pembayaran
+                        Konfirmasi Data Pengirim
                       </h3>
                       
                       <div style={{ marginBottom: '14px' }}>
                         <label style={labelStyle}>Nama Lengkap (Sesuai Rekening Pengirim)</label>
-                        <input type="text" placeholder="Masukkan nama lengkap" required value={invData.senderName} onChange={(e) => setInvData({...invData, senderName: e.target.value})} style={inputStyle} />
+                        <input type="text" placeholder="Masukkan nama pemilik rekening" required value={invData.senderName} onChange={(e) => setInvData({...invData, senderName: e.target.value})} style={inputStyle} />
                       </div>
                       
-                      {/* Grid untuk Bank dan Rekening Pengirim */}
+                      {/* --- PEMILIHAN BANK PENGIRIM DENGAN FITUR SEARCH (INTERVAL STYLE) --- */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                        <div>
+                        <div style={{ position: 'relative' }}>
                           <label style={labelStyle}>Bank Pengirim</label>
-                          <select required value={invData.senderBank} onChange={(e) => setInvData({...invData, senderBank: e.target.value})} style={inputStyle}>
-                            <option value="" disabled>Pilih Bank</option>
-                            {INDONESIAN_BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-                          </select>
+                          <div 
+                            onClick={() => setBankDropdownOpen(!bankDropdownOpen)}
+                            style={{ ...inputStyle, background: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{invData.senderBank}</span>
+                            <span style={{ fontSize: '10px', color: '#64748b' }}>▼</span>
+                          </div>
+
+                          {bankDropdownOpen && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginTop: '4px', padding: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+                              <input 
+                                type="text" 
+                                placeholder="Cari bank..." 
+                                value={bankSearch} 
+                                onChange={(e) => setBankSearch(e.target.value)}
+                                autoFocus
+                                style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', marginBottom: '6px', outline: 'none' }}
+                              />
+                              {filteredBanks.length > 0 ? (
+                                filteredBanks.map(b => (
+                                  <div 
+                                    key={b} 
+                                    onClick={() => { setInvData({...invData, senderBank: b}); setBankDropdownOpen(false); setBankSearch(''); }}
+                                    style={{ padding: '8px 10px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', color: '#334155', background: invData.senderBank === b ? '#ffedd5' : 'transparent', fontWeight: invData.senderBank === b ? 'bold' : 'normal' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = invData.senderBank === b ? '#ffedd5' : 'transparent'}
+                                  >
+                                    {b}
+                                  </div>
+                                ))
+                              ) : (
+                                <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>Bank tidak ditemukan</div>
+                              )}
+                            </div>
+                          )}
                         </div>
+
                         <div>
-                          <label style={labelStyle}>Nomor Rekening</label>
-                          <input type="number" placeholder="No. Rekening" required value={invData.senderAccount} onChange={(e) => setInvData({...invData, senderAccount: e.target.value})} style={inputStyle} />
+                          <label style={labelStyle}>Nomor Rekening Pengirim</label>
+                          <input type="number" placeholder="No. Rekening Anda" required value={invData.senderAccount} onChange={(e) => setInvData({...invData, senderAccount: e.target.value})} style={inputStyle} />
                         </div>
                       </div>
 
-                      {/* --- DESAIN UPLOAD BUKTI TF PREMIUM --- */}
                       <div style={{ marginBottom: '24px' }}>
                         <label style={labelStyle}>Upload Bukti Transfer</label>
                         <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}>
@@ -299,13 +367,9 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                           </svg>
                           <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
-                            {invData.proofFile ? (
-                              <b style={{ color: '#c45e20' }}>✓ {invData.proofFile.name}</b>
-                            ) : (
-                              "Klik untuk Upload Gambar Bukti TF"
-                            )}
+                            {invData.proofFile ? <b style={{ color: '#c45e20' }}>✓ {invData.proofFile.name}</b> : "Klik atau seret file bukti transfer ke sini"}
                           </span>
-                          <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Format: JPG, PNG, atau PDF</span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Format didukung: JPG, PNG, PDF</span>
                           <input type="file" accept="image/*,application/pdf" hidden required onChange={(e) => setInvData({...invData, proofFile: e.target.files[0]})} />
                         </label>
                       </div>
@@ -332,23 +396,40 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         )}
                       </div>
 
-                      {/* --- DESAIN DOKUMEN PDF --- */}
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', background: '#fff7ed', border: '1px dashed #ea580c', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
-                        <div style={{ background: '#ea580c', color: '#fff', padding: '10px', borderRadius: '10px' }}>
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                          </svg>
+                      {/* --- DOKUMEN KONTRAK & INVOICE (PDF A4) DENGAN TEKS PREVIEW --- */}
+                      <div style={{ background: '#fff7ed', border: '1px solid #ea580c', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                          <div style={{ background: '#ea580c', color: '#fff', padding: '10px', borderRadius: '10px' }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                              <line x1="16" y1="13" x2="8" y2="13"></line>
+                              <line x1="16" y1="17" x2="8" y2="17"></line>
+                              <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <h5 style={{ margin: '0 0 2px 0', color: '#9a3412', fontSize: '14px', fontWeight: 'bold' }}>Dokumen Kontrak & Invoice (PDF A4)</h5>
+                            <p style={{ margin: 0, color: '#c2410c', fontSize: '12px' }}>Format resmi siap cetak untuk tanda tangan basah.</p>
+                          </div>
+                          <button type="button" onClick={() => setShowContractPreview(!showContractPreview)} style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                            {showContractPreview ? 'Tutup Preview' : 'Preview Teks'}
+                          </button>
                         </div>
-                        <div>
-                          <h5 style={{ margin: '0 0 4px 0', color: '#9a3412', fontSize: '14px', fontWeight: 'bold' }}>Dokumen Kontrak & Invoice (PDF A4)</h5>
-                          <p style={{ margin: 0, color: '#c2410c', fontSize: '12px', lineHeight: '1.4' }}>
-                            Setelah pembayaran selesai, sistem otomatis membuat Dokumen Berisi Klausul, Info Rekening, dan Form untuk dicetak & ditandatangani.
-                          </p>
-                        </div>
+
+                        {showContractPreview && (
+                          <div style={{ marginTop: '14px', background: '#fff', border: '1px solid #fdba74', borderRadius: '8px', padding: '16px', fontSize: '12px', color: '#334155', fontFamily: 'monospace', lineHeight: '1.5', maxHeight: '200px', overflowY: 'auto' }}>
+                            <center><b>SURAT PERJANJIAN INVESTASI & ALOKASI KOMODITAS</b></center>
+                            <center><b>PT. TUNAS KEMBAR ABADI (CSCID)</b></center>
+                            <br/>
+                            Pada hari ini, sistem mencatat pemesanan alokasi ekspor arang batok kelapa sebesar <b>{invData.ton} Ton</b> melalui mitra pelaksana <b>{invData.mitra}</b> dengan total nilai transaksi sebesar <b>{displayTotal}</b>.<br/><br/>
+                            <b>1. Klausul Utama:</b> Pihak Investor berhak atas bagi hasil ekspor sesuai kuota yang diamankan.<br/>
+                            <b>2. Rekening Resmi:</b> Seluruh dana ditransfer ke rekening resmi terdaftar atas nama {selectedMitraData?.anRekening} ({selectedMitraData?.bank}).<br/>
+                            <b>3. Validasi:</b> Dokumen ini sah dan mengikat secara hukum setelah ditandatangani di atas meterai oleh Investor dan Penanggung Jawab ({selectedMitraData?.direktur}).
+                            <br/><br/>
+                            <i>[Area Tanda Tangan Basah & Meterai 10.000]</i>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', gap: '12px' }}>
@@ -396,7 +477,7 @@ const menuDropdownStyle = { position: 'absolute', top: '46px', right: '0', backg
 const activeInvestBoxStyle = { padding: '20px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '12px', textAlign: 'center' };
 const tambahInvestBtnStyle = { marginTop: '16px', padding: '12px 18px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', width: '100%' };
 const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px' };
-const inputStyle = { width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box', background: '#f9fafb', color: '#111827' };
+const inputStyle = { width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box', background: '#f9fafb', color: '#111827', outline: 'none' };
 const qtyBtnStyle = { padding: '12px 18px', background: '#e2e8f0', border: 'none', fontSize: '18px', fontWeight: 'bold', color: '#334155', cursor: 'pointer', transition: 'background 0.2s' };
 const radioContainerStyle = { flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: '#374151', transition: 'all 0.2s ease' };
 const menuItemStyle = { display: 'flex', alignItems: 'center', width: '100%', padding: '10px 12px', border: 'none', borderRadius: '8px', background: 'transparent', fontSize: '13px', fontWeight: '600', color: '#4b5563', cursor: 'pointer', textAlign: 'left' };
