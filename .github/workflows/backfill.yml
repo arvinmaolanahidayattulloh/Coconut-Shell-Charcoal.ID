@@ -1,0 +1,19 @@
+# [CSC:WORKFLOW-BACKFILL] jalan manual dari tab Actions
+name: Backfill CSC
+on:
+  workflow_dispatch:
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: node scripts/backfill.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+# [/CSC:WORKFLOW-BACKFILL]
