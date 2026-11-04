@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useAccount } from './Account';
 import { useGoogleLogin } from '@react-oauth/google';
 import styles from './AuthShared.module.css';
+import { loginMicrosoft, loginApple, verifyWithServer } from '@/lib/auth/providers';
 
 // ============================================================
 // AuthShared.jsx — dipakai bersama oleh Login.jsx & Register.jsx
@@ -103,14 +104,9 @@ export const useProviderAuth = () => {
   const triggerGooglePopup = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-        const data = await res.json();
-        
-        if (promiseRef.current.resolve) {
-          promiseRef.current.resolve({ name: data.name, email: data.email, picture: data.picture });
-        }
+        // token Google diverifikasi di server (aud, email terverifikasi), bukan dipercaya begitu saja
+        const account = await verifyWithServer({ provider: 'Google', accessToken: tokenResponse.access_token });
+        if (promiseRef.current.resolve) promiseRef.current.resolve(account);
       } catch (err) {
         if (promiseRef.current.reject) promiseRef.current.reject(err);
       }
@@ -125,14 +121,12 @@ export const useProviderAuth = () => {
       if (providerName === 'Google') {
         promiseRef.current = { resolve, reject };
         triggerGooglePopup(); 
+      } else if (providerName === 'Microsoft') {
+        loginMicrosoft().then(resolve, reject);
+      } else if (providerName === 'Apple') {
+        loginApple().then(resolve, reject);
       } else {
-        // Simulasi jika Microsoft / Apple ditekan
-        setTimeout(() => {
-          resolve({
-            name: `${providerName} User`,
-            email: `${providerName.toLowerCase()}_user@coconutshellcharcoal.id`,
-          });
-        }, 800);
+        reject(new Error('Penyedia login tidak dikenal.'));
       }
     });
   };
