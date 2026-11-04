@@ -1,56 +1,255 @@
 /* [FILE: src/components/Order.module.css] */
-/* [SECTION: AKSI] */
-.aksi{display:flex;gap:8px;margin:12px 0}
-.tombolAksi{flex:1;padding:12px;border-radius:10px;border:1px solid var(--aksen,#888);background:transparent;color:inherit;font-weight:600;cursor:pointer}
-.aktif{background:var(--aksen,#1d6fd6);color:#fff}
+
+/* [SECTION: AKSI] tombol Ekspor / Domestik (dipakai BuyAction) */
+.aksi {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.tombolAksi {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--aksen, #1d6fd6);
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.aktif {
+  background: var(--aksen, #1d6fd6);
+  color: #fff;
+}
 /* [/SECTION: AKSI] */
-/* [SECTION: FORM] */
-.form{--aksen:var(--aksen,#1d6fd6);display:flex;flex-direction:column;gap:10px;margin-top:12px}
-.label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;opacity:.9}
-.input{padding:10px;border-radius:8px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;font:inherit}
-.hargaBox{padding:10px;border-radius:8px;background:rgba(128,128,128,.12)}
-.galat{color:#d33;font-size:.85rem}
+
+/* [SECTION: FORM] wadah form; warna --aksen datang dari Ekspor/Domestik */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+.input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.hargaBox {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.12);
+}
+.galat {
+  color: #d33;
+  font-size: 0.85rem;
+}
 /* [/SECTION: FORM] */
-/* [SECTION: MITRA] */
-.mitraList{display:flex;flex-direction:column;gap:6px}
-.mitraItem{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;cursor:pointer;text-align:left}
-.mitraAktif{border-color:var(--aksen);box-shadow:0 0 0 2px var(--aksen)}
-.mitraLogo{width:36px;height:36px;object-fit:contain}
-.pj{display:flex;align-items:center;gap:10px}
-.pjFoto{width:72px;aspect-ratio:1/1;object-fit:cover;border-radius:12px}
-.pj small{display:block;opacity:.7}
+
+/* [SECTION: MITRA] pilihan broker + foto penanggung jawab 1:1 */
+.mitraList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mitraItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.mitraAktif {
+  border-color: var(--aksen, #1d6fd6);
+  box-shadow: 0 0 0 2px var(--aksen, #1d6fd6);
+}
+.mitraLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.pj {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pjFoto {
+  width: 72px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.pj small {
+  display: block;
+  opacity: 0.7;
+}
 /* [/SECTION: MITRA] */
-/* [SECTION: GRADE] */
-.gradeRow{display:flex;gap:6px}
-.gradeBtn{flex:1;padding:8px;border-radius:10px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;cursor:pointer}
-.gradeBtn small{display:block;opacity:.7}
-.gradeAktif{background:var(--aksen,#1d6fd6);border-color:var(--aksen,#1d6fd6);color:#fff}
-.spek{margin-top:8px;display:grid;gap:4px}
-.spek div{display:flex;justify-content:space-between;font-size:.85rem}
+
+/* [SECTION: GRADE] tombol Grade + tabel spesifikasi (dipakai GradePicker) */
+.gradeRow {
+  display: flex;
+  gap: 6px;
+}
+.gradeBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.gradeBtn small {
+  display: block;
+  opacity: 0.7;
+}
+.gradeAktif {
+  background: var(--aksen, #1d6fd6);
+  border-color: var(--aksen, #1d6fd6);
+  color: #fff;
+}
+.spek {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+.spek div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
 /* [/SECTION: GRADE] */
-/* [SECTION: BAYAR] */
-.bayarRow{display:flex;gap:6px}
-.bayarBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border-radius:10px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;cursor:pointer;font-size:.8rem}
-.bayarBtn img{height:24px;object-fit:contain}
-.terkunci{opacity:.45;cursor:not-allowed}
-.info{padding:12px;border-radius:10px;background:rgba(128,128,128,.12)}
-.brokerHead{display:flex;align-items:center;gap:8px}
-.brokerHead img{width:28px;height:28px;object-fit:contain}
-.qris{width:100%;max-width:240px;display:block;margin-top:8px}
+
+/* [SECTION: BAYAR] metode pembayaran + info rekening/QRIS */
+.bayarRow {
+  display: flex;
+  gap: 6px;
+}
+.bayarBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.bayarBtn img {
+  height: 24px;
+  object-fit: contain;
+}
+.terkunci {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.info {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(128, 128, 128, 0.12);
+}
+.brokerHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brokerHead img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.qris {
+  width: 100%;
+  max-width: 240px;
+  display: block;
+  margin-top: 8px;
+}
 /* [/SECTION: BAYAR] */
-/* [SECTION: INVOICE] */
-.invoiceWrap{container-type:inline-size;width:100%}
-.invoice{aspect-ratio:210/297;background:#fff;color:#111;padding:6cqw;font-size:2.6cqw;display:flex;flex-direction:column;gap:1.2cqw;border:1px solid #ccc;overflow:hidden}
-.invoice h3{margin:0;font-size:5cqw}
-.invSub{margin:0 0 2cqw;color:#555}
-.invRow{display:flex;justify-content:space-between;gap:3cqw;border-bottom:1px dashed #ddd;padding-bottom:.8cqw}
-.invRow span{color:#555}
-.invRow b{text-align:right}
-.invTotal{font-size:3.4cqw;border-bottom:2px solid #111}
-.invNote{margin-top:auto;color:#777;font-size:2.2cqw}
-@media print{.invoice{border:none}}
+
+/* [SECTION: INVOICE] preview A4 (rasio 210:297), font skala mengikuti lebar */
+.invoiceWrap {
+  container-type: inline-size;
+  width: 100%;
+}
+.invoice {
+  aspect-ratio: 210 / 297;
+  background: #fff;
+  color: #111;
+  padding: 6cqw;
+  font-size: 2.6cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2cqw;
+  border: 1px solid #ccc;
+  overflow: hidden;
+}
+.invoice h3 {
+  margin: 0;
+  font-size: 5cqw;
+}
+.invSub {
+  margin: 0 0 2cqw;
+  color: #555;
+}
+.invRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 3cqw;
+  border-bottom: 1px dashed #ddd;
+  padding-bottom: 0.8cqw;
+}
+.invRow span {
+  color: #555;
+}
+.invRow b {
+  text-align: right;
+}
+.invTotal {
+  font-size: 3.4cqw;
+  border-bottom: 2px solid #111;
+}
+.invNote {
+  margin-top: auto;
+  color: #777;
+  font-size: 2.2cqw;
+}
+@media print {
+  .invoice {
+    border: none;
+  }
+}
 /* [/SECTION: INVOICE] */
-/* [SECTION: SELESAI] */
-.selesai{padding:14px;border-radius:10px;border:0;background:var(--aksen,#1d6fd6);color:#fff;font-weight:700;cursor:pointer}
-.selesai:disabled{opacity:.4;cursor:not-allowed}
+
+/* [SECTION: SELESAI] tombol Selesai */
+.selesai {
+  padding: 14px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--aksen, #1d6fd6);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.selesai:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 /* [/SECTION: SELESAI] */
