@@ -1,0 +1,24 @@
+// [FILE: src/data/Mitra.js]
+// Adapter: sumber data tunggal tetap src/components/Mitra.js (partnersData).
+// OrderForm membaca bentuk MITRA di bawah ini, jadi tidak perlu data ganda.
+import { partnersData } from "@/components/Mitra";
+
+// [SECTION: MAP-MITRA]
+export const MITRA = partnersData.map((p) => {
+  const rekening = { bank: p.bank, noRek: p.noRekening, atasNama: p.anRekening };
+  return {
+    id: p.id,
+    nama: p.name,
+    logo: p.logo,
+    penanggungJawab: { nama: p.direktur, foto: p.fotoPJ },
+    pembayaran: {
+      // SWIFT hanya relevan untuk transfer ekspor (USD)
+      transfer: {
+        ekspor: { ...rekening, swift: p.swiftCode },
+        domestik: rekening,
+      },
+      qris: p.qris,
+    },
+  };
+});
+// [/SECTION: MAP-MITRA]
