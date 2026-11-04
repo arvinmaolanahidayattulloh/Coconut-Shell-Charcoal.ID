@@ -46,7 +46,7 @@ const PAYMENT_CATEGORIES = [
 
 const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
   const { user, logout } = useAccount();
-  const { livePrice, currency: chartCurrency } = usePrice();
+  const { index } = usePrice(); // [PATCH:PRICE-READY]
   
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -85,22 +85,22 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
     })).filter(cat => cat.items.length > 0);
   }, [providerSearch]);
 
-  const rawChartPrice = livePrice || 1250.50; 
-  const USD_EXCHANGE_RATE = 15500; 
+  // [PATCH:PRICE-READY] harga dipakai hanya setelah termuat; tanpa harga sementara & tanpa kurs tebakan
+  const priceReady = !!index && index.usd > 0 && index.idr > 0;
 
-  const normalizedChartUSD = chartCurrency === 'IDR' ? rawChartPrice / USD_EXCHANGE_RATE : rawChartPrice;
-  const normalizedChartIDR = chartCurrency === 'IDR' ? rawChartPrice : rawChartPrice * USD_EXCHANGE_RATE;
+  const unitPriceUSD = priceReady ? index.usd * 0.90 : 0;
+  const unitPriceIDR = priceReady ? index.idr * 0.90 : 0;
 
-  const unitPriceUSD = normalizedChartUSD * 0.90;
-  const unitPriceIDR = normalizedChartIDR * 0.90;
-
-  const currentTotalCalculated = invData.currency === 'IDR' 
-    ? invData.ton * unitPriceIDR 
+  const currentTotalCalculated = invData.currency === 'IDR'
+    ? invData.ton * unitPriceIDR
     : invData.ton * unitPriceUSD;
 
-  const displayTotal = invData.currency === 'IDR' 
-    ? `Rp ${Math.round(currentTotalCalculated).toLocaleString('id-ID')}`
-    : `$ ${currentTotalCalculated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const displayTotal = !priceReady
+    ? "Memuat harga..."
+    : invData.currency === 'IDR'
+      ? `Rp ${Math.round(currentTotalCalculated).toLocaleString('id-ID')}`
+      : `$ ${currentTotalCalculated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // [/PATCH:PRICE-READY]
 
   const selectedMitraData = partnersData?.find(p => p.name === invData.mitra) || null;
 
@@ -152,6 +152,12 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
 
   const handleInitialSubmit = (e) => {
     e.preventDefault();
+    // [PATCH:PRICE-READY]
+    if (!priceReady) {
+      alert("Harga indeks belum termuat. Coba lagi beberapa saat.");
+      return;
+    }
+    // [/PATCH:PRICE-READY]
     if (!invAgreed) {
       setInvShake(true);
       setTimeout(() => setInvShake(false), 600);
@@ -315,7 +321,7 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                           <div>
                             <span style={{ display: 'block', fontSize: '12px', color: '#b45309', fontWeight: '700' }}>Total Tagihan Bersih:</span>
-                            <span style={{ fontSize: '28px', fontWeight: '900', color: '#78350f', letterSpacing: '-0.5px' }}>{displayTotal}</span>
+                            <span style={{ fontSize: priceReady ? '28px' : '18px', fontWeight: '900', color: '#78350f', letterSpacing: '-0.5px' }}>{displayTotal}</span>
                           </div>
                           <span style={{ fontSize: '11px', color: '#92400e', fontStyle: 'italic' }}>*Terkalkulasi stabil dari Indeks CSCID</span>
                         </div>
@@ -517,7 +523,9 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
                             </label>
                           </div>
 
-                          <div className={invShake ? styles.shakeRed : ''} style={{ marginBottom: '16px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
+                          {/* [PATCH:SHAKE-INLINE] styles.shakeRed diganti border merah inline (tidak ada impor styles di file ini) */}
+                          <div style={{ marginBottom: '16px', background: '#fff', border: invShake ? '1px solid #dc2626' : '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', transition: 'border-color 0.2s' }}>
+                          {/* [/PATCH:SHAKE-INLINE] */}
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                               <input type="checkbox" checked={invAgreed} onChange={(e) => setInvAgreed(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#c45e20', marginTop: '2px' }} />
                               <div style={{ flex: 1 }}>
@@ -577,9 +585,11 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
                             <button type="button" onClick={() => setIsInvestingFlow(false)} style={{ padding: '14px 20px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
                               BATAL
                             </button>
-                            <button type="submit" style={{ flex: 1, padding: '14px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(196,94,32,0.3)' }}>
-                              SELESAI & KONFIRMASI PEMBAYARAN
+                            {/* [PATCH:PRICE-READY] tombol nonaktif selama harga belum termuat */}
+                            <button type="submit" disabled={!priceReady} style={{ flex: 1, padding: '14px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: priceReady ? 'pointer' : 'not-allowed', opacity: priceReady ? 1 : 0.5, boxShadow: '0 4px 12px rgba(196,94,32,0.3)' }}>
+                              {priceReady ? 'SELESAI & KONFIRMASI PEMBAYARAN' : 'MEMUAT HARGA...'}
                             </button>
+                            {/* [/PATCH:PRICE-READY] */}
                           </div>
                         </div>
                       )}
