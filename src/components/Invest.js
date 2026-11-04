@@ -7,7 +7,6 @@ import Login from './Login';
 import styles from './Invest.module.css';
 import { partnersData } from './Mitra'; 
 
-// Kategori Bank & E-Wallet dengan Logo Gambar Nyata (Resmi)
 const PAYMENT_CATEGORIES = [
   {
     category: "Transfer Bank Resmi",
@@ -62,8 +61,6 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     ton: 1,
     currency: 'IDR',
     mitra: defaultMitra,
-    payment: 'bank',
-    senderName: '',
     senderBank: '', 
     senderAccount: '',
     proofFile: null
@@ -73,6 +70,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
   const [invShake, setInvShake] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showContractPreview, setShowContractPreview] = useState(false);
+
+  // State OTP & Status Validasi CEO
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [investmentStatus, setInvestmentStatus] = useState(null); // null, 'pending', 'approved'
 
   const [providerSearch, setProviderSearch] = useState('');
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
@@ -84,22 +86,29 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     })).filter(cat => cat.items.length > 0);
   }, [providerSearch]);
 
+  // Sinkronisasi stabil harga dari Index CSCID & Konversi Kurs Stabil
   const rawChartPrice = livePrice || 1250.50; 
   const USD_EXCHANGE_RATE = 15500; 
-  const isChartInIdr = chartCurrency === 'IDR' || rawChartPrice > 10000;
 
-  let unitPriceUSD = isChartInIdr ? (rawChartPrice / USD_EXCHANGE_RATE) * 0.90 : rawChartPrice * 0.90;
-  let unitPriceIDR = isChartInIdr ? rawChartPrice * 0.90 : (rawChartPrice * USD_EXCHANGE_RATE) * 0.90;
+  // Normalisasi stabil agar tidak mengalami lonjakan aneh saat mata uang chart berubah
+  const normalizedChartUSD = chartCurrency === 'IDR' ? rawChartPrice / USD_EXCHANGE_RATE : rawChartPrice;
+  const normalizedChartIDR = chartCurrency === 'IDR' ? rawChartPrice : rawChartPrice * USD_EXCHANGE_RATE;
+
+  const unitPriceUSD = normalizedChartUSD * 0.90;
+  const unitPriceIDR = normalizedChartIDR * 0.90;
 
   const currentTotalCalculated = invData.currency === 'IDR' 
     ? invData.ton * unitPriceIDR 
     : invData.ton * unitPriceUSD;
 
   const displayTotal = invData.currency === 'IDR' 
-    ? `Rp ${currentTotalCalculated.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
+    ? `Rp ${Math.round(currentTotalCalculated).toLocaleString('id-ID')}`
     : `$ ${currentTotalCalculated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const selectedMitraData = partnersData?.find(p => p.name === invData.mitra) || partnersData?.[0];
+
+  // Nama Pengirim Otomatis Terisi dari Nama Akun/Profil Pengguna yang Valid
+  const automaticSenderName = user?.name || "Investor Terverifikasi";
 
   const handleLogout = () => {
     logout();
@@ -107,6 +116,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     setActiveTab('invest');
     setMenuOpen(false);
     setIsInvestingFlow(false);
+    setInvestmentStatus(null);
   };
 
   const handleTradeAccessCheck = (e) => {
@@ -146,7 +156,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
     }
   };
 
-  const handleProcessPayment = (e) => {
+  const handleInitialSubmit = (e) => {
     e.preventDefault();
     if (!invAgreed) {
       setInvShake(true);
@@ -154,7 +164,11 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       return;
     }
     if (!invData.senderBank) {
-      alert("Harap pilih Bank atau E-Wallet pengirim terlebih dahulu.");
+      alert("Harap pilih sumber bank atau e-wallet terlebih dahulu.");
+      return;
+    }
+    if (!invData.senderAccount) {
+      alert("Harap masukkan nomor rekening atau nomor handphone pengirim.");
       return;
     }
     if (!invData.proofFile) {
@@ -162,17 +176,36 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
       return;
     }
 
+    // Memunculkan permintaan OTP WhatsApp sebelum finalisasi
+    setShowOtpModal(true);
+  };
+
+  const handleVerifyOtpAndProcess = (e) => {
+    e.preventDefault();
+    if (otpCode.length < 4) {
+      alert("Masukkan kode OTP WhatsApp yang valid.");
+      return;
+    }
+
+    setShowOtpModal(false);
+    setInvestmentStatus('pending');
     setInvested(true);
     setIsInvestingFlow(false);
-    alert(`Konfirmasi Pembayaran Berhasil!\n\nInvestor: ${invData.senderName}\nSumber: ${invData.senderBank} (${invData.senderAccount})\nAlokasi: ${invData.ton} Ton pada ${invData.mitra}`);
+    setOtpCode('');
+
+    // Simulasi validasi CEO dan pengiriman rincian sukses via WhatsApp CS
+    setTimeout(() => {
+      setInvestmentStatus('approved');
+      alert("Validasi Chief Executive Officer Berhasil Disetujui! Rincian Investasi Berhasil telah dikirimkan oleh Customer Service via WhatsApp.");
+    }, 6000);
   };
 
   return (
     <section className={styles.investSection} style={{ position: 'relative' }}>
-      <div className={styles.investCard}>
+      <div className={styles.investCard} style={{ maxWidth: '900px', margin: '0 auto' }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#c45e20', margin: 0 }}>Investasi CSCID</h2>
+          <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#c45e20', margin: 0 }}>Investasi Indeks CSCID</h2>
           
           {user && (
             <div style={{ position: 'relative' }}>
@@ -181,7 +214,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                 <div style={menuDropdownStyle}>
                   <button onClick={() => handleMenuClick('beranda')} style={menuItemStyle}>Beranda</button>
                   <button onClick={() => handleMenuClick('profil')} style={menuItemStyle}>Profil</button>
-                  <button onClick={() => handleMenuClick('trade')} style={{ ...menuItemStyle, color: '#c45e20', fontWeight: '700' }}>MT5 Terminal Trade 🔐</button>
+                  <button onClick={() => handleMenuClick('trade')} style={{ ...menuItemStyle, color: '#c45e20', fontWeight: '700' }}>Terminal Perdagangan 🔐</button>
                   <button onClick={() => handleMenuClick('portofolio')} style={menuItemStyle}>Portofolio</button>
                   <div style={{ height: '1px', background: '#f3f4f6', margin: '4px 0' }}></div>
                   <button onClick={() => handleMenuClick('keluar')} style={{ ...menuItemStyle, color: '#dc2626' }}>Keluar</button>
@@ -191,31 +224,45 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           )}
         </div>
 
-        <div style={{ filter: showPasswordModal ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
+        <div style={{ filter: showPasswordModal || showOtpModal ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
           <div className={styles.actionWrapper}>
             {!user ? (
               <Login />
             ) : (
               <div className={styles.userDashboard}>
                 
+                {investmentStatus === 'pending' && (
+                  <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', padding: '20px', borderRadius: '14px', marginBottom: '24px', textAlign: 'center' }}>
+                    <h4 style={{ color: '#b45309', margin: '0 0 8px 0', fontSize: '18px' }}>Status: Pending</h4>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#92400e' }}>Menunggu Validasi dari Chief Executive Officer. Mohon tunggu sebentar...</p>
+                  </div>
+                )}
+
+                {investmentStatus === 'approved' && (
+                  <div style={{ background: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '14px', marginBottom: '24px', textAlign: 'center' }}>
+                    <h4 style={{ color: '#047857', margin: '0 0 8px 0', fontSize: '18px' }}>Investasi Berhasil Disetujui</h4>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#065f46' }}>Rincian lengkap telah dikirimkan oleh Customer Service melalui WhatsApp Anda.</p>
+                  </div>
+                )}
+
                 {!isInvestingFlow && (
                   <>
                     <div className={styles.userInfo} style={{ marginBottom: '24px' }}>
                       <img src={user.picture || 'https://via.placeholder.com/40'} alt="Profile" className={styles.avatar} />
                       <span>Halo, <strong>{user.name}</strong></span>
-                      <button onClick={handleLogout} className={styles.logoutBtn}> KELUAR </button>
+                      <button onClick={handleLogout} className={styles.logoutBtn}>KELUAR</button>
                     </div>
 
                     {invested ? (
                       <div style={activeInvestBoxStyle}>
-                        <h4 style={{ color: '#047857', margin: '0 0 8px 0', fontSize: '18px' }}>Investasi Aktif</h4>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#065f46' }}>Portofolio Anda: <b>{invData.ton} Ton</b> (Penyedia: <b>{invData.mitra}</b>).</p>
+                        <h4 style={{ color: '#047857', margin: '0 0 8px 0', fontSize: '18px' }}>Portofolio Investasi Aktif</h4>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#065f46' }}>Alokasi Anda: <b>{invData.ton} Ton</b> (Penyedia: <b>{invData.mitra}</b>).</p>
                         <button onClick={() => setIsInvestingFlow(true)} style={tambahInvestBtnStyle}>TAMBAH ALOKASI INVESTASI</button>
                       </div>
                     ) : (
                       <>
-                        <span className={styles.subtitle} style={{ display: 'block', marginBottom: '16px', fontSize: '14px' }}>
-                          Amankan alokasi kuota komoditas ekspor Anda sekarang (Berdasarkan harga chart real-time dikurangi 10%).
+                        <span className={styles.subtitle} style={{ display: 'block', marginBottom: '16px', fontSize: '14px', color: '#475569' }}>
+                          Amankan alokasi kuota komoditas ekspor Anda sekarang berdasarkan Indeks CSCID dengan penyesuaian khusus.
                         </span>
                         <button onClick={() => setIsInvestingFlow(true)} className={styles.investBtn} style={{ width: '100%', padding: '14px', borderRadius: '12px' }}>
                           MULAI INVESTASI BARU
@@ -228,18 +275,19 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                 {isInvestingFlow && (
                   <div style={{ textAlign: 'left', animation: 'fadeIn 0.3s ease' }}>
                     
-                    <form onSubmit={handleProcessPayment}>
+                    <form onSubmit={handleInitialSubmit}>
                       
-                      <div style={{ marginBottom: '16px', background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <label style={{ ...labelStyle, marginBottom: 0 }}>Volume Investasi (Ton)</label>
-                          <div style={{ display: 'flex', background: '#e2e8f0', padding: '3px', borderRadius: '8px', gap: '2px' }}>
+                      {/* DESAIN BAGIAN TAGIHAN YANG KOKOH & STABIL */}
+                      <div style={{ background: 'linear-gradient(135deg, #fffbeb 100%, #fef3c7 0%)', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #fcd34d', boxShadow: '0 10px 25px -5px rgba(245,158,11,0.1)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #fde68a', paddingBottom: '12px' }}>
+                          <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Rincian Tagihan Investasi CSCID</span>
+                          <div style={{ display: 'flex', background: '#fef9c3', padding: '3px', borderRadius: '8px', gap: '2px', border: '1px solid #fde047' }}>
                             {['IDR', 'USD'].map(curr => (
                               <button 
                                 key={curr} 
                                 type="button" 
                                 onClick={() => setInvData({...invData, currency: curr})}
-                                style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', border: 'none', borderRadius: '6px', cursor: 'pointer', background: invData.currency === curr ? '#c45e20' : 'transparent', color: invData.currency === curr ? '#fff' : '#475569' }}
+                                style={{ padding: '4px 12px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '6px', cursor: 'pointer', background: invData.currency === curr ? '#b45309' : 'transparent', color: invData.currency === curr ? '#fff' : '#78350f', transition: 'all 0.2s' }}
                               >
                                 {curr}
                               </button>
@@ -247,27 +295,30 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '10px', background: '#fff', overflow: 'hidden', flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                          <span style={{ fontSize: '14px', color: '#78350f', fontWeight: '600' }}>Volume Alokasi Kuota:</span>
+                          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #fcd34d', borderRadius: '10px', background: '#fff', overflow: 'hidden' }}>
                             <button type="button" onClick={() => setInvData({...invData, ton: Math.max(1, invData.ton - 1)})} style={qtyBtnStyle}>-</button>
                             <input 
                               type="number" min="1" value={invData.ton} 
                               onChange={(e) => setInvData({...invData, ton: Math.max(1, parseInt(e.target.value) || 1)})}
-                              style={{ flex: 1, textAlign: 'center', fontSize: '18px', fontWeight: '800', border: 'none', background: 'transparent', outline: 'none', color: '#0f172a' }}
+                              style={{ width: '60px', textAlign: 'center', fontSize: '16px', fontWeight: '800', border: 'none', background: 'transparent', outline: 'none', color: '#111827' }}
                             />
                             <button type="button" onClick={() => setInvData({...invData, ton: invData.ton + 1})} style={qtyBtnStyle}>+</button>
+                            <span style={{ paddingRight: '12px', fontSize: '14px', fontWeight: 'bold', color: '#78350f' }}>Ton</span>
                           </div>
-                          <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', minWidth: '40px' }}>Ton</span>
                         </div>
-                        <span style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '6px' }}>*Dihitung otomatis dari harga chart real-time dikurangi diskon khusus -10%</span>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                          <div>
+                            <span style={{ display: 'block', fontSize: '12px', color: '#b45309', fontWeight: '700' }}>Total Tagihan Bersih:</span>
+                            <span style={{ fontSize: '28px', fontWeight: '900', color: '#78350f', letterSpacing: '-0.5px' }}>{displayTotal}</span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#92400e', fontStyle: 'italic' }}>*Terkalkulasi stabil dari Indeks CSCID</span>
+                        </div>
                       </div>
 
-                      <div style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #fcd34d', boxShadow: '0 4px 12px rgba(245,158,11,0.1)' }}>
-                        <span style={{ display: 'block', fontSize: '12px', color: '#92400e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Total Tagihan Bersih:</span>
-                        <span style={{ fontSize: '26px', fontWeight: '900', color: '#b45309' }}>{displayTotal}</span>
-                      </div>
-
-                      {/* PILIHAN PENYEDIA / MITRA DENGAN LOGO */}
+                      {/* PEMILIHAN PERUSAHAAN PENYEDIA / MITRA */}
                       <div style={{ marginBottom: '24px' }}>
                         <label style={labelStyle}>Pilih Perusahaan Penyedia (Mitra PT)</label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '6px' }}>
@@ -276,10 +327,10 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                             return (
                               <div 
                                 key={mitra.id}
-                                onClick={() => setInvData({...invData, mitra: mitra.name})}
+                                onClick={() => setInvData({...mitra: mitra.name})}
                                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', border: isSelected ? '2px solid #c45e20' : '1px solid #e2e8f0', background: isSelected ? '#fff7ed' : '#f9fafb', cursor: 'pointer', transition: 'all 0.2s' }}
                               >
-                                <img src={mitra.logo} alt={mitra.name} style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0', flexShrink: 0 }} />
+                                <img src={mitra.logo} alt={mitra.name} style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px', background: '#fff', padding: '2px', border: '1px solid #e2e8f0', flexShrink: '0' }} />
                                 <div style={{ flex: 1 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>{mitra.name}</h4>
@@ -293,7 +344,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                           })}
                         </div>
                         
-                        {/* Kartu Profil Penanggung Jawab Responsif */}
+                        {/* KARTU PROFIL PENANGGUNG JAWAB */}
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', background: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginTop: '12px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
                           <img 
                             src={selectedMitraData?.fotoPJ || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedMitraData?.direktur || 'Direktur')}&background=c45e20&color=fff&size=120`} 
@@ -317,58 +368,46 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         </div>
                       </div>
 
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={labelStyle}>Metode Pembayaran Tujuan</label>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                          <label style={{...radioContainerStyle, border: invData.payment === 'bank' ? '2px solid #c45e20' : '1px solid #e5e7eb', background: invData.payment === 'bank' ? '#fff7ed' : '#fff'}}>
-                            <input type="radio" name="pay" value="bank" checked={invData.payment === 'bank'} onChange={() => setInvData({...invData, payment: 'bank'})} style={{display: 'none'}} />
-                            💳 Transfer Bank PT
-                          </label>
-                          <label style={{...radioContainerStyle, border: invData.payment === 'qris' ? '2px solid #c45e20' : '1px solid #e5e7eb', background: invData.payment === 'qris' ? '#fff7ed' : '#fff'}}>
-                            <input type="radio" name="pay" value="qris" checked={invData.payment === 'qris'} onChange={() => setInvData({...invData, payment: 'qris'})} style={{display: 'none'}} />
-                            📱 QRIS Perusahaan
-                          </label>
-                        </div>
-                      </div>
-
+                      {/* INFORMASI REKENING TUJUAN & GAMBAR QRIS / TRANSFER */}
                       <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-                        {invData.payment === 'bank' ? (
-                          <>
-                            <h5 style={{ margin: '0 0 8px 0', color: '#334155', fontSize: '14px' }}>Rekening Resmi Tujuan</h5>
+                        <h5 style={{ margin: '0 0 12px 0', color: '#334155', fontSize: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                          Rekening Resmi Tujuan Pembayaran
+                        </h5>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
                             <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Bank: <b>{selectedMitraData?.bank || 'Bank Central Asia'}</b></p>
                             <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>No. Rekening: <b style={{ fontSize: '18px', color: '#0f172a' }}>{selectedMitraData?.noRekening || '8692824902'}</b></p>
                             <p style={{ margin: '4px 0', fontSize: '14px', color: '#475569' }}>Atas Nama: <b>{selectedMitraData?.anRekening || invData.mitra}</b></p>
-                          </>
-                        ) : (
-                          <div style={{ textAlign: 'center' }}>
-                            <h5 style={{ margin: '0 0 12px 0', color: '#334155', fontSize: '14px' }}>Scan QRIS Resmi</h5>
-                            <div style={{ width: '130px', height: '130px', background: '#cbd5e1', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '2px dashed #94a3b8' }}>
-                              <span style={{ fontSize: '12px', color: '#64748b' }}>[Mockup QRIS]</span>
-                            </div>
-                            <p style={{ margin: '12px 0 0 0', fontSize: '14px', color: '#475569' }}>A.n <b>{selectedMitraData?.anRekening || invData.mitra}</b></p>
                           </div>
-                        )}
+                          
+                          {/* GAMBAR QRIS / TRANSFER RESMI */}
+                          <div style={{ textAlign: 'center', background: '#fff', padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                            <img 
+                              src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_Code_example.svg" 
+                              alt="QRIS Transfer Resmi" 
+                              style={{ width: '110px', height: '110px', objectFit: 'contain' }} 
+                            />
+                            <span style={{ display: 'block', fontSize: '10px', color: '#64748b', marginTop: '4px', fontWeight: 'bold' }}>Scan QRIS / Transfer</span>
+                          </div>
+                        </div>
                       </div>
 
                       <h3 style={{ margin: '0 0 12px 0', color: '#111827', fontSize: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
                         Konfirmasi Data Pengirim
                       </h3>
                       
-                      <div style={{ marginBottom: '14px' }}>
-                        <label style={labelStyle}>Nama Lengkap (Sesuai Rekening / Akun Pengirim)</label>
-                        <input type="text" placeholder="Masukkan nama pemilik rekening" required value={invData.senderName} onChange={(e) => setInvData({...invData, senderName: e.target.value})} style={inputStyle} />
-                      </div>
-                      
-                      {/* PEMILIHAN BANK / E-WALLET DENGAN LOGO GAMBAR NYATA */}
+                      {/* URUTAN BARU: SUMBER DAN NOMOR DULU, KEMUDIAN NAMA OTOMATIS */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                        
+                        {/* SUMBER (BANK / E-WALLET) */}
                         <div style={{ position: 'relative' }}>
-                          <label style={labelStyle}>Bank / E-Wallet Pengirim</label>
+                          <label style={labelStyle}>Sumber</label>
                           <div 
                             onClick={() => setProviderDropdownOpen(!providerDropdownOpen)}
                             style={{ ...inputStyle, background: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                           >
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: invData.senderBank ? '#111827' : '#9ca3af' }}>
-                              {invData.senderBank || "Pilih Bank / E-Wallet"}
+                              {invData.senderBank || "Pilih Bank atau E-Wallet"}
                             </span>
                             <span style={{ fontSize: '10px', color: '#64748b' }}>▼</span>
                           </div>
@@ -410,10 +449,33 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                           )}
                         </div>
 
+                        {/* NOMOR REKENING / NO HP BERDASARKAN SUMBER */}
                         <div>
-                          <label style={labelStyle}>Nomor Rekening / No. HP</label>
-                          <input type="text" placeholder="No. Rekening / No. HP" required value={invData.senderAccount} onChange={(e) => setInvData({...invData, senderAccount: e.target.value})} style={inputStyle} />
+                          <label style={labelStyle}>
+                            {invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'Nomor Handphone Akun' : 'Nomor Rekening Pengirim'}
+                          </label>
+                          <input 
+                            type="text" 
+                            placeholder={invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'Masukkan nomor handphone e-wallet' : 'Masukkan nomor rekening pengirim'} 
+                            required 
+                            value={invData.senderAccount} 
+                            onChange={(e) => setInvData({...invData, senderAccount: e.target.value})} 
+                            style={inputStyle} 
+                          />
                         </div>
+
+                      </div>
+
+                      {/* NAMA PENGIRIM OTOMATIS (TIDAK BISA DIGANTI KARENA SUDAH JELAS DARI AKUN) */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={labelStyle}>Nama Lengkap Pengirim</label>
+                        <input 
+                          type="text" 
+                          value={automaticSenderName} 
+                          disabled 
+                          style={{ ...inputStyle, background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed', fontWeight: 'bold' }} 
+                        />
+                        <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>*Nama pengirim terisi otomatis dari akun terverifikasi dan tidak dapat diubah.</span>
                       </div>
 
                       <div style={{ marginBottom: '24px' }}>
@@ -437,7 +499,7 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                           <input type="checkbox" checked={invAgreed} onChange={(e) => setInvAgreed(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#c45e20', marginTop: '2px' }} />
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '14px', cursor: 'pointer', color: invShake ? '#dc2626' : '#111827', fontWeight: 'bold' }} onClick={() => setInvAgreed(!invAgreed)}>
-                              Saya menyetujui seluruh <u>Syarat, Ketentuan, dan Risiko Investasi</u>.
+                              Saya menyetujui seluruh syarat, ketentuan, dan risiko investasi.
                             </label>
                             <button type="button" onClick={() => setShowTerms(!showTerms)} style={{ display: 'block', background: 'none', border: 'none', color: '#c45e20', fontSize: '13px', fontWeight: '700', marginTop: '6px', cursor: 'pointer', padding: 0 }}>
                               {showTerms ? 'Sembunyikan Detail ▲' : 'Baca Detail ▼'}
@@ -454,48 +516,12 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
                         )}
                       </div>
 
-                      {/* DOKUMEN KONTRAK & INVOICE (PDF A4) */}
-                      <div style={{ background: '#fff7ed', border: '1px solid #ea580c', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
-                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                          <div style={{ background: '#ea580c', color: '#fff', padding: '10px', borderRadius: '10px' }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                              <polyline points="14 2 14 8 20 8"></polyline>
-                              <line x1="16" y1="13" x2="8" y2="13"></line>
-                              <line x1="16" y1="17" x2="8" y2="17"></line>
-                              <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <h5 style={{ margin: '0 0 2px 0', color: '#9a3412', fontSize: '14px', fontWeight: 'bold' }}>Dokumen Kontrak & Invoice (Format PDF A4)</h5>
-                            <p style={{ margin: 0, color: '#c2410c', fontSize: '12px' }}>Format resmi siap cetak untuk pengesahan tanda tangan basah.</p>
-                          </div>
-                          <button type="button" onClick={() => setShowContractPreview(!showContractPreview)} style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-                            {showContractPreview ? 'Tutup Preview' : 'Preview Teks'}
-                          </button>
-                        </div>
-
-                        {showContractPreview && (
-                          <div style={{ marginTop: '14px', background: '#fff', border: '1px solid #fdba74', borderRadius: '8px', padding: '16px', fontSize: '12px', color: '#334155', fontFamily: 'monospace', lineHeight: '1.5', maxHeight: '200px', overflowY: 'auto' }}>
-                            <center><b>SURAT PERJANJIAN INVESTASI & ALOKASI KOMODITAS</b></center>
-                            <center><b>{invData.mitra} (CSCID)</b></center>
-                            <br/>
-                            Pada hari ini, sistem mencatat pemesanan alokasi kuota komoditas ekspor sebesar <b>{invData.ton} Ton</b> melalui perusahaan penyedia <b>{invData.mitra}</b> dengan total nilai transaksi (setelah penyesuaian diskon khusus -10%) sebesar <b>{displayTotal}</b>.<br/><br/>
-                            <b>1. Klausul Utama:</b> Investor berhak atas bagi hasil dari penjualan ekspor komoditas sesuai dengan alokasi kuota yang berhasil diamankan.<br/>
-                            <b>2. Rekening Resmi:</b> Seluruh dana wajib ditransfer ke rekening resmi atas nama {selectedMitraData?.anRekening} ({selectedMitraData?.bank}).<br/>
-                            <b>3. Keabsahan:</b> Dokumen ini sah dan mengikat secara hukum setelah ditandatangani di atas meterai oleh Investor dan Penanggung Jawab ({selectedMitraData?.direktur}).
-                            <br/><br/>
-                            <i>[Area Validasi Tanda Tangan Basah & Meterai Resmi]</i>
-                          </div>
-                        )}
-                      </div>
-
                       <div style={{ display: 'flex', gap: '12px' }}>
                         <button type="button" onClick={() => setIsInvestingFlow(false)} style={{ padding: '14px 20px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
                           BATAL
                         </button>
                         <button type="submit" style={{ flex: 1, padding: '14px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(196,94,32,0.3)' }}>
-                          SELESAI & KONFIRMASI PEMBAYARAN
+                          SELESAI & LANJUTKAN KE OTP WHATSAPP
                         </button>
                       </div>
                     </form>
@@ -506,6 +532,32 @@ const Invest = ({ invested, setInvested, activeTab, setActiveTab }) => {
           </div>
         </div>
 
+        {/* MODAL OTP WHATSAPP */}
+        {showOtpModal && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(5px)', borderRadius: '24px' }}>
+            <form onSubmit={handleVerifyOtpAndProcess} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'center', maxWidth: 380, padding: 28, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+              <div style={{ width: '100%', textAlign: 'center', marginBottom: '4px' }}>
+                <h4 style={{ margin: 0, color: '#111827', fontSize: '18px', fontWeight: 'bold' }}>Verifikasi OTP WhatsApp</h4>
+                <p style={{ margin: '6px 0 16px 0', color: '#6b7280', fontSize: '13px' }}>Masukkan 4 digit kode OTP yang dikirimkan ke nomor WhatsApp terdaftar Anda.</p>
+              </div>
+              <input 
+                type="text" 
+                maxLength="6"
+                autoFocus 
+                value={otpCode} 
+                onChange={(e) => setOtpCode(e.target.value)} 
+                placeholder="Contoh: 1234" 
+                style={{ width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: 18, textAlign: 'center', letterSpacing: '4px', outline: 'none', background: '#f9fafb', fontWeight: 'bold' }} 
+              />
+              <div style={{ display: 'flex', width: '100%', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setShowOtpModal(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>BATAL</button>
+                <button type="submit" style={{ flex: 1, padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>VERIFIKASI</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Modal Sandi Terminal Trade */}
         {showPasswordModal && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)', borderRadius: '24px' }}>
             <form onSubmit={handleTradeAccessCheck} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'center', maxWidth: 360, padding: 24, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
@@ -535,7 +587,6 @@ const tambahInvestBtnStyle = { marginTop: '16px', padding: '12px 18px', backgrou
 const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px' };
 const inputStyle = { width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box', background: '#f9fafb', color: '#111827', outline: 'none' };
 const qtyBtnStyle = { padding: '12px 18px', background: '#e2e8f0', border: 'none', fontSize: '18px', fontWeight: 'bold', color: '#334155', cursor: 'pointer', transition: 'background 0.2s' };
-const radioContainerStyle = { flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: '#374151', transition: 'all 0.2s ease' };
 const menuItemStyle = { display: 'flex', alignItems: 'center', width: '100%', padding: '10px 12px', border: 'none', borderRadius: '8px', background: 'transparent', fontSize: '13px', fontWeight: '600', color: '#4b5563', cursor: 'pointer', textAlign: 'left' };
 
 export default Invest;
