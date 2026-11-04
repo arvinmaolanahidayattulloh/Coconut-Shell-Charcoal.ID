@@ -13,7 +13,11 @@ import Trade from "@/components/Trade";
 import Invest from "@/components/Invest";
 import Footer from "@/components/Footer";
 import AdBanner from "@/components/AdBanner";
+import AccessPanel from "@/components/AccessPanel";
 import { LeftPanel, RightPanel } from "@/components/SidePanels";
+
+// Set true untuk menampilkan kembali bagian Investasi & Trade.
+const SHOW_INVEST_TRADE = false;
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
@@ -92,26 +96,32 @@ export default function Home() {
 
             <PriceChart />
 
-            {/* Switch Tampilan Dinamis Berdasarkan Tab Aktif */}
-            {activeTab === 'invest' ? (
-              <Invest
-                invested={invested}
-                setInvested={setInvested}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-              />
-            ) : (
-              <div>
-                <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto', padding: '0 24px' }}>
-                  <button
-                    onClick={() => setActiveTab('invest')}
-                    style={{ padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                  >
-                    ← Kembali ke Menu Investasi
-                  </button>
+            <AccessPanel />
+
+            {/* Bagian Investasi & Trade disembunyikan sementara (SHOW_INVEST_TRADE) */}
+            {SHOW_INVEST_TRADE && (
+              <>
+              {activeTab === 'invest' ? (
+                <Invest
+                  invested={invested}
+                  setInvested={setInvested}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                />
+              ) : (
+                <div>
+                  <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto', padding: '0 24px' }}>
+                    <button
+                      onClick={() => setActiveTab('invest')}
+                      style={{ padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      ← Kembali ke Menu Investasi
+                    </button>
+                  </div>
+                  <Trade />
                 </div>
-                <Trade />
-              </div>
+              )}
+              </>
             )}
 
             <AdBanner slot="1003" format="horizontal" className="adSection" />
