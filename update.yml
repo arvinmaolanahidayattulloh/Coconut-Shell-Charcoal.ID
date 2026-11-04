@@ -1,0 +1,26 @@
+# [CSC:WORKFLOW-UPDATE] pembaruan candle CSC tiap 5 menit (juga bisa dijalankan manual dari tab Actions)
+name: Update CSC
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+# satu proses saja pada satu waktu; proses baru menunggu yang berjalan
+concurrency:
+  group: csc-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --omit=dev --ignore-scripts --no-audit --no-fund
+      - run: node scripts/update.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+# [/CSC:WORKFLOW-UPDATE]
