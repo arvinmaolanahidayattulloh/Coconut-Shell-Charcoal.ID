@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import RevealWrapper from "./RevealWrapper";
+import { usePrice } from "@/context/PriceContext";
 import styles from "./Products.module.css";
 
 const PRODUCTS = [
@@ -11,7 +12,7 @@ const PRODUCTS = [
     name: "Natural",
     subName: "Coconut Shell Charcoal",
     badge: "Best Seller",
-    desc: "Lorem Ipsum.",
+    priceKey: "csc", // harga realtime dari indeks CSC (PriceContext)
     image: "/products/Natural.jpg",
     specs: [
       { label: "Kadar Air", value: "4,37%", progress: 20.37 },
@@ -25,7 +26,8 @@ const PRODUCTS = [
     name: "Karbon Aktif",
     subName: "Coconut Shell Charcoal",
     badge: "Product",
-    desc: "Lorem Ipsum",
+    priceKey: null,
+    priceNote: "Harga mengikuti spesifikasi dan volume pesanan. Hubungi kami untuk penawaran terbaru.",
     image: "/products/Carbon-Active.png",
     specs: [
       { label: "Kadar Air", value: "4,5%", progress: 20 },
@@ -39,7 +41,8 @@ const PRODUCTS = [
     name: "Briket",
     subName: "Charcoal Briquettes",
     badge: "Costume",
-    desc: "Lorem Ipsum",
+    priceKey: null,
+    priceNote: "Harga mengikuti spesifikasi dan volume pesanan. Hubungi kami untuk penawaran terbaru.",
     image: "/products/Briquettes.jpg",
     specs: [
       { label: "Nilai Kalori", value: "7.200+ kcal/kg", progress: 92 },
@@ -49,6 +52,38 @@ const PRODUCTS = [
   }
 ];
 
+const fmtUSD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+const fmtIDR = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+
+// Harga realtime: dibaca dari PriceContext (diisi PriceChart, maks. 1x per detik).
+// Tidak ada harga sementara: sebelum data asli tiba, tampil status memuat.
+function LivePrice({ product }) {
+  const { index } = usePrice();
+
+  if (!product.priceKey) {
+    return <p className={styles.detailsDesc}>{product.priceNote}</p>;
+  }
+
+  const ready = !!index && index.usd > 0 && index.idr > 0;
+
+  return (
+    <div className={styles.livePrice}>
+      <div className={styles.livePriceHead}>
+        <span className={styles.liveDot} aria-hidden="true" />
+        <span className={styles.liveLabel}>Harga Realtime</span>
+        <span className={styles.liveUnit}>per Ton</span>
+      </div>
+      {ready ? (
+        <>
+          <div className={styles.livePriceMain}>{fmtIDR.format(index.idr)}</div>
+          <div className={styles.livePriceSub}>{fmtUSD.format(index.usd)} / ton</div>
+        </>
+      ) : (
+        <div className={styles.livePriceLoading}>Memuat harga realtime…</div>
+      )}
+    </div>
+  );
+}
 
 export default function Products() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -159,7 +194,7 @@ export default function Products() {
           Katalog Produk
         </h2>
         <p className={styles.sectionDesc}>
-          Lorem Ipsum. Geser atau klik kartu untuk informasi selengkapnya.
+          Harga acuan Natural Coconut Shell Charcoal diperbarui realtime. Geser atau klik kartu untuk informasi selengkapnya.
         </p>
       </RevealWrapper>
 
@@ -340,16 +375,15 @@ export default function Products() {
 
               <div style={{ position: "relative" }}>
                 <AnimatePresence mode="popLayout">
-                  <motion.p 
+                  <motion.div
                     key={activeIndex}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ delay: 0.05, duration: 0.25 }}
-                    className={styles.detailsDesc}
                   >
-                    {activeProduct.desc}
-                  </motion.p>
+                    <LivePrice product={activeProduct} />
+                  </motion.div>
                 </AnimatePresence>
               </div>
 
