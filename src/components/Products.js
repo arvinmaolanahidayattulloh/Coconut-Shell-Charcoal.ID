@@ -108,37 +108,47 @@ function useLiveCsc() {
   if (!ready) return { ready: false };
 
   const base = openUsd || firstRef.current; // acuan dalam USD
-  const pct = base > 0 ? ((usd - base) / base) * 100 : 0;
   const chgIdr = base > 0 ? idr - idr * (base / usd) : 0; // perubahan dalam Rupiah
-  return { ready: true, idr, pct, chgIdr, flash };
+  return { ready: true, idr, chgIdr, flash };
 }
 
 function LivePrice({ product, live }) {
   const k = 1 + (product.markup || 0); // Karbon Aktif +25%, Briket +50% dari harga dasar
+  const chg = live.ready ? live.chgIdr * k : 0;
+  const up = chg >= 0;
 
   return (
     <div className={styles.livePrice}>
-      <div className={styles.livePriceHead}>
-        <span className={styles.liveDot} aria-hidden="true" />
-        <span className={styles.liveLabel}>Harga Realtime</span>
+      <div className={styles.livePriceInfo}>
+        <div className={styles.livePriceHead}>
+          <span className={styles.liveDot} aria-hidden="true" />
+          <span className={styles.liveLabel}>Harga Realtime</span>
+        </div>
+        {live.ready ? (
+          <>
+            <div
+              className={`${styles.livePriceMain} ${
+                live.flash === "up" ? styles.up : live.flash === "down" ? styles.down : ""
+              }`}
+            >
+              Rp{fmtNum(live.idr * k, 0)}
+            </div>
+            <div className={`${styles.livePriceChange} ${up ? styles.up : styles.down}`}>
+              {up ? "▲" : "▼"} {sign(chg)}{fmtNum(Math.abs(chg), 0)}
+            </div>
+          </>
+        ) : (
+          <div className={styles.livePriceLoading}>Memuat harga realtime…</div>
+        )}
       </div>
-      {live.ready ? (
-        <>
-          <div
-            className={`${styles.livePriceMain} ${
-              live.flash === "up" ? styles.up : live.flash === "down" ? styles.down : ""
-            }`}
-          >
-            Rp{fmtNum(live.idr * k, 0)}
-          </div>
-          <div className={`${styles.livePriceChange} ${live.pct >= 0 ? styles.up : styles.down}`}>
-            {live.pct >= 0 ? "▲" : "▼"} Rp{fmtNum(Math.abs(live.chgIdr * k), 0)} ({sign(live.pct)}
-            {fmtNum(Math.abs(live.pct), 2)}%)
-          </div>
-        </>
-      ) : (
-        <div className={styles.livePriceLoading}>Memuat harga realtime…</div>
-      )}
+
+      <a href="#kontak" className={styles.detailsCta}>
+        Buy
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="3" y1="8" x2="13" y2="8"></line>
+          <polyline points="9 4 13 8 9 12"></polyline>
+        </svg>
+      </a>
     </div>
   );
 }
@@ -444,16 +454,6 @@ export default function Products() {
                     <LivePrice product={activeProduct} live={live} />
                   </motion.div>
                 </AnimatePresence>
-              </div>
-
-              <div className={styles.detailsCtaWrap}>
-                <a href="#kontak" className={styles.detailsCta}>
-                  Minta Penawaran
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="3" y1="8" x2="13" y2="8"></line>
-                    <polyline points="9 4 13 8 9 12"></polyline>
-                  </svg>
-                </a>
               </div>
             </div>
 
