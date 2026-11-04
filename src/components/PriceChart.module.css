@@ -1,443 +1,640 @@
-.priceSection {
-  padding: 0 24px;
-  max-width: 100%;
-  margin: 0 auto 80px;
+.products {
+  padding-top: var(--section-gap);
+  padding-bottom: var(--section-gap);
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    #f8f4ef 0%,
+    #f2ece4 30%,
+    #ede5d8 60%,
+    #f5f0e8 100%
+  );
+  isolation: isolate;
+  overflow: hidden;
 }
 
-.loading {
+/* Ambient glow orbs behind the grid */
+.products::before,
+.products::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+}
+.products::before {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(196, 94, 32, 0.15) 0%, transparent 70%);
+  top: -5%;
+  left: -15%;
+}
+.products::after {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(184, 115, 51, 0.12) 0%, transparent 70%);
+  bottom: -5%;
+  right: -10%;
+}
+
+.sectionHead {
+  max-width: 600px;
+  margin-bottom: 48px;
+  position: relative;
+  z-index: 1;
+}
+
+.sectionTitle {
+  font-size: var(--text-4xl);
+  letter-spacing: -0.03em;
+  margin-top: 10px;
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+.sectionDesc {
+  font-size: var(--text-lg);
+  color: var(--color-graphite);
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+/* ─── Carousel Layout ───────────────────────────── */
+.carouselContainer {
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 80px 0;
-  color: #9ca3af;
-  font-size: 15px;
+  z-index: 5;
 }
 
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #c45e20;
+.carouselViewport {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+}
+
+.carouselTrack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.carouselTrack:active {
+  cursor: grabbing;
+}
+
+/* ─── Navigation Buttons ───────────────────────── */
+.navBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 25;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: var(--color-carbon);
+  cursor: pointer;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.navBtn:hover {
+  background: var(--color-ember);
+  color: var(--color-white);
+  border-color: transparent;
+  box-shadow: 0 8px 24px rgba(196, 94, 32, 0.3);
 }
 
-.priceCard {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+.navBtn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.prevBtn {
+  left: -20px;
+}
+
+.nextBtn {
+  right: -20px;
+}
+
+/* ─── Product Card ──────────────────────────────── */
+.productCard {
+  position: absolute;
   border-radius: 24px;
-  padding: 48px 56px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.05),
+    0 2px 8px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: border-color 0.4s ease;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.priceHeader {
+.productCard:not(.activeCard) {
+  cursor: pointer;
+}
+
+.productCard:hover {
+  border-color: rgba(196, 94, 32, 0.35);
+}
+
+.activeCard {
+  box-shadow:
+    0 25px 60px rgba(196, 94, 32, 0.15),
+    0 6px 20px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  border-color: rgba(196, 94, 32, 0.5);
+}
+
+.activeBorderGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  pointer-events: none;
+  border: 2px solid var(--color-ember);
+  opacity: 0.8;
+  z-index: 10;
+}
+
+/* ─── Card Content ─────────────────────────────── */
+.productImageWrap {
+  position: relative;
+  width: 100%;
+  height: 55%;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(26, 26, 26, 0.08) 0%,
+    rgba(196, 94, 32, 0.06) 100%
+  );
+  border-radius: 24px 24px 0 0;
+}
+
+.productImageWrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  pointer-events: none;
+}
+
+.productImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.productCard:hover .productImage {
+  transform: scale(1.05);
+}
+
+/* Glow underneath image */
+.imageGlow {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 60px;
+  background: radial-gradient(ellipse, rgba(196, 94, 32, 0.2) 0%, transparent 70%);
+  filter: blur(14px);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.productCardBody {
+  padding: 16px 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  flex-direction: column;
+  height: 45%;
+  justify-content: flex-start;
 }
 
-.eyebrow {
-  font-family: var(--font-display);
-  font-size: 34px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: #c45e20;
-}
-
-.headerRight {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.liveIndicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-}
-
-.liveDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #d1d5db;
-}
-
-.liveDotActive {
-  background: #22c55e;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.3); }
-}
-
-.liveText {
+.cardBadge {
+  display: inline-flex;
+  align-self: flex-start;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1.2px;
-  color: #22c55e;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ember);
+  background: rgba(196, 94, 32, 0.08);
+  border: 1px solid rgba(196, 94, 32, 0.15);
+  border-radius: 100px;
+  padding: 3px 8px;
+  margin-bottom: 8px;
 }
 
-.currencySelector {
+.cardName {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-carbon);
+  line-height: 1.25;
+  margin-bottom: 3px;
+}
+
+.cardSubname {
+  color: var(--color-stone);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ─── Indicator Dots ───────────────────────────── */
+.dotsContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  z-index: 5;
   position: relative;
 }
 
-.currencyBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  font-size: 13px;
-  font-weight: 700;
-  color: #111827;
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(26, 26, 26, 0.15);
+  border: none;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
 }
 
-.currencyBtn:hover {
-  border-color: #c45e20;
-  box-shadow: 0 2px 8px rgba(196, 94, 32, 0.1);
+.dot:hover {
+  background: rgba(26, 26, 26, 0.3);
+  transform: scale(1.1);
+}
+
+.activeDot {
+  background: var(--color-ember);
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* ─── Details Section ───────────────────────────── */
+.detailsOuter {
+  margin-top: 48px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 5;
+  position: relative;
+}
+
+.detailsCard {
+  max-width: 960px;
+  width: 100%;
+  background: rgba(254, 252, 249, 0.97);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 28px;
+  padding: 40px 48px;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 56px;
+  align-items: start;
+}
+
+/* Left Column Styling */
+.detailsLeft {
+  display: flex;
+  flex-direction: column;
+}
+
+.detailsBadge {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ember);
+  margin-bottom: 12px;
+}
+
+.detailsTitle {
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--color-carbon);
+  line-height: 1.2;
+  margin-bottom: 18px;
+  letter-spacing: -0.02em;
+}
+
+.wordWrapper {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.wordItem {
+  display: inline-block;
+  white-space: pre;
+}
+
+.detailsSubTitle {
+  display: block;
+  font-size: var(--text-lg);
+  color: var(--color-stone);
+  font-weight: 400;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.detailsDesc {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-graphite);
+  margin-bottom: 28px;
+}
+
+.detailsCtaWrap {
+  margin-top: auto;
+}
+
+.detailsCta {
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 100px;
+  color: var(--color-white);
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
+  border: none;
+  transition: gap 0.25s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(196, 94, 32, 0.3);
+}
+
+.detailsCta:hover {
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(196, 94, 32, 0.45);
   transform: translateY(-1px);
 }
 
-.currencyDropdown {
-  position: absolute;
-  top: 42px;
-  right: 0;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 6px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
-  z-index: 50;
-  min-width: 160px;
-  max-height: 280px;
-  overflow-y: auto;
-  animation: dropIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.detailsCta:active {
+  transform: translateY(0);
 }
 
-@keyframes dropIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+/* Right Column: Specs */
+.detailsRight {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 28px;
+  backdrop-filter: blur(8px);
 }
 
-.currencyOption {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 13px;
+.specsHeader {
+  font-size: 16px;
   font-weight: 600;
-  color: #4b5563;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.currencyOption:hover {
-  background: #f9fafb;
-  color: #c45e20;
-}
-
-.currencyActive {
-  background: #fef3ec !important;
-  color: #c45e20 !important;
-  border-color: #fef3ec;
-}
-
-.currencyCode {
-  font-weight: 700;
-}
-
-.currencySymbol {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.priceMain {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 28px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #f3f4f6;
-  flex-wrap: wrap;
-}
-
-.bigPrice {
-  font-family: var(--font-display);
-  font-size: 56px;
-  font-weight: 700;
-  color: #111827;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.bigPriceUnit {
-  font-size: 20px;
-  font-weight: 400;
-  color: #9ca3af;
-}
-
-.priceStats {
-  display: flex;
-  gap: 28px;
-}
-
-.statBox {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  text-align: right;
-}
-
-.statLabel {
-  font-size: 10px;
-  font-weight: 600;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.statVal {
-  font-size: 14px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.up { color: #16a34a; }
-.down { color: #dc2626; }
-
-.chartContainer {
-  background: #fafaf9;
-  border: 1px solid #f3f4f6;
-  border-radius: 16px;
-  padding: 24px;
-  overflow: hidden;
-}
-
-/* ===== FULL TAB CHART ===== */
-.fullBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  color: #111827;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.fullBtn:hover {
-  border-color: #c45e20;
-  color: #c45e20;
-}
-
-/* Seluruh kartu PriceChart (judul, harga, statistik, chart) memenuhi layar */
-.cardFull {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  box-sizing: border-box;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  padding: max(24px, env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(32px, env(safe-area-inset-left));
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.cardFull .priceMain {
-  flex-shrink: 0;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-}
-
-/* Area chart mengisi sisa ruang di bawah harga */
-.chartInFull {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-}
-
-.cardFull .toolbar {
-  flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-  .priceCard { padding: 32px 24px; }
-  .bigPrice { font-size: 40px; }
-  .bigPriceUnit { font-size: 16px; }
-  .priceStats { gap: 16px; }
-  .statBox { text-align: left; }
-  .priceMain {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  .priceHeader { flex-wrap: wrap; gap: 10px; }
-  .chartContainer { padding: 16px; }
-}
-
-@media (max-width: 480px) {
-  .priceSection { padding: 0 16px; }
-  .priceCard { padding: 24px 16px; border-radius: 18px; }
-  .bigPrice { font-size: 32px; }
-  .priceStats { flex-wrap: wrap; gap: 12px; }
-  .cardFull { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); border-radius: 0; }
-  .cardFull .bigPrice { font-size: 28px; }
-  .cardFull .eyebrow { font-size: 24px; }
-  .chartInFull { padding: 10px; }
-}
-
-/* ===== FONT (mengikuti font situs) ===== */
-.bigPriceUnit,
-.statLabel,
-.statVal,
-.liveText,
-.currencyBtn,
-.currencyOption,
-.currencyCode,
-.currencySymbol,
-.fullBtn,
-.dropLabel,
-.modeBtn {
-  font-family: var(--font-body);
-}
-
-.statVal {
-  font-family: var(--font-display);
+  color: var(--color-carbon);
+  margin-bottom: 24px;
   letter-spacing: -0.01em;
 }
 
-/* ===== TOOLBAR DI BAWAH CHART ===== */
-.toolbar {
+.specsList {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.toolbarGroup {
+.specItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.specTextRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.specLabel {
+  color: var(--color-stone);
+}
+
+.specValue {
+  font-weight: 600;
+  color: var(--color-carbon);
+}
+
+.progressTrack {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 100px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-ember), var(--color-ember-light));
+  border-radius: 100px;
+}
+
+/* ─── Responsive Media Queries ─────────────────── */
+@media (max-width: 1024px) {
+  .carouselViewport {
+    height: 400px;
+  }
+  
+  .detailsCard {
+    padding: 36px;
+  }
+
+  .detailsGrid {
+    gap: 40px;
+  }
+
+  .detailsTitle {
+    font-size: var(--text-2xl);
+  }
+}
+
+@media (max-width: 768px) {
+  .products {
+    padding-top: var(--section-gap);
+    padding-bottom: var(--section-gap);
+  }
+
+  .prevBtn {
+    left: -10px;
+  }
+
+  .nextBtn {
+    right: -10px;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .detailsRight {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sectionTitle {
+    font-size: var(--text-3xl);
+  }
+
+  .carouselViewport {
+    height: 380px;
+  }
+
+  .navBtn {
+    display: none; /* Hide buttons on mobile in favor of gestures */
+  }
+
+  .productCard {
+    background: #faf8f5;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(26, 26, 26, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  }
+
+  .detailsCard {
+    padding: 28px 20px;
+    border-radius: 20px;
+    background: #faf8f5;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(26, 26, 26, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  }
+
+  .detailsTitle {
+    font-size: var(--text-xl);
+  }
+
+  .detailsDesc {
+    font-size: 14px;
+  }
+
+  .specsHeader {
+    margin-bottom: 16px;
+  }
+}
+
+
+/* ─── Harga Realtime ───────────────────────────── */
+.livePrice {
+  margin-bottom: 28px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--color-cream);
+  border: 1px solid var(--color-smoke);
+}
+
+.livePriceHead {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-}
-
-.smallBtn {
-  padding: 4px 12px;
   font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-stone);
 }
 
-.modeSwitch {
-  display: inline-flex;
-  background: #f3f4f6;
-  border-radius: 9999px;
-  padding: 3px;
-  border: 1px solid #e5e7eb;
-  gap: 3px;
+.liveUnit {
+  margin-left: auto;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
-.modeBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 14px;
-  border-radius: 9999px;
-  border: none;
-  background: transparent;
-  color: #4b5563;
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.6);
+  animation: livePulse 1.8s infinite;
+}
+
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+
+.livePriceMain {
+  margin-top: 10px;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-ember);
+  font-variant-numeric: tabular-nums;
+}
+
+.livePriceSub {
+  margin-top: 4px;
   font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  color: var(--color-graphite);
+  font-variant-numeric: tabular-nums;
 }
 
-.modeBtnActive {
-  background: #ffffff;
-  color: #c45e20;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+.livePriceLoading {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--color-stone);
 }
 
-/* Dropdown interval */
-.toolbar .currencyDropdown {
-  right: auto;
-  left: 0;
-  width: 160px;
-  max-height: 320px;
+@media (max-width: 640px) {
+  .livePriceMain {
+    font-size: 24px;
+  }
 }
-
-.dropLabel {
-  padding: 4px 12px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #9ca3af;
-  letter-spacing: 0.5px;
-}
-
-/* ===== ANIMASI HALUS ===== */
-.chartFade {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.chartFadeOut {
-  opacity: 0.15;
-  transform: scale(0.995);
-}
-
-.cardFull {
-  animation: fullIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes fullIn {
-  from { opacity: 0.4; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.modeBtn,
-.currencyOption,
-.fullBtn,
-.liveIndicator,
-.liveText {
-  transition: all 0.2s ease;
-}
-
-.up, .down {
-  transition: color 0.3s ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chartFade, .cardFull, .currencyDropdown { transition: none; animation: none; }
-}
-
