@@ -13,7 +13,7 @@ import {
   sameText,
 } from './AuthShared';
 
-const Login = () => {
+const Login = ({ children } = {}) => {
   const { loginGoogle, runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
   const [authMode, setAuthMode] = useState(null);
@@ -92,32 +92,8 @@ const Login = () => {
     }
   };
 
-  return (
-    <div className={styles.loginContainer}>
-      <h2 className={styles.cardTitle}>Investasi CSCID</h2>
-
-      <p className={styles.subtitle}>
-        Amankan alokasi kuota komoditas ekspor Anda sekarang.
-      </p>
-
-      <div className={styles.imageWrapper}>
-        <img 
-          src="/NephiPhelia.png" 
-          alt="NephiPhelia" 
-          className={styles.centerImage}
-        />
-      </div>
-
-      <div className={styles.authButtonsRow}>
-        <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
-        <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
-      </div>
-
-      <div className={styles.linksRow}>
-        <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
-        <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
-      </div>
-
+  const modals = (
+    <>
       {authMode === 'login_username' && (
         <div className={styles.modalBackdrop} onClick={closeAll}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px' }}>
@@ -170,6 +146,51 @@ const Login = () => {
         onClose={closeAll}
         onDone={goLogin}
       />
+    </>
+  );
+
+  // Mode panel: <Login>{({ openRegister, openLogin }) => ...}</Login>
+  // memakai logika & modal yang sama, tampilan tombolnya diatur pemanggil.
+  if (typeof children === 'function') {
+    return (
+      <>
+        {children({
+          openRegister: () => openMode('register'),
+          openLogin: goLogin,
+          openForgot: () => openMode('forgot'),
+        })}
+        {modals}
+      </>
+    );
+  }
+
+  return (
+    <div className={styles.loginContainer}>
+      <h2 className={styles.cardTitle}>Investasi CSCID</h2>
+
+      <p className={styles.subtitle}>
+        Amankan alokasi kuota komoditas ekspor Anda sekarang.
+      </p>
+
+      <div className={styles.imageWrapper}>
+        <img 
+          src="/NephiPhelia.png" 
+          alt="NephiPhelia" 
+          className={styles.centerImage}
+        />
+      </div>
+
+      <div className={styles.authButtonsRow}>
+        <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
+        <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
+      </div>
+
+      <div className={styles.linksRow}>
+        <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
+        <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
+      </div>
+
+      {modals}
     </div>
   );
 };
