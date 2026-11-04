@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GoogleOAuthProvider } from "@react-oauth/google";
-import { AccountProvider } from "@/components/Account";
-import { PriceProvider } from "@/context/PriceContext";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Partners from "@/components/Partners";
@@ -56,82 +53,78 @@ export default function Home() {
   }, []);
 
   return (
-    <GoogleOAuthProvider clientId="677126002730-5m6a6uge42bvk9aglki09dqkoi467tfs.apps.googleusercontent.com">
-      <AccountProvider>
-        <PriceProvider>
-          <Header />
+    <>
+      <Header />
 
-          <div className="pageFlexLayout">
-            <div className="mainLayoutContainer">
-              <main id="beranda">
-                <div className="sectionWrapper">
-                  <LeftPanel section="beranda" />
-                  <Hero />
-                  <RightPanel section="beranda" />
-                </div>
-
-                <Partners />
-
-                <AdBanner slot="1001" format="horizontal" className="adSection" />
-
-                <div className="sectionWrapper" id="tentang">
-                  <LeftPanel section="tentang" />
-                  <About />
-                  <RightPanel section="tentang" />
-                </div>
-
-                <div className="sectionWrapper" id="produk">
-                  <LeftPanel section="produk" />
-                  <Products />
-                  <RightPanel section="produk" />
-                </div>
-
-                <AdBanner slot="1002" format="horizontal" className="adSection" />
-
-                <div className="sectionWrapper" id="keunggulan">
-                  <LeftPanel section="keunggulan" />
-                  <WhyUs />
-                  <RightPanel section="keunggulan" />
-                </div>
-
-                <CTA />
-
-                <PriceChart setLivePrice={setLivePrice} />
-                
-                {/* Switch Tampilan Dinamis Berdasarkan Tab Aktif */}
-                {activeTab === 'invest' ? (
-                  <Invest 
-                    invested={invested} 
-                    setInvested={setInvested} 
-                    activeTab={activeTab} 
-                    setActiveTab={setActiveTab} 
-                  />
-                ) : (
-                  <div>
-                    <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto', padding: '0 24px' }}>
-                      <button 
-                        onClick={() => setActiveTab('invest')}
-                        style={{ padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                      >
-                        ← Kembali ke Menu Investasi
-                      </button>
-                    </div>
-                    <Trade livePrice={livePrice} />
-                  </div>
-                )}
-
-                <AdBanner slot="1003" format="horizontal" className="adSection" />
-
-                <div className="sectionWrapper" id="kontak">
-                  <LeftPanel section="kontak" />
-                  <Footer />
-                  <RightPanel section="kontak" />
-                </div>
-              </main>
+      <div className="pageFlexLayout">
+        <div className="mainLayoutContainer">
+          <main id="beranda">
+            <div className="sectionWrapper">
+              <LeftPanel section="beranda" />
+              <Hero />
+              <RightPanel section="beranda" />
             </div>
-          </div>
-        </PriceProvider>
-      </AccountProvider>
-    </GoogleOAuthProvider>
+
+            <Partners />
+
+            <AdBanner slot="1001" format="horizontal" className="adSection" />
+
+            <div className="sectionWrapper" id="tentang">
+              <LeftPanel section="tentang" />
+              <About />
+              <RightPanel section="tentang" />
+            </div>
+
+            <div className="sectionWrapper" id="produk">
+              <LeftPanel section="produk" />
+              <Products />
+              <RightPanel section="produk" />
+            </div>
+
+            <AdBanner slot="1002" format="horizontal" className="adSection" />
+
+            <div className="sectionWrapper" id="keunggulan">
+              <LeftPanel section="keunggulan" />
+              <WhyUs />
+              <RightPanel section="keunggulan" />
+            </div>
+
+            <CTA />
+
+            <PriceChart setLivePrice={setLivePrice} />
+
+            {/* Switch Tampilan Dinamis Berdasarkan Tab Aktif */}
+            {activeTab === 'invest' ? (
+              <Invest
+                invested={invested}
+                setInvested={setInvested}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+              />
+            ) : (
+              <div>
+                <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto', padding: '0 24px' }}>
+                  <button
+                    onClick={() => setActiveTab('invest')}
+                    style={{ padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    ← Kembali ke Menu Investasi
+                  </button>
+                </div>
+                <Trade livePrice={livePrice} />
+              </div>
+            )}
+
+            <AdBanner slot="1003" format="horizontal" className="adSection" />
+
+            <div className="sectionWrapper" id="kontak">
+              <LeftPanel section="kontak" />
+              <Footer />
+              <RightPanel section="kontak" />
+            </div>
+          </main>
+        </div>
+      </div>
+    </>
   );
 }
