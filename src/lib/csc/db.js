@@ -1,7 +1,17 @@
 // [CSC:DB] koneksi Neon + skema + query
 import { neon } from "@neondatabase/serverless";
 
-const sql = neon(process.env.DATABASE_URL);
+// [PATCH:DB-LAZY] koneksi dibuat saat query pertama, bukan saat file dimuat
+// (build Vercel tidak gagal bila DATABASE_URL belum ada)
+let _sql = null;
+function sql(strings, ...values) {
+  if (!_sql) {
+    if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL belum diatur");
+    _sql = neon(process.env.DATABASE_URL);
+  }
+  return _sql(strings, ...values);
+}
+// [/PATCH:DB-LAZY]
 
 // Waktu disimpan UTC detik (TANPA offset WIB). Browser menambah WIB seperti sekarang.
 export async function ensureSchema() {
@@ -74,6 +84,20 @@ export async function upsertFxBulk(rows) {
   }
 }
 // [/PATCH:DB-BULK]
+
+// [PATCH:DB-UPDATE] dipakai cron update
+export async function upsertFxOne(t, cny, jpy, source) {
+  await sql`INSERT INTO fx_rates (t, cny, jpy, source) VALUES (${t}, ${cny}, ${jpy}, ${source})
+    ON CONFLICT (t) DO UPDATE SET cny=EXCLUDED.cny, jpy=EXCLUDED.jpy, source=EXCLUDED.source`;
+}
+
+// kurs sejak `sinceSec`, ditambah kurs terbaru (agar selalu ada walau kosong beberapa hari)
+export async function getFxRecent(sinceSec) {
+  const rows = await sql`SELECT t, cny, jpy FROM fx_rates
+    WHERE t >= ${sinceSec} OR t = (SELECT max(t) FROM fx_rates) ORDER BY t`;
+  return rows.map((r) => ({ t: Number(r.t), cny: r.cny, jpy: r.jpy }));
+}
+// [/PATCH:DB-UPDATE]
 
 export async function getRaw(symbol, iv) {
   return sql`SELECT t, o, h, l, c FROM raw_candles WHERE symbol=${symbol} AND iv=${iv} ORDER BY t`;
