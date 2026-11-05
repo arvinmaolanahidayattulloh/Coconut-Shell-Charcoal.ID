@@ -229,7 +229,7 @@ const Register = ({ open, onClose, onRegistered }) => {
 
   if (step === 'provider') {
     content = (
-      <div className={auth.modalOverlay}>
+      <div className={auth.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
         <div className={auth.modalForm}>
           <h4 className={auth.modalTitle}>Daftar Akun</h4>
           <p className={auth.modalDesc}>Pilih platform untuk memulai verifikasi email</p>
@@ -270,10 +270,6 @@ const Register = ({ open, onClose, onRegistered }) => {
                 <span>{busyProvider === p || isLoading ? 'Memeriksa...' : `Daftar dengan ${p}`}</span>
               </button>
             ))}
-          </div>
-
-          <div className={auth.modalActionsRow}>
-            <button type="button" onClick={onClose} className={auth.btnCancel}>BATAL</button>
           </div>
         </div>
       </div>

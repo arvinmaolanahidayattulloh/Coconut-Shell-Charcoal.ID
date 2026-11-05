@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart } from "lightweight-charts";
 import { usePrice } from "@/context/PriceContext"; // <-- Integrasi Context
+import AksiBtn from "./AksiBtn";
 import styles from "./PriceChart.module.css";
 // ... impor bawaan lainnya ...
 
@@ -1147,7 +1148,9 @@ export default function PriceChart() {
             <div ref={chartContainerRef} style={{ position: "absolute", inset: 0, zIndex: 2 }}></div>
 
             {pendingMode && (
-              <div style={{ position: "absolute", inset: 0, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.88)" }}>
+              <div
+                onClick={(e) => { if (e.target === e.currentTarget) setPendingMode(null); }} /* ketuk di luar kotak = tutup popup */
+                style={{ position: "absolute", inset: 0, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.88)" }}>
                 <form onSubmit={submitPw} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center", maxWidth: 360, padding: 16 }}>
                   <input
                     type="password"
@@ -1158,8 +1161,7 @@ export default function PriceChart() {
                     autoComplete="off"
                     style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 12px", border: `1px solid ${pwErr ? "#f23645" : "#e0e3eb"}`, borderRadius: 4, fontSize: 14, outline: "none", background: "#fff", color: "#111" }}
                   />
-                  <button className={styles.currencyBtn} type="submit">BUKA</button>
-                  <button className={styles.currencyBtn} type="button" onClick={() => setPendingMode(null)}>BATAL</button>
+                  <AksiBtn label="Buka" />
                   {pwErr && <span style={{ width: "100%", textAlign: "center", color: "#f23645", fontSize: 13 }}>Password salah.</span>}
                 </form>
               </div>

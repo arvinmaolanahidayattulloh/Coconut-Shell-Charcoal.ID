@@ -77,6 +77,44 @@
   color: var(--color-carbon);
 }
 
+/* menu Perusahaan (desktop): Karier, Blog, Certificate, Galery → tab baru */
+.navDrop {
+  position: relative;
+}
+.navDropBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.navDropMenu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  background: var(--color-white);
+  border: 1px solid var(--color-smoke);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+.navDropItem {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-graphite);
+  text-decoration: none;
+}
+.navDropItem:hover {
+  background: var(--color-cream);
+  color: var(--color-carbon);
+}
+
 .headerActions {
   display: flex;
   align-items: center;

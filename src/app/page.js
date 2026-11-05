@@ -9,22 +9,14 @@ import Products from "@/components/Products";
 import WhyUs from "@/components/WhyUs";
 import CTA from "@/components/CTA";
 import PriceChart from "@/components/PriceChart";
-import Trade from "@/components/Trade";
 import Invest from "@/components/Invest";
 import Footer from "@/components/Footer";
 import AdBanner from "@/components/AdBanner";
 import AccessPanel from "@/components/AccessPanel";
 import { LeftPanel, RightPanel } from "@/components/SidePanels";
 
-// Set true untuk menampilkan kembali bagian Investasi & Trade.
-const SHOW_INVEST_TRADE = false;
-
 export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
-
-  // State untuk sistem Switch Tab Invest & Trade
-  const [invested, setInvested] = useState(false);
-  const [activeTab, setActiveTab] = useState("invest"); // 'invest' atau 'trade'
 
   useEffect(() => {
     const handleScroll = () => {
@@ -96,33 +88,14 @@ export default function Home() {
 
             <PriceChart />
 
-            <AccessPanel />
+            {/* Invest tepat di bawah chart. Halaman khususnya: /invest (tampilan layar penuh) */}
+            <div className="sectionWrapper" id="invest">
+              <div className="wrap" style={{ maxWidth: 960, marginBottom: 80 }}>
+                <Invest embedded />
+              </div>
+            </div>
 
-            {/* Bagian Investasi & Trade disembunyikan sementara (SHOW_INVEST_TRADE) */}
-            {SHOW_INVEST_TRADE && (
-              <>
-              {activeTab === 'invest' ? (
-                <Invest
-                  invested={invested}
-                  setInvested={setInvested}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                />
-              ) : (
-                <div>
-                  <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto', padding: '0 24px' }}>
-                    <button
-                      onClick={() => setActiveTab('invest')}
-                      style={{ padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                    >
-                      ← Kembali ke Menu Investasi
-                    </button>
-                  </div>
-                  <Trade />
-                </div>
-              )}
-              </>
-            )}
+            <AccessPanel />
 
             <AdBanner slot="1003" format="horizontal" className="adSection" />
 

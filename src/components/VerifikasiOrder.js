@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import s from "./AuthShared.module.css";
 import v from "./Verifikasi.module.css";
 import { loadUsers, sameText } from "./AuthShared";
+import AksiBtn from "./AksiBtn";
 
 const METODE = [
   { id: "password", nama: "Password" },
@@ -114,7 +115,9 @@ export default function VerifikasiOrder({ user, onSukses, onBatal }) {
   const kodeLengkap = kode.replace(/\s/g, "").length === 6;
 
   return (
-    <div className={s.modalOverlay} role="dialog" aria-modal="true" aria-label="Verifikasi order">
+    // mengetuk / mengklik di luar kotak = tutup popup (tidak saat sedang memproses)
+    <div className={s.modalOverlay} role="dialog" aria-modal="true" aria-label="Verifikasi order"
+      onClick={(e) => { if (e.target === e.currentTarget && !sibuk) onBatal?.(); }}>
       <div className={s.modalForm}>
         <h4 className={s.modalTitle}>Verifikasi Order</h4>
         <p className={s.modalDesc}>Pilih satu cara untuk memastikan ini benar-benar Anda. Setelah itu order disimpan dengan status Pending.</p>
@@ -132,14 +135,14 @@ export default function VerifikasiOrder({ user, onSukses, onBatal }) {
           <form className={v.panel} onSubmit={(e) => { e.preventDefault(); cekPassword(); }}>
             <input className={s.inputField} type="password" placeholder="Password akun Anda" value={sandi}
               onChange={(e) => setSandi(e.target.value)} autoComplete="current-password" />
-            <button type="submit" className={s.btnSubmit} disabled={sibuk || !sandi}>{sibuk ? "Memeriksa…" : "VERIFIKASI"}</button>
+            <AksiBtn label="Verifikasi" busy={sibuk} disabled={!sandi} />
           </form>
         )}
 
         {metode === "passkey" && (
           <div className={v.panel}>
             <p className={v.info}>Gunakan sidik jari, wajah, atau PIN perangkat Anda.</p>
-            <button type="button" className={s.btnSubmit} onClick={cekPasskey} disabled={sibuk}>{sibuk ? "Menunggu Passkey…" : "GUNAKAN PASSKEY"}</button>
+            <AksiBtn type="button" label="Gunakan Passkey" busy={sibuk} onClick={cekPasskey} />
           </div>
         )}
 
@@ -150,7 +153,7 @@ export default function VerifikasiOrder({ user, onSukses, onBatal }) {
             {totp && !totp.aktif && !totp.secret && (
               <>
                 <p className={v.info}>Authenticator belum diaktifkan untuk akun ini. Aktifkan sekali, lalu bisa dipakai untuk order berikutnya.</p>
-                <button type="button" className={s.btnSubmit} onClick={daftarTotp} disabled={sibuk}>{sibuk ? "Menyiapkan…" : "AKTIFKAN AUTHENTICATOR"}</button>
+                <AksiBtn type="button" label="Aktifkan Authenticator" busy={sibuk} onClick={daftarTotp} />
               </>
             )}
 
@@ -162,7 +165,7 @@ export default function VerifikasiOrder({ user, onSukses, onBatal }) {
                 <code className={v.rahasia}>{totp.secret}</code>
                 <p className={v.info}>2. Masukkan kode 6 digit yang tampil di aplikasi.</p>
                 {kolomKode}
-                <button type="submit" className={s.btnSubmit} disabled={sibuk || !kodeLengkap}>{sibuk ? "Memeriksa…" : "AKTIFKAN & VERIFIKASI"}</button>
+                <AksiBtn label="Aktifkan dan verifikasi" busy={sibuk} disabled={!kodeLengkap} />
               </form>
             )}
 
@@ -170,7 +173,7 @@ export default function VerifikasiOrder({ user, onSukses, onBatal }) {
               <form className={v.panel} onSubmit={(e) => { e.preventDefault(); cekTotp(); }}>
                 <p className={v.info}>Masukkan kode 6 digit dari aplikasi Authenticator Anda.</p>
                 {kolomKode}
-                <button type="submit" className={s.btnSubmit} disabled={sibuk || !kodeLengkap}>{sibuk ? "Memeriksa…" : "VERIFIKASI"}</button>
+                <AksiBtn label="Verifikasi" busy={sibuk} disabled={!kodeLengkap} />
               </form>
             )}
           </div>
@@ -192,10 +195,8 @@ export default function VerifikasiOrder({ user, onSukses, onBatal }) {
                 {kolomKode}
               </>
             )}
-            <button type="submit" className={s.btnSubmit}
-              disabled={sibuk || (terkirim ? !kodeLengkap : !(metode === "email" ? email.trim() : wa.trim()))}>
-              {sibuk ? "Memproses…" : terkirim ? "VERIFIKASI" : "KIRIM KODE"}
-            </button>
+            <AksiBtn label={terkirim ? "Verifikasi" : "Kirim kode"} busy={sibuk}
+              disabled={terkirim ? !kodeLengkap : !(metode === "email" ? email.trim() : wa.trim())} />
             {terkirim && (
               <button type="button" className={v.linkKecil} disabled={sibuk}
                 onClick={() => { setTerkirim(false); setKode(""); setToken(""); setGalat(""); }}>
@@ -206,10 +207,6 @@ export default function VerifikasiOrder({ user, onSukses, onBatal }) {
         )}
 
         {galat && <div className={v.galat} role="alert">{galat}</div>}
-
-        <div className={s.modalActionsRow}>
-          <button type="button" onClick={onBatal} className={s.btnCancel} disabled={sibuk}>BATAL</button>
-        </div>
       </div>
     </div>
   );

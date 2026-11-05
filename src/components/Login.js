@@ -112,8 +112,8 @@ const Login = ({ children } = {}) => {
               title="Masuk Akun"
               desc="Masukkan username dan password Anda"
               onSubmit={handleLoginSubmit}
-              submitLabel="MASUK"
-              hideBackBtn={true}
+              submitLabel="Masuk"
+              onClose={closeAll}
               footer={
                 <>
                   <div className={styles.dividerWrapper}>atau masuk dengan</div>

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount } from '../Account'; // Sesuaikan lokasi impor Account jika perlu
 import { usePrice } from '@/context/PriceContext';
 import Login from '../Login'; // Sesuaikan lokasi impor Login jika perlu
+import AksiBtn from '../AksiBtn';
 import { partnersData } from '../Mitra'; // Sesuaikan lokasi impor Mitra jika perlu
 
 const PAYMENT_CATEGORIES = [
@@ -130,9 +131,13 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
   const handleMenuClick = (action) => {
     setMenuOpen(false);
     switch (action) {
-      case 'beranda':
-        document.getElementById('beranda')?.scrollIntoView({ behavior: 'smooth' });
+      case 'beranda': {
+        // di halaman utama: gulir ke atas; di halaman khusus /invest: kembali ke beranda situs
+        const beranda = document.getElementById('beranda');
+        if (beranda) beranda.scrollIntoView({ behavior: 'smooth' });
+        else window.location.href = '/';
         break;
+      }
       case 'profil':
         setActiveTab('profil');
         break;
@@ -602,7 +607,9 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
         </div>
 
         {verificationStep > 0 && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(5px)', borderRadius: '24px' }}>
+          <div
+            onClick={(e) => { if (e.target === e.currentTarget) setVerificationStep(0); }} /* ketuk di luar kotak = tutup popup */
+            style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(5px)', borderRadius: '24px' }}>
             <div style={{ width: '100%', maxWidth: 380, padding: 28, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
               
               {verificationStep === 1 && (
@@ -617,7 +624,6 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
                     <button onClick={() => selectVerificationMethod('Email')} style={verifyBtnStyle}>✉️ OTP Email Resmi</button>
                     <button onClick={() => selectVerificationMethod('WhatsApp')} style={{...verifyBtnStyle, background: '#ecfdf5', color: '#047857', border: '1px solid #10b981'}}>💬 OTP WhatsApp</button>
                   </div>
-                  <button onClick={() => setVerificationStep(0)} style={{ width: '100%', marginTop: '16px', padding: '12px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>BATAL</button>
                 </>
               )}
 
@@ -644,12 +650,7 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
                     />
                   )}
 
-                  <div style={{ display: 'flex', width: '100%', gap: '10px' }}>
-                    <button type="button" onClick={() => setVerificationStep(1)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>KEMBALI</button>
-                    <button type="submit" style={{ flex: 1, padding: '12px', background: '#c45e20', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
-                      {verificationMethod === 'Passkey' ? 'OTORISASI Selesai' : 'VERIFIKASI'}
-                    </button>
-                  </div>
+                  <AksiBtn label={verificationMethod === 'Passkey' ? 'Otorisasi' : 'Verifikasi'} />
                 </form>
               )}
             </div>

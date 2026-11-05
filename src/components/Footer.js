@@ -1,7 +1,9 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import SocialCard from "./SocialCard";
 import styles from "./Footer.module.css";
+import { HALAMAN_PERUSAHAAN } from "@/data/Halaman";
 
 const NAV_LINKS = [
   { label: "Beranda", href: "#beranda" },
@@ -10,12 +12,8 @@ const NAV_LINKS = [
   { label: "Keunggulan", href: "#keunggulan" },
 ];
 
-const COMPANY_LINKS = [
-  { label: "Karier", href: "#" },
-  { label: "Blog", href: "#" },
-  { label: "Sertifikasi", href: "#" },
-  { label: "Media", href: "#" },
-];
+// Karier, Blog, Certificate, Galery → dibuka di TAB BARU
+const COMPANY_LINKS = HALAMAN_PERUSAHAAN;
 
 const CONTACT_INFO = [
   { label: "Info@CoconutShellCharcoal.ID", href: "mailto:Info@CoconutShellCharcoal.ID" },
@@ -24,11 +22,14 @@ const CONTACT_INFO = [
 ];
 
 export default function Footer() {
+  // di halaman selain beranda, tautan "#bagian" menuju beranda: "/#bagian"
+  const pathname = usePathname();
+  const ke = (href) => (pathname === "/" ? href : `/${href}`);
   return (
     <footer className={`${styles.footer} wrap`} id="kontak">
       <div className={styles.footerGrid}>
         <div className={styles.footerBrand}>
-          <a href="#beranda" className={styles.logo}>
+          <a href={ke("#beranda")} className={styles.logo}>
             <span className={styles.logoIcon}>
               <svg
                 width="18"
@@ -59,7 +60,7 @@ export default function Footer() {
           <ul>
             {NAV_LINKS.map((link) => (
               <li key={link.label}>
-                <a href={link.href} className={styles.footerLink}>
+                <a href={ke(link.href)} className={styles.footerLink}>
                   {link.label}
                 </a>
               </li>
@@ -72,7 +73,7 @@ export default function Footer() {
           <ul>
             {COMPANY_LINKS.map((link) => (
               <li key={link.label}>
-                <a href={link.href} className={styles.footerLink}>
+                <a href={link.href} target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
                   {link.label}
                 </a>
               </li>

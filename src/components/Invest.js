@@ -6,7 +6,10 @@ import React, { useState } from 'react';
 import InvestPageContent from './invest/invest.page';
 import InvestProfileContent from './invest/invest.profile';
 
-export default function Invest() {
+// embedded : true saat ditampilkan sebagai bagian halaman utama (di bawah chart) → banner "Buka di Apps" dan menu bawah
+//            ikut mengalir di dalam bagian itu, tidak menempel di atas / bawah layar.
+//            false (halaman khusus /invest) → tampilan layar penuh.
+export default function Invest({ embedded = false }) {
   // State untuk mengontrol halaman mana yang sedang aktif
   const [activeTab, setActiveTab] = useState('invest');
   
@@ -17,7 +20,7 @@ export default function Invest() {
   const handleOpenApp = () => {
     // Coba arahkan ke Custom Scheme aplikasi (misal: cscid://invest)
     const appSchema = "cscid://invest";
-    const webFallbackUrl = "https://invest.coconutshellcharcoal.id";
+    const webFallbackUrl = "/invest"; // halaman khusus Invest di domain utama (CoconutShellCharcoal.id/invest)
 
     // Catat waktu saat mencoba membuka aplikasi
     const startTimestamp = Date.now();
@@ -25,8 +28,11 @@ export default function Invest() {
     // Panggil skema aplikasi
     window.location.href = appSchema;
 
-    // Jika dalam waktu 1.5 detik pengguna masih di halaman ini (artinya aplikasi belum terinstal),
-    // alihkan secara otomatis ke subdomain web.
+    // Sudah berada di halaman khusus /invest: tidak ada tujuan web lain
+    if (!embedded) return;
+
+    // Dari halaman utama: jika dalam 1.5 detik pengguna masih di halaman ini (aplikasi belum terinstal),
+    // alihkan otomatis ke halaman khusus /invest.
     setTimeout(() => {
       const elapsed = Date.now() - startTimestamp;
       if (elapsed < 2000 && document.hasFocus()) {
@@ -36,10 +42,12 @@ export default function Invest() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', paddingBottom: '60px' }}>
-      
-      {/* 🚀 MENU PALING ATAS: BUKA DI APPS / SUBDOMAIN */}
-      <div style={appBannerStyle}>
+    <div style={embedded
+      ? { background: '#f8fafc', borderRadius: '24px', overflow: 'hidden' }
+      : { minHeight: '100vh', background: '#f8fafc', paddingBottom: '60px' }}>
+
+      {/* 🚀 MENU PALING ATAS: BUKA DI APPS / HALAMAN KHUSUS /invest */}
+      <div style={embedded ? { ...appBannerStyle, position: 'static' } : appBannerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>📱</span>
           <div>
@@ -74,7 +82,7 @@ export default function Invest() {
       </main>
 
       {/* NAVIGASI BAWAH (BOTTOM NAVIGATION) */}
-      <div style={bottomNavStyle}>
+      <div style={embedded ? { ...bottomNavStyle, position: 'static', boxShadow: 'none' } : bottomNavStyle}>
         <button 
           onClick={() => setActiveTab('invest')} 
           style={{ ...navBtnStyle, color: activeTab === 'invest' ? '#c45e20' : '#64748b' }}

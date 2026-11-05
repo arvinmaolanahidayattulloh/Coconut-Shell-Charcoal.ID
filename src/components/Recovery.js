@@ -122,9 +122,8 @@ const Recovery = ({ mode, onClose, onDone }) => {
         title={isReset ? 'Email Terdaftar' : 'Lupa Akun'}
         desc={isReset ? 'Masukkan email yang terdaftar' : 'Masukkan email terdaftar Anda'}
         onSubmit={handleEmailSubmit}
-        submitLabel="NEXT"
-        onBack={isReset ? () => setStep('username') : onClose}
-        backLabel={isReset ? 'KEMBALI' : 'BATAL'}
+        submitLabel="Lanjut"
+        onClose={onClose}
       >
         <input type="email" placeholder="email@domain.com" {...bind('email')} />
       </AuthModal>
@@ -138,9 +137,8 @@ const Recovery = ({ mode, onClose, onDone }) => {
         title="Nomor WhatsApp"
         desc="Masukkan nomor WhatsApp yang terdaftar"
         onSubmit={handleWaSubmit}
-        submitLabel="KIRIM OTP"
-        onBack={() => setStep('email')}
-        backLabel="KEMBALI"
+        submitLabel="Kirim OTP"
+        onClose={onClose}
       >
         <input type="tel" placeholder="No. WhatsApp (0812...)" {...bind('whatsapp')} />
       </AuthModal>

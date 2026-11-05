@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useAccount } from './Account';
 import { useGoogleLogin } from '@react-oauth/google';
 import styles from './AuthShared.module.css';
+import AksiBtn from './AksiBtn';
 import { loginMicrosoft, loginApple, verifyWithServer } from '@/lib/csc/auth/providers';
 
 // ============================================================
@@ -67,20 +68,22 @@ export const ProviderIcon = ({ name, size = 20 }) => {
   );
 };
 
-export const AuthModal = ({ title, desc, onSubmit, submitLabel, onBack, backLabel = 'BATAL', footer = null, children }) => (
-  <div className={styles.modalOverlay}>
-    <form onSubmit={onSubmit} className={styles.modalForm}>
-      <h4 className={styles.modalTitle}>{title}</h4>
-      <p className={styles.modalDesc}>{desc}</p>
-      {children}
-      <div className={styles.modalActionsRow}>
-        <button type="submit" className={styles.btnSubmit}>{submitLabel}</button>
-        <button type="button" onClick={onBack} className={styles.btnCancel}>{backLabel}</button>
-      </div>
-      {footer}
-    </form>
-  </div>
-);
+// Popup: satu tombol aksi berlogo (AksiBtn), tanpa tombol Kembali/Batal. Mengetuk di luar kotak = menutup popup
+// (onClose; onBack tetap diterima sebagai nama lama dari onClose).
+export const AuthModal = ({ title, desc, onSubmit, submitLabel, onClose, onBack, footer = null, children }) => {
+  const tutup = onClose ?? onBack;
+  return (
+    <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) tutup?.(); }}>
+      <form onSubmit={onSubmit} className={styles.modalForm}>
+        <h4 className={styles.modalTitle}>{title}</h4>
+        <p className={styles.modalDesc}>{desc}</p>
+        {children}
+        <AksiBtn label={submitLabel} />
+        {footer}
+      </form>
+    </div>
+  );
+};
 
 export const useAuthForm = () => {
   const [values, setValues] = useState(EMPTY_INPUT);
