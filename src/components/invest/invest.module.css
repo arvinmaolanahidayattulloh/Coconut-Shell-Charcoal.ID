@@ -18,7 +18,7 @@
 .table td.invest { background: #fff7ed; }
 
 /* Langkah (urutan nyata, jadi bernomor) */
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; counter-reset: s; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; counter-reset: s; list-style: none; margin: 0; padding: 0; }
 .step { counter-increment: s; padding: 18px; background: var(--color-white); border: 1px solid var(--color-smoke); border-radius: var(--radius-lg); }
 .step::before { content: counter(s); display: grid; place-items: center; width: 28px; height: 28px; margin-bottom: 12px; border-radius: var(--radius-full); background: var(--color-ember); color: #fff; font: 600 var(--text-sm) var(--font-display); }
 .step h4 { font-size: var(--text-base); margin-bottom: 6px; }

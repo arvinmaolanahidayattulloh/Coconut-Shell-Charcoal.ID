@@ -167,10 +167,11 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
     <section style={{ position: 'relative', padding: '20px' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', background: '#fff', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#c45e20', margin: 0 }}>Investasi Indeks CSCID</h2>
-          
-          {user && (
+        {/* Judul hanya setelah masuk; sebelum masuk, <Login /> sudah punya judul "Investasi CSCID" sendiri (hindari judul dobel). */}
+        {user && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#c45e20', margin: 0 }}>Investasi Indeks CSCID</h2>
+
             <div style={{ position: 'relative' }}>
               <button onClick={() => setMenuOpen(!menuOpen)} style={menuBtnStyle}>Menu ☰</button>
               {menuOpen && (
@@ -184,8 +185,8 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div style={{ filter: showPasswordModal || verificationStep > 0 ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
           <div>
