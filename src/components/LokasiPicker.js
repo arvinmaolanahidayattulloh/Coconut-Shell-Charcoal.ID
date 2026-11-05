@@ -37,7 +37,7 @@ export function parseKoordinat(teks) {
 const fmt = (n) => Number(n).toFixed(6);
 
 // jarak dua titik (meter), rumus haversine
-function jarakM(a, b) {
+export function jarakM(a, b) {
   const R = 6371000, rad = (x) => (x * Math.PI) / 180;
   const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
@@ -67,6 +67,7 @@ export default function LokasiPicker({ value, onChange }) {
   const [live, setLive] = useState(false);
   const watchRef = useRef(null);
   const terakhirRef = useRef(null);
+  const dihapusRef = useRef(false); // true setelah pengguna menekan Hapus lokasi → tidak dinyalakan otomatis lagi
 
   const stopGps = () => {
     if (watchRef.current != null && typeof navigator !== "undefined") {
@@ -74,7 +75,6 @@ export default function LokasiPicker({ value, onChange }) {
     }
     watchRef.current = null;
   };
-  useEffect(() => () => stopGps(), []);
 
   const hentikanLive = () => { stopGps(); setLive(false); setSibuk(false); };
 
@@ -100,6 +100,7 @@ export default function LokasiPicker({ value, onChange }) {
 
     watchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        if (watchRef.current == null) return; // sudah dihentikan / lokasi dihapus
         const { latitude, longitude, accuracy } = pos.coords;
         const baru = { lat: latitude, lng: longitude, akurasi: Math.round(accuracy), sumber: "gps", waktu: Date.now() };
         const lama = terakhirRef.current;
@@ -112,6 +113,7 @@ export default function LokasiPicker({ value, onChange }) {
         setStatus(`Live · akurasi ±${Math.round(accuracy)} m · diperbarui ${new Date().toLocaleTimeString("id-ID")}`);
       },
       (err) => {
+        if (watchRef.current == null) return;
         if (err?.code === 1) { hentikanLive(); setStatus(pesanGalat(err)); return; } // izin ditolak → berhenti
         // sinyal sementara hilang / timeout: tetap memantau, hanya beri tahu bila belum pernah dapat lokasi
         if (!terakhirRef.current) setStatus(pesanGalat(err));
@@ -119,6 +121,13 @@ export default function LokasiPicker({ value, onChange }) {
       { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
   };
+
+  // Live Location otomatis menyala begitu form tampil (browser akan meminta izin lokasi); berhenti saat form ditutup
+  useEffect(() => {
+    if (!dihapusRef.current) mulaiLive();
+    return () => stopGps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- 2. Cari di peta (OpenStreetMap Nominatim) ---
   const cari = async () => {
@@ -177,18 +186,22 @@ export default function LokasiPicker({ value, onChange }) {
         <>
           <div className={styles.baris}>
             {live ? (
-              <button type="button" className={styles.btnSolid} onClick={() => { hentikanLive(); setStatus("Pemantauan lokasi dihentikan."); }}>
-                Hentikan Live
-              </button>
+              <>
+                {!sibuk && <span className={styles.liveTanda}><i />LIVE</span>}
+                <button type="button" className={styles.btnLink}
+                  onClick={() => { hentikanLive(); setStatus("Pemantauan lokasi dihentikan."); }}>
+                  Hentikan
+                </button>
+              </>
             ) : (
-              <button type="button" className={styles.btnSolid} onClick={mulaiLive}>
-                {value?.sumber === "gps" ? "Aktifkan Live Lagi" : "Aktifkan Lokasi Live"}
+              <button type="button" className={styles.btnSolid}
+                onClick={() => { dihapusRef.current = false; mulaiLive(); }}>
+                Gunakan Lokasi Live
               </button>
             )}
-            {live && !sibuk && <span className={styles.liveTanda}><i />LIVE</span>}
           </div>
           <span className={styles.hint}>
-            Lokasi Anda diperbarui otomatis selama Live aktif. Aktifkan GPS dan izinkan akses lokasi; paling akurat di area terbuka. Bukan di lokasi tujuan? Pakai tab Cari di Peta atau Koordinat.
+            Lokasi Anda terdeteksi otomatis dan diperbarui live. Izinkan akses lokasi di browser; paling akurat di area terbuka. Bukan di lokasi tujuan? Pakai tab Cari di Peta atau Koordinat.
           </span>
         </>
       )}
@@ -242,7 +255,7 @@ export default function LokasiPicker({ value, onChange }) {
             <a href={`https://www.google.com/maps?q=${value.lat},${value.lng}`} target="_blank" rel="noopener noreferrer">
               Buka di Google Maps
             </a>
-            <button type="button" className={styles.btnLink} onClick={() => { hentikanLive(); setStatus(""); onChange(null); }}>
+            <button type="button" className={styles.btnLink} onClick={() => { dihapusRef.current = true; hentikanLive(); setStatus("Lokasi dihapus."); onChange(null); }}>
               Hapus lokasi
             </button>
             {value.label && <span className={styles.lokasiLabel}>{value.label}</span>}

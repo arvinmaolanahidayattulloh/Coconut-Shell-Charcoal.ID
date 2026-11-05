@@ -9,6 +9,7 @@ const fmtKoord = (l) => `${Number(l.lat).toFixed(6)}, ${Number(l.lng).toFixed(6)
 export default function Invoice({ o }) {
   const baris = [
     ["No. Invoice", o.id], ["Tanggal", o.tanggal], ["Jenis", o.jenis],
+    ...(o.pembeli?.email ? [["Pembeli (Akun)", `${o.pembeli.id} · ${o.pembeli.email}`]] : []),
     ["Penerima", o.nama], ["WhatsApp", o.wa], ["Alamat Tujuan", o.alamat],
     ...(o.catatan ? [["Catatan", o.catatan]] : []),
     ...(o.lokasi ? [["Lokasi GPS", fmtKoord(o.lokasi)]] : []),

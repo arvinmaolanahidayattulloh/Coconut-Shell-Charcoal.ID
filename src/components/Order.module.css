@@ -687,8 +687,12 @@ textarea.input {
 .logoProvider,
 .logoCadangan {
   flex: none;
-  width: 40px;
-  height: 28px;
+  width: 64px;
+  height: 26px;
+}
+.logoBesar {
+  width: 96px;
+  height: 36px;
 }
 .logoProvider {
   object-fit: contain;
@@ -880,6 +884,114 @@ textarea.input {
   line-height: 1.5;
   color: #f23645;
   text-align: center;
+}
+
+/* data pembeli (akun terdaftar) */
+.pembeli {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+}
+.fotoAkun,
+.fotoAkunHuruf {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+.fotoAkun {
+  object-fit: cover;
+}
+.fotoAkunHuruf {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* peta lokasi operasional broker */
+.brokerPeta {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+}
+.brokerPetaJudul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.brokerPetaJudul span {
+  color: var(--color-stone);
+}
+.brokerPeta iframe {
+  display: block;
+  width: 100%;
+  height: 220px;
+  border: 0;
+}
+
+/* pembayaran: kartu penerima (rancangan sama dengan kartu broker) */
+.bayarCard {
+  background: linear-gradient(135deg, rgba(196, 94, 32, 0.07), rgba(212, 137, 10, 0.05));
+  border-color: rgba(196, 94, 32, 0.2);
+}
+.kecil {
+  font-size: 12px;
+  color: var(--color-stone);
+}
+.rekPenerima {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(26, 26, 26, 0.08);
+}
+.rekBank {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rekNomor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rekNomor b {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+.btnSalin {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1.5px solid var(--color-ember);
+  background: #fff;
+  color: var(--color-ember);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btnSalin:hover {
+  background: rgba(196, 94, 32, 0.08);
 }
 /* [/SECTION: ORDER-TAMBAHAN] */
 

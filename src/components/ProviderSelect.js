@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./Order.module.css";
 
 // Logo provider; bila file belum ada di public/pembayaran/provider/ → tampil inisial
-export function LogoProvider({ p }) {
+export function LogoProvider({ p, besar = false }) {
   const [gagal, setGagal] = useState(false);
-  if (gagal) return <span className={styles.logoCadangan} aria-hidden="true">{p.singkat.slice(0, 3)}</span>;
-  return <img src={p.logo} alt="" className={styles.logoProvider} onError={() => setGagal(true)} />;
+  const kelas = besar ? ` ${styles.logoBesar}` : "";
+  if (gagal) return <span className={`${styles.logoCadangan}${kelas}`} aria-hidden="true">{p.singkat.slice(0, 3)}</span>;
+  return <img src={p.logo} alt={besar ? p.nama : ""} className={`${styles.logoProvider}${kelas}`} onError={() => setGagal(true)} />;
 }
 
 export default function ProviderSelect({ daftar, value, onChange, placeholder = "Pilih", ariaLabel }) {

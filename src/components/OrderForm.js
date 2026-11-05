@@ -1,14 +1,14 @@
 "use client";
 // [FILE: src/components/OrderForm.jsx]
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Order.module.css";
 import { MITRA } from "@/data/Mitra";
-import { BANK, EWALLET } from "@/data/Provider";
+import { BANK, EWALLET, cariProvider } from "@/data/Provider";
 import { GRADE, PRODUK_BERGRADE, GRADE_AWAL } from "@/data/Grade";
 import { hitungHarga, formatUang } from "@/lib/csc/harga";
 import GradePicker from "./GradePicker";
-import LokasiPicker from "./LokasiPicker";
-import ProviderSelect from "./ProviderSelect";
+import LokasiPicker, { jarakM } from "./LokasiPicker";
+import ProviderSelect, { LogoProvider } from "./ProviderSelect";
 import VerifikasiOrder from "./VerifikasiOrder";
 import Invoice from "./Invoice";
 import { useAccount } from "./Account";
@@ -21,6 +21,17 @@ const waLink = (no) => {
 };
 
 const MAKS_BUKTI = 3 * 1024 * 1024; // 3 MB (batas body server)
+
+// Foto profil akun terdaftar; bila tidak ada / gagal dimuat → huruf pertama nama
+function FotoAkun({ user }) {
+  const [gagal, setGagal] = useState(false);
+  const huruf = (user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
+  if (!user?.picture || gagal || user.picture.includes("via.placeholder.com")) {
+    return <span className={styles.fotoAkunHuruf} aria-hidden="true">{huruf}</span>;
+  }
+  return <img src={user.picture} alt={user.name || "Foto profil"} className={styles.fotoAkun}
+    referrerPolicy="no-referrer" onError={() => setGagal(true)} />;
+}
 
 // grade / onGradeChange (opsional): bila diberikan, grade dikontrol dari luar (Products) sehingga
 // pilihan di kartu Produk dan di form selalu sama. Tanpa itu, grade dipegang form sendiri.
@@ -44,8 +55,35 @@ export default function OrderForm({
   const [verif, setVerif] = useState(false);
   const [simpan, setSimpan] = useState({ status: "idle", pesan: "" }); // idle | menyimpan | tersimpan | galat
   const [verifTerakhir, setVerifTerakhir] = useState(null);
+  const [tersalin, setTersalin] = useState(false);
+  const alamatSentuhRef = useRef(false); // true setelah pengguna mengetik / menghapus Alamat Tujuan
+  const geoRef = useRef(null); // titik terakhir yang sudah dicarikan alamatnya
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
   const mitra = MITRA.find((m) => m.id === f.mitraId);
+
+  // Alamat Tujuan terisi otomatis dari lokasi (GPS live / pencarian). Berhenti menimpa begitu pengguna
+  // mengetik atau menghapus alamat; pengguna bebas mengubahnya.
+  useEffect(() => {
+    if (!lokasi || alamatSentuhRef.current) return;
+    if (lokasi.label) { setF((s) => ({ ...s, alamat: lokasi.label })); return; } // hasil pencarian sudah berupa alamat
+    if (geoRef.current && jarakM(geoRef.current, lokasi) < 30) return; // belum berpindah jauh
+    const ac = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=id&lat=${lokasi.lat}&lon=${lokasi.lng}`,
+          { signal: ac.signal }
+        );
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j?.display_name && !alamatSentuhRef.current) {
+          geoRef.current = { lat: lokasi.lat, lng: lokasi.lng };
+          setF((s) => ({ ...s, alamat: j.display_name }));
+        }
+      } catch { /* dibatalkan / offline: biarkan alamat apa adanya */ }
+    }, 800);
+    return () => { clearTimeout(t); ac.abort(); };
+  }, [lokasi]);
 
   // Jumlah SELALU diisi dalam Ton (boleh desimal, mis. 1,2). Domestik dihitung per Kg → dikonversi.
   const domestik = config.mode === "domestik";
@@ -91,6 +129,7 @@ export default function OrderForm({
   // [SECTION: DATA-ORDER]
   const order = harga && mitra ? {
     id: invId,
+    pembeli: { id: user?.name || "", email: user?.email || "" },
     tanggal: new Date().toLocaleDateString("id-ID", { dateStyle: "long" }),
     jenis: config.judul, nama: f.nama, wa, alamat: f.alamat, catatan: f.catatan.trim(), lokasi,
     mitra: mitra.nama, ahu: mitra.ahu, nib: mitra.nib,
@@ -106,6 +145,14 @@ export default function OrderForm({
 
   // [SECTION: INFO-BAYAR]
   const tf = mitra?.pembayaran.transfer[config.mode];
+  const bankPenerima = cariProvider(tf?.bank);
+  const salin = async () => {
+    try {
+      await navigator.clipboard.writeText(String(tf.noRek));
+      setTersalin(true);
+      setTimeout(() => setTersalin(false), 2000);
+    } catch { /* clipboard tidak tersedia */ }
+  };
   // [/SECTION: INFO-BAYAR]
 
   // [SECTION: SIMPAN-PENDING] dipanggil setelah verifikasi berhasil; order masuk server berstatus "pending"
@@ -139,9 +186,23 @@ export default function OrderForm({
         {config.catatan && <p>{config.catatan}</p>}
       </header>
 
+      {/* [SECTION: PEMBELI] data akun terdaftar (tidak bisa diubah di sini) */}
+      <section className={styles.seksi}>
+        <h5 className={styles.seksiJudul}><i>1</i>Data Pembeli</h5>
+        <div className={styles.pembeli}>
+          <FotoAkun user={user} />
+          <dl className={styles.pjData}>
+            <div><dt>ID Akun</dt><dd>{user?.name || "—"}</dd></div>
+            <div><dt>Email</dt><dd>{user?.email || "—"}</dd></div>
+          </dl>
+        </div>
+        <span className={styles.hint}>Diambil dari akun terdaftar Anda dan tidak dapat diubah di form ini.</span>
+      </section>
+      {/* [/SECTION: PEMBELI] */}
+
       {/* [SECTION: PENERIMA] */}
       <section className={styles.seksi}>
-        <h5 className={styles.seksiJudul}><i>1</i>Data Penerima</h5>
+        <h5 className={styles.seksiJudul}><i>2</i>Data Penerima</h5>
         <div className={styles.grid2}>
           <label className={styles.label}>Nama Penerima
             <input className={styles.input} value={f.nama} onChange={set("nama")} autoComplete="name" /></label>
@@ -149,7 +210,10 @@ export default function OrderForm({
             <input className={styles.input} inputMode="tel" value={f.wa} onChange={set("wa")} placeholder="62812xxxx" autoComplete="tel" /></label>
         </div>
         <label className={styles.label}>Alamat Tujuan
-          <textarea className={styles.input} rows={3} value={f.alamat} onChange={set("alamat")} /></label>
+          <textarea className={styles.input} rows={3} value={f.alamat}
+            onChange={(e) => { alamatSentuhRef.current = true; set("alamat")(e); }} />
+          {lokasi && <span className={styles.hint}>Terisi otomatis dari lokasi GPS. Anda bebas mengubah atau menghapusnya.</span>}
+        </label>
 
         {/* [SECTION: CATATAN] tepat di bawah Alamat Tujuan */}
         <label className={styles.label}>Catatan (opsional)
@@ -165,7 +229,7 @@ export default function OrderForm({
 
       {/* [SECTION: BROKER] */}
       <section className={styles.seksi}>
-        <h5 className={styles.seksiJudul}><i>2</i>Broker (mitra terdaftar)</h5>
+        <h5 className={styles.seksiJudul}><i>3</i>Broker (mitra terdaftar)</h5>
         {MITRA.length > 1 && (
           <div className={styles.mitraList}>
             {MITRA.map((m) => (
@@ -187,13 +251,23 @@ export default function OrderForm({
                 <dl className={styles.legal}>
                   <div><dt>Nomor AHU</dt><dd>{mitra.ahu || "—"}</dd></div>
                   <div><dt>NIB</dt><dd>{mitra.nib || "—"}</dd></div>
-                  <div><dt>Alamat</dt><dd>{mitra.alamat || "—"}</dd></div>
+                  <div><dt>Kantor</dt><dd>{mitra.alamat || "—"}</dd></div>
                 </dl>
                 {mitra.maps && (
                   <a className={styles.btnMaps} href={mitra.maps} target="_blank" rel="noopener noreferrer">Ke Maps</a>
                 )}
               </div>
             </div>
+            {mitra.embedMap && (
+              <div className={styles.brokerPeta}>
+                <div className={styles.brokerPetaJudul}>
+                  <b>Lokasi Operasional</b>
+                  {mitra.alamatOps && <span>{mitra.alamatOps}</span>}
+                </div>
+                <iframe title={`Peta lokasi operasional ${mitra.nama}`} src={mitra.embedMap}
+                  loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+              </div>
+            )}
             <div className={styles.pj}>
               <img src={mitra.penanggungJawab.foto} alt={mitra.penanggungJawab.nama} className={styles.pjFoto} />
               <div>
@@ -215,7 +289,7 @@ export default function OrderForm({
 
       {/* [SECTION: GRADE-JUMLAH] */}
       <section className={styles.seksi}>
-        <h5 className={styles.seksiJudul}><i>3</i>Produk &amp; Jumlah</h5>
+        <h5 className={styles.seksiJudul}><i>4</i>Produk &amp; Jumlah</h5>
         {adaGrade ? (
           <>
             <div className={styles.label}>Pilihan Grade — {produk}</div>
@@ -248,7 +322,7 @@ export default function OrderForm({
 
       {/* [SECTION: METODE-BAYAR] logo/gambar ada di public/pembayaran/ */}
       <section className={styles.seksi}>
-        <h5 className={styles.seksiJudul}><i>4</i>Pembayaran</h5>
+        <h5 className={styles.seksiJudul}><i>5</i>Pembayaran</h5>
         <div className={styles.bayarRow}>
           <button type="button" className={`${styles.bayarBtn} ${f.metode === "transfer" ? styles.gradeAktif : ""}`}
             onClick={() => setF((s) => ({ ...s, metode: "transfer" }))}>
@@ -261,12 +335,26 @@ export default function OrderForm({
 
         {/* [SECTION: INFO-PEMBAYARAN] rekening / QR tujuan transfer */}
         {mitra && (
-          <div className={styles.info}>
-            <div className={styles.brokerHead}><img src={mitra.logo} alt="" /><b>{mitra.nama}</b></div>
-            {f.metode === "transfer" && tf && (
-              <p>{tf.bank} · <b>{tf.noRek}</b><br />a.n. {tf.atasNama}{tf.swift ? <><br />SWIFT: {tf.swift}</> : null}</p>
-            )}
-            {f.metode === "qris" && <img src={mitra.pembayaran.qris} alt="QRIS" className={styles.qris} />}
+          <div className={`${styles.brokerCard} ${styles.bayarCard}`}>
+            <img src={mitra.logo} alt={mitra.nama} className={styles.brokerLogo} />
+            <div className={styles.brokerIsi}>
+              <small className={styles.kecil}>Penerima Pembayaran</small>
+              <b className={styles.brokerNama}>{mitra.nama}</b>
+              {f.metode === "transfer" && tf && (
+                <div className={styles.rekPenerima}>
+                  <div className={styles.rekBank}>
+                    {bankPenerima && <LogoProvider key={bankPenerima.kode} p={bankPenerima} besar />}
+                    <span>{tf.bank}</span>
+                  </div>
+                  <div className={styles.rekNomor}>
+                    <b>{tf.noRek}</b>
+                    <button type="button" className={styles.btnSalin} onClick={salin}>{tersalin ? "Tersalin ✓" : "Salin"}</button>
+                  </div>
+                  <span className={styles.hint}>a.n. {tf.atasNama}{tf.swift ? ` · SWIFT ${tf.swift}` : ""}</span>
+                </div>
+              )}
+              {f.metode === "qris" && <img src={mitra.pembayaran.qris} alt="QRIS" className={styles.qris} />}
+            </div>
           </div>
         )}
         {/* [/SECTION: INFO-PEMBAYARAN] */}
@@ -274,7 +362,7 @@ export default function OrderForm({
 
       {/* [SECTION: REKENING-PEMBELI] tepat setelah info rekening / QR penerima */}
       <section className={styles.seksi}>
-        <h5 className={styles.seksiJudul}><i>5</i>Rekening / E-Wallet Anda</h5>
+        <h5 className={styles.seksiJudul}><i>6</i>Rekening / E-Wallet Anda</h5>
         <span className={styles.hint}>Akun yang Anda pakai untuk membayar, agar pembayaran mudah dicocokkan.</span>
         <div className={styles.segmen} role="group" aria-label="Jenis akun">
           <button type="button" className={bank ? styles.segAktif : ""}
@@ -305,7 +393,7 @@ export default function OrderForm({
 
       {/* [SECTION: UPLOAD-BUKTI] */}
       <section className={styles.seksi}>
-        <h5 className={styles.seksiJudul}><i>6</i>Bukti Pembayaran</h5>
+        <h5 className={styles.seksiJudul}><i>7</i>Bukti Pembayaran</h5>
         <input className={styles.input} type="file" accept="image/*,application/pdf" aria-label="Upload bukti pembayaran"
           onChange={(e) => setBukti(e.target.files?.[0] ?? null)} />
       </section>

@@ -50,7 +50,7 @@ export async function POST(req) {
     const buktiB64 = Buffer.from(await bukti.arrayBuffer()).toString("base64");
 
     const data = {
-      id: o.id, tanggal: teks(o.tanggal, 60), jenis: teks(o.jenis, 30),
+      id: o.id, pembeli: { id: teks(o.pembeli?.id, 120), email: teks(form.get("email"), 200).toLowerCase() }, tanggal: teks(o.tanggal, 60), jenis: teks(o.jenis, 30),
       nama: teks(o.nama, 120), wa: String(o.wa).replace(/\D/g, ""), alamat: teks(o.alamat, 500), catatan: teks(o.catatan, 500),
       lokasi: o.lokasi && Number.isFinite(Number(o.lokasi.lat)) && Number.isFinite(Number(o.lokasi.lng))
         ? { lat: Number(o.lokasi.lat), lng: Number(o.lokasi.lng), akurasi: o.lokasi.akurasi ?? null, sumber: teks(o.lokasi.sumber, 20), waktu: o.lokasi.waktu ?? null }
