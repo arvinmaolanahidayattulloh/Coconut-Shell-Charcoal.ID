@@ -1,157 +1,60 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import InvestIntro from "./invest/InvestIntro";
+import InvestPageContent from "./invest/invest.page";
+import InvestProfileContent from "./invest/invest.profile";
+import styles from "./invest/invest.module.css";
 
-// Import sub-komponen dari folder invest
-import InvestPageContent from './invest/invest.page';
-import InvestProfileContent from './invest/invest.profile';
-
-// embedded : true saat ditampilkan sebagai bagian halaman utama (di bawah chart) → banner "Buka di Apps" dan menu bawah
-//            ikut mengalir di dalam bagian itu, tidak menempel di atas / bawah layar.
-//            false (halaman khusus /invest) → tampilan layar penuh.
+// embedded: true di halaman utama (mengalir di dalam bagian), false di /invest (layar penuh).
 export default function Invest({ embedded = false }) {
-  // State untuk mengontrol halaman mana yang sedang aktif
-  const [activeTab, setActiveTab] = useState('invest');
-  
-  // State global untuk status investasi
+  const [activeTab, setActiveTab] = useState("invest");
   const [invested, setInvested] = useState(false);
 
-  // Fungsi untuk menangani tombol "Buka di Apps"
   const handleOpenApp = () => {
-    // Coba arahkan ke Custom Scheme aplikasi (misal: cscid://invest)
-    const appSchema = "cscid://invest";
-    const webFallbackUrl = "/invest"; // halaman khusus Invest di domain utama (CoconutShellCharcoal.id/invest)
-
-    // Catat waktu saat mencoba membuka aplikasi
-    const startTimestamp = Date.now();
-
-    // Panggil skema aplikasi
-    window.location.href = appSchema;
-
-    // Sudah berada di halaman khusus /invest: tidak ada tujuan web lain
-    if (!embedded) return;
-
-    // Dari halaman utama: jika dalam 1.5 detik pengguna masih di halaman ini (aplikasi belum terinstal),
-    // alihkan otomatis ke halaman khusus /invest.
+    const start = Date.now();
+    window.location.href = "cscid://invest";
+    if (!embedded) return; // sudah di /invest, tidak ada tujuan web lain
     setTimeout(() => {
-      const elapsed = Date.now() - startTimestamp;
-      if (elapsed < 2000 && document.hasFocus()) {
-        window.location.href = webFallbackUrl;
-      }
+      if (Date.now() - start < 2000 && document.hasFocus()) window.location.href = "/invest";
     }, 1500);
   };
 
+  const full = !embedded;
+
   return (
-    <div style={embedded
-      ? { background: '#f8fafc', borderRadius: '24px', overflow: 'hidden' }
-      : { minHeight: '100vh', background: '#f8fafc', paddingBottom: '60px' }}>
+    <>
+      <InvestIntro />
 
-      {/* 🚀 MENU PALING ATAS: BUKA DI APPS / HALAMAN KHUSUS /invest */}
-      <div style={embedded ? { ...appBannerStyle, position: 'static' } : appBannerStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>📱</span>
+      <div className={`${styles.shell} ${full ? styles.shellFull : ""}`}>
+        <div className={`${styles.appBar} ${full ? styles.appBarFull : ""}`}>
           <div>
-            <span style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>
-              Gunakan Aplikasi CSCID
-            </span>
-            <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
-              Lebih cepat & stabil di aplikasi resmi
-            </span>
+            <strong>Gunakan Aplikasi CSCID</strong>
+            <span>Lebih cepat dan stabil di aplikasi resmi</span>
           </div>
+          <button type="button" className={styles.openApp} onClick={handleOpenApp}>Buka di Apps</button>
         </div>
-        <button onClick={handleOpenApp} style={openAppBtnStyle}>
-          Buka di Apps
-        </button>
+
+        <main className={styles.content}>
+          {activeTab === "invest" && (
+            <InvestPageContent invested={invested} setInvested={setInvested} setActiveTab={setActiveTab} />
+          )}
+          {activeTab === "profil" && <InvestProfileContent setActiveTab={setActiveTab} />}
+        </main>
+
+        <nav className={`${styles.bottomNav} ${full ? styles.bottomNavFull : ""}`} aria-label="Menu Invest">
+          {[["invest", "Beranda"], ["profil", "Profil"]].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveTab(id)}
+              className={`${styles.navBtn} ${activeTab === id ? styles.navBtnActive : ""}`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
       </div>
-
-      {/* AREA KONTEN DINAMIS */}
-      <main style={{ marginTop: '10px' }}>
-        {activeTab === 'invest' && (
-          <InvestPageContent 
-            invested={invested} 
-            setInvested={setInvested} 
-            setActiveTab={setActiveTab} 
-          />
-        )}
-
-        {activeTab === 'profil' && (
-          <InvestProfileContent 
-            setActiveTab={setActiveTab} 
-          />
-        )}
-      </main>
-
-      {/* NAVIGASI BAWAH (BOTTOM NAVIGATION) */}
-      <div style={embedded ? { ...bottomNavStyle, position: 'static', boxShadow: 'none' } : bottomNavStyle}>
-        <button 
-          onClick={() => setActiveTab('invest')} 
-          style={{ ...navBtnStyle, color: activeTab === 'invest' ? '#c45e20' : '#64748b' }}
-        >
-          <span style={{ fontSize: '20px', marginBottom: '4px' }}>🏠</span>
-          Beranda
-        </button>
-        <button 
-          onClick={() => setActiveTab('profil')} 
-          style={{ ...navBtnStyle, color: activeTab === 'profil' ? '#c45e20' : '#64748b' }}
-        >
-          <span style={{ fontSize: '20px', marginBottom: '4px' }}>👤</span>
-          Profil
-        </button>
-      </div>
-
-    </div>
+    </>
   );
 }
-
-// --- Styling Komponen ---
-
-const appBannerStyle = {
-  background: '#ffffff',
-  borderBottom: '1px solid #e2e8f0',
-  padding: '10px 16px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  position: 'sticky',
-  top: 0,
-  zIndex: 101,
-  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-};
-
-const openAppBtnStyle = {
-  background: '#c45e20',
-  color: '#ffffff',
-  border: 'none',
-  padding: '8px 14px',
-  borderRadius: '8px',
-  fontSize: '12px',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-  boxShadow: '0 2px 6px rgba(196,94,32,0.3)'
-};
-
-const bottomNavStyle = {
-  position: 'fixed',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  background: '#ffffff',
-  borderTop: '1px solid #e2e8f0',
-  display: 'flex',
-  justifyContent: 'space-around',
-  padding: '10px 0',
-  boxShadow: '0 -4px 10px rgba(0,0,0,0.05)',
-  zIndex: 100
-};
-
-const navBtnStyle = {
-  background: 'transparent',
-  border: 'none',
-  fontSize: '12px',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  flex: 1
-};
