@@ -77,10 +77,10 @@ export default function OrderForm({
   useEffect(() => {
     fetch("/api/device-ip").then((r) => r.json()).then((j) => setDeviceIp(j.ip || "")).catch(() => {});
   }, []);
-  // tombol +0,1 / +1 / +10 pada Jumlah (dibulatkan 2 desimal agar tidak muncul 2.3000000001)
+  // tombol −10 / −1 / +1 / +10 pada Jumlah (dibulatkan 2 desimal agar tidak muncul 2.3000000001; tidak boleh di bawah 0)
   const tambahTon = (n) => setF((s) => {
     const kini = Number(String(s.qty).replace(",", ".")) || 0;
-    return { ...s, qty: String(Math.round((kini + n) * 100) / 100) };
+    return { ...s, qty: String(Math.max(0, Math.round((kini + n) * 100) / 100)) };
   });
   const [verif, setVerif] = useState(false);
   const [simpan, setSimpan] = useState({ status: "idle", pesan: "" }); // idle | menyimpan | tersimpan | galat
@@ -345,11 +345,12 @@ export default function OrderForm({
         )}
         <label className={styles.label}>Jumlah (Ton) — min. {fmtAngka(minTon)}
           <span className={rev.qtyRow}>
+            <button type="button" className={rev.btnTambah} aria-label="Kurangi 10 Ton" onClick={() => tambahTon(-10)}>−10</button>
+            <button type="button" className={rev.btnTambah} aria-label="Kurangi 1 Ton" onClick={() => tambahTon(-1)}>−1</button>
             <input className={`${styles.input} ${rev.qtyInput}`} type="number" min={minTon} step="0.1" inputMode="decimal"
               placeholder={`mis. ${fmtAngka(minTon)} atau ${fmtAngka(minTon + 0.2)}`} value={f.qty} onChange={set("qty")} />
-            <button type="button" className={rev.btnTambah} onClick={() => tambahTon(0.1)}>+0,1</button>
-            <button type="button" className={rev.btnTambah} onClick={() => tambahTon(1)}>+1</button>
-            <button type="button" className={rev.btnTambah} onClick={() => tambahTon(10)}>+10</button>
+            <button type="button" className={rev.btnTambah} aria-label="Tambah 1 Ton" onClick={() => tambahTon(1)}>+1</button>
+            <button type="button" className={rev.btnTambah} aria-label="Tambah 10 Ton" onClick={() => tambahTon(10)}>+10</button>
           </span>
           <span className={styles.hint}>Boleh desimal, mis. 1,2 Ton. Minimal order {fmtAngka(minTon)} Ton.</span>
         </label>
