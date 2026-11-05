@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import RevealWrapper from "./RevealWrapper";
 import { usePrice } from "@/context/PriceContext";
 import { useAccount } from "./Account";
-import BuyAction from "./BuyAction";
+import BuyAction, { OrderPanel } from "./BuyAction";
 import styles from "./Products.module.css";
 
 const PRODUCTS = [
@@ -114,15 +114,11 @@ function useLiveCsc() {
   return { ready: true, idr, usd, chgIdr, flash };
 }
 
-function LivePrice({ product, live }) {
+function LivePrice({ product, live, orderMode, onOrderMode }) {
   const { user } = useAccount();
-  // Belum login: buka Register. Sudah login: tampil form Ekspor / Domestik (BuyAction).
+  // Belum login: buka Register. Sudah login: tombol Ekspor / Domestik (formnya di bawah section).
   const onBuy = () => window.dispatchEvent(new CustomEvent("open-register"));
   const k = 1 + (product.markup || 0); // Karbon Aktif +25%, Briket +50% dari harga dasar
-  // Harga order: Rupiah per TON (sudah termasuk markup produk). Persen grade
-  // (A +5%, B +2,5%, C +0%) ditambahkan di OrderForm lewat hitungHarga() di harga.js.
-  const hargaTonIdr = live.ready ? live.idr * k : 0;
-  const usdIdr = live.ready && live.usd > 0 ? live.idr / live.usd : 0;
   const chg = live.ready ? live.chgIdr * k : 0;
   const up = chg >= 0;
 
@@ -152,14 +148,7 @@ function LivePrice({ product, live }) {
       </div>
 
       {user ? (
-        <BuyAction
-          isLoggedIn
-          onBuyGuest={onBuy}
-          produk={product.name}
-          hargaTonIdr={hargaTonIdr}
-          usdIdr={usdIdr}
-          onSelesai={() => {}} // batch 2: Verifikasi
-        />
+        <BuyAction isLoggedIn onBuyGuest={onBuy} mode={orderMode} onMode={onOrderMode} />
       ) : (
         <button type="button" className={styles.detailsCta} onClick={onBuy}>
           Buy
@@ -266,6 +255,18 @@ export default function Products() {
   };
 
   const activeProduct = PRODUCTS[activeIndex];
+
+  // Form order (Ekspor / Domestik) tampil DI BAWAH section Produk; kartu hanya berisi tombol.
+  const [orderMode, setOrderMode] = useState(null); // null | "ekspor" | "domestik"
+  const orderRef = useRef(null);
+  useEffect(() => {
+    if (orderMode && user) orderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [orderMode, user]);
+
+  // Harga order: Rupiah per TON (sudah termasuk markup produk). Persen grade
+  // (A +5%, B +2,5%, C +0%) ditambahkan di OrderForm lewat hitungHarga() di harga.js.
+  const orderHargaTonIdr = live.ready ? live.idr * (1 + (activeProduct.markup || 0)) : 0;
+  const orderUsdIdr = live.ready && live.usd > 0 ? live.idr / live.usd : 0;
 
   // Responsive variables
   const isMobile = windowWidth < 640;
@@ -474,7 +475,7 @@ export default function Products() {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ delay: 0.05, duration: 0.25 }}
                   >
-                    <LivePrice product={activeProduct} live={live} />
+                    <LivePrice product={activeProduct} live={live} orderMode={orderMode} onOrderMode={setOrderMode} />
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -524,6 +525,20 @@ export default function Products() {
           </div>
         </motion.div>
       </div>
+
+      {/* Form order di bawah Produk (hanya setelah login & memilih Ekspor / Domestik) */}
+      {user && orderMode && (
+        <div ref={orderRef} style={{ maxWidth: 720, margin: "28px auto 0", scrollMarginTop: 96 }}>
+          <OrderPanel
+            key={`${orderMode}-${activeProduct.name}`}
+            mode={orderMode}
+            produk={activeProduct.name}
+            hargaTonIdr={orderHargaTonIdr}
+            usdIdr={orderUsdIdr}
+            onSelesai={() => {}} // batch 2: Verifikasi
+          />
+        </div>
+      )}
     </section>
   );
 }
