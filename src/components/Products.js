@@ -7,6 +7,8 @@ import RevealWrapper from "./RevealWrapper";
 import { usePrice } from "@/context/PriceContext";
 import { useAccount } from "./Account";
 import BuyAction, { OrderPanel } from "./BuyAction";
+import GradePicker from "./GradePicker";
+import { GRADE, GRADE_AWAL, PRODUK_BERGRADE } from "@/data/Grade";
 import styles from "./Products.module.css";
 
 const PRODUCTS = [
@@ -114,11 +116,14 @@ function useLiveCsc() {
   return { ready: true, idr, usd, chgIdr, flash };
 }
 
-function LivePrice({ product, live, orderMode, onOrderMode }) {
+function LivePrice({ product, live, orderMode, onOrderMode, grade, onGrade }) {
   const { user } = useAccount();
   // Belum login: buka Register. Sudah login: tombol Ekspor / Domestik (formnya di bawah section).
   const onBuy = () => window.dispatchEvent(new CustomEvent("open-register"));
-  const k = 1 + (product.markup || 0); // Karbon Aktif +25%, Briket +50% dari harga dasar
+  // Grade (Natural saja): A +5%, B +2,5%, C +0% dari harga dasar. Harga yang tampil ikut grade.
+  const adaGrade = PRODUK_BERGRADE.includes(product.name);
+  const persenGrade = adaGrade ? (GRADE.find((g) => g.kode === grade)?.persen ?? 0) : 0;
+  const k = (1 + (product.markup || 0)) * (1 + persenGrade / 100); // Karbon Aktif +25%, Briket +50% dari harga dasar
   const chg = live.ready ? live.chgIdr * k : 0;
   const up = chg >= 0;
 
@@ -157,6 +162,13 @@ function LivePrice({ product, live, orderMode, onOrderMode }) {
             <polyline points="9 4 13 8 9 12"></polyline>
           </svg>
         </button>
+      )}
+
+      {adaGrade && (
+        <div className={styles.gradeBox}>
+          <span className={styles.gradeLabel}>Pilih Grade</span>
+          <GradePicker value={grade} onChange={onGrade} tampilSpek={false} />
+        </div>
       )}
     </div>
   );
@@ -258,6 +270,7 @@ export default function Products() {
 
   // Form order (Ekspor / Domestik) tampil DI BAWAH section Produk; kartu hanya berisi tombol.
   const [orderMode, setOrderMode] = useState(null); // null | "ekspor" | "domestik"
+  const [grade, setGrade] = useState(GRADE_AWAL); // dipakai kartu Produk DAN form order (selalu sama)
   const orderRef = useRef(null);
   useEffect(() => {
     if (orderMode && user) orderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -475,7 +488,14 @@ export default function Products() {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ delay: 0.05, duration: 0.25 }}
                   >
-                    <LivePrice product={activeProduct} live={live} orderMode={orderMode} onOrderMode={setOrderMode} />
+                    <LivePrice
+                      product={activeProduct}
+                      live={live}
+                      orderMode={orderMode}
+                      onOrderMode={setOrderMode}
+                      grade={grade}
+                      onGrade={setGrade}
+                    />
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -535,6 +555,8 @@ export default function Products() {
             produk={activeProduct.name}
             hargaTonIdr={orderHargaTonIdr}
             usdIdr={orderUsdIdr}
+            grade={grade}
+            onGradeChange={setGrade}
             onSelesai={() => {}} // batch 2: Verifikasi
           />
         </div>

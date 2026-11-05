@@ -6,3 +6,8 @@ export const GRADE = [
   { kode: "C", nama: "Grade C", persen: 0,   spek: { kadarAir: "—", kadarAbu: "—", zatTerbang: "—", karbonTetap: "—", nilaiKalori: "—" } },
 ];
 // [/SECTION: DAFTAR-GRADE]
+
+// [SECTION: PRODUK-BERGRADE] hanya produk ini yang punya pilihan Grade (nama sama dengan PRODUCTS di Products.js)
+export const PRODUK_BERGRADE = ["Natural"];
+export const GRADE_AWAL = "C"; // +0% = harga indeks apa adanya
+// [/SECTION: PRODUK-BERGRADE]

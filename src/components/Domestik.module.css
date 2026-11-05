@@ -1,13 +1,7 @@
 /* [FILE: src/components/Domestik.module.css] */
 
-/* [SECTION: TEMA-DOMESTIK] warna aksen Domestik (hijau) */
+/* [SECTION: TEMA-DOMESTIK] aksen Domestik: copper (satu keluarga dengan ember) */
 .root {
-  --aksen: #2e9e5b;
-  padding-top: 12px;
-  border-top: 3px solid var(--aksen);
-}
-.root h4 {
-  margin: 0;
-  color: var(--aksen);
+  --aksen: var(--color-copper);
 }
 /* [/SECTION: TEMA-DOMESTIK] */

@@ -18,10 +18,10 @@ export default function BuyAction({ isLoggedIn, onBuyGuest, mode, onMode }) {
 // [/SECTION: BUY-ACTION]
 
 // [SECTION: ORDER-PANEL] form order, dirender Products DI BAWAH section Produk
-export function OrderPanel({ mode, produk = "Natural", hargaTonIdr, usdIdr, onSelesai }) {
-  const p = { produk, hargaTonIdr, usdIdr, onSelesai };
-  if (mode === "ekspor") return <Ekspor {...p} />;
-  if (mode === "domestik") return <Domestik {...p} />;
+// sisa props (produk, hargaTonIdr, usdIdr, onSelesai, grade, onGradeChange) diteruskan ke form
+export function OrderPanel({ mode, ...sisa }) {
+  if (mode === "ekspor") return <Ekspor {...sisa} />;
+  if (mode === "domestik") return <Domestik {...sisa} />;
   return null;
 }
 // [/SECTION: ORDER-PANEL]

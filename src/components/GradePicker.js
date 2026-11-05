@@ -5,14 +5,14 @@ import { GRADE } from "@/data/Grade";
 
 const LABEL = { kadarAir: "Kadar Air", kadarAbu: "Kadar Abu", zatTerbang: "Zat Terbang", karbonTetap: "Karbon Tetap", nilaiKalori: "Nilai Kalori" };
 
-// [SECTION: GRADE-PICKER] dipakai di kartu produk DAN di form order
+// [SECTION: GRADE-PICKER] dipakai di kartu produk DAN di form order (state dipegang Products)
 export default function GradePicker({ value, onChange, tampilSpek = true }) {
   const g = GRADE.find((x) => x.kode === value) ?? GRADE[0];
   return (
     <div>
-      <div className={styles.gradeRow}>
+      <div className={styles.gradeRow} role="group" aria-label="Pilihan grade">
         {GRADE.map((x) => (
-          <button key={x.kode} type="button"
+          <button key={x.kode} type="button" aria-pressed={x.kode === value}
             className={`${styles.gradeBtn} ${x.kode === value ? styles.gradeAktif : ""}`}
             onClick={() => onChange(x.kode)}>
             {x.nama}<small>+{String(x.persen).replace(".", ",")}%</small>

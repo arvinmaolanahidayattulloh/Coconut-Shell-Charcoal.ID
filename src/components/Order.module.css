@@ -1,81 +1,407 @@
-/* [FILE: src/components/Order.module.css] */
+/* [FILE: src/components/Order.module.css]
+   Tema mengikuti website: ember / cream, Space Grotesk, kartu 28px, input 10px
+   dengan fokus ember, tombol pill gradient (sama seperti Products & Login). */
 
-/* [SECTION: AKSI] tombol Ekspor / Domestik (dipakai BuyAction) */
+/* [SECTION: AKSI] tombol Ekspor / Domestik (dipakai BuyAction di kartu Produk) */
 .aksi {
   display: flex;
-  gap: 8px;
-  margin: 12px 0;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .tombolAksi {
-  flex: 1;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--aksen, #1d6fd6);
+  padding: 12px 26px;
+  border-radius: 100px;
+  border: 1.5px solid var(--color-ember);
   background: transparent;
-  color: inherit;
+  color: var(--color-ember);
+  font-family: inherit;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.25s ease, box-shadow 0.3s ease, transform 0.2s ease, color 0.2s ease;
 }
-.aktif {
-  background: var(--aksen, #1d6fd6);
+.tombolAksi:hover {
+  background: rgba(196, 94, 32, 0.08);
+  transform: translateY(-1px);
+}
+.aktif,
+.aktif:hover {
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 4px 14px rgba(196, 94, 32, 0.3);
 }
 /* [/SECTION: AKSI] */
 
-/* [SECTION: FORM] wadah form; warna --aksen datang dari Ekspor/Domestik */
+/* [SECTION: FORM] kartu form; warna --aksen datang dari Ekspor/Domestik (tetap satu keluarga ember) */
 .form {
+  position: relative;
   display: flex;
   flex-direction: column;
+  gap: 26px;
+  padding: 40px 44px;
+  text-align: left;
+  background: rgba(254, 252, 249, 0.97);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  border-radius: 28px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.form::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 44px;
+  right: 44px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, var(--aksen, var(--color-ember)), var(--color-ember-light));
+}
+.formHead h4 {
+  margin-top: 2px;
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.formHead p {
+  margin-top: 6px;
+  font-size: var(--text-sm);
+  color: var(--color-stone);
+}
+
+.seksi {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(26, 26, 26, 0.07);
+}
+.seksiJudul {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.seksiJudul i {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(196, 94, 32, 0.1);
+  color: var(--color-ember);
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 .label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-  opacity: 0.9;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-graphite);
 }
 .input {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(128, 128, 128, 0.4);
-  background: transparent;
-  color: inherit;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111827;
   font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+.input::placeholder {
+  color: #9ca3af;
+}
+.input:focus {
+  border-color: var(--color-ember);
+  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.12);
+}
+textarea.input {
+  min-height: 84px;
+  resize: vertical;
+}
+.input[type="file"] {
+  padding: 8px;
+  cursor: pointer;
+}
+.input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 100px;
+  background: rgba(196, 94, 32, 0.1);
+  color: var(--color-ember);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-stone);
+  line-height: 1.5;
+}
+
 .hargaBox {
-  padding: 10px;
-  border-radius: 8px;
-  background: rgba(128, 128, 128, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(196, 94, 32, 0.08), rgba(212, 137, 10, 0.06));
+  border: 1px solid rgba(196, 94, 32, 0.2);
+  font-variant-numeric: tabular-nums;
+}
+.hargaBox small {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+}
+.hargaBox span {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+.hargaBox strong {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-carbon);
+}
+.hargaMuat {
+  font-size: 14px;
+  color: var(--color-stone);
 }
 .galat {
-  color: #d33;
+  color: #dc2626;
   font-size: 0.85rem;
 }
 /* [/SECTION: FORM] */
 
-/* [SECTION: MITRA] pilihan broker + foto penanggung jawab 1:1 */
-.mitraList {
+/* [SECTION: SEGMEN] tombol pilihan 2-3 opsi (jenis akun, tab lokasi) */
+.segmen {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 100px;
+  background: #f1eee9;
+}
+.segmen button {
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 100px;
+  background: transparent;
+  color: var(--color-graphite);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.segmen button:hover {
+  color: var(--color-ember);
+}
+.segmen .segAktif {
+  background: #fff;
+  color: var(--color-ember);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+/* [/SECTION: SEGMEN] */
+
+/* [SECTION: LOKASI] GPS akurat / cari di peta / koordinat */
+.lokasi {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+}
+.lokasiJudul {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-graphite);
+}
+.lokasiJudul small {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--color-stone);
+}
+.baris {
+  display: flex;
+  gap: 8px;
+}
+.baris .input {
+  flex: 1;
+  min-width: 0;
+}
+.btnSolid,
+.btnGhost {
+  padding: 11px 20px;
+  border-radius: 100px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.btnSolid {
+  border: 0;
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(196, 94, 32, 0.3);
+}
+.btnSolid:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.btnSolid:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.btnGhost {
+  border: 1.5px solid rgba(26, 26, 26, 0.12);
+  background: transparent;
+  color: var(--color-graphite);
+}
+.btnGhost:hover {
+  border-color: var(--color-ember);
+  color: var(--color-ember);
+}
+.statusTeks {
+  font-size: 13px;
+  color: var(--color-graphite);
+  line-height: 1.5;
+}
+.hasilList {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+.hasilItem {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: var(--color-carbon);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.hasilItem:hover {
+  border-color: var(--color-ember);
+  background: rgba(196, 94, 32, 0.05);
+}
+.peta {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(26, 26, 26, 0.1);
+  background: #e8e5e0;
+}
+.peta iframe {
+  display: block;
+  width: 100%;
+  height: 230px;
+  border: 0;
+}
+.lokasiMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--color-graphite);
+}
+.lokasiMeta b {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-carbon);
+}
+.lokasiLabel {
+  flex-basis: 100%;
+  color: var(--color-stone);
+  line-height: 1.45;
+}
+.lokasiMeta a {
+  color: var(--color-ember);
+  font-weight: 600;
+}
+.lokasiMeta a:hover {
+  text-decoration: underline;
+}
+.btnLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #dc2626;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btnLink:hover {
+  text-decoration: underline;
+}
+/* [/SECTION: LOKASI] */
+
+/* [SECTION: MITRA] pilihan broker + foto penanggung jawab 1:1 */
+.mitraList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
 .mitraItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(128, 128, 128, 0.4);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: var(--color-carbon);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.mitraItem:hover {
+  border-color: rgba(196, 94, 32, 0.5);
 }
 .mitraAktif {
-  border-color: var(--aksen, #1d6fd6);
-  box-shadow: 0 0 0 2px var(--aksen, #1d6fd6);
+  border-color: var(--color-ember);
+  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.12);
 }
 .mitraLogo {
   width: 36px;
@@ -85,42 +411,67 @@
 .pj {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(26, 26, 26, 0.08);
 }
 .pjFoto {
-  width: 72px;
+  width: 64px;
   aspect-ratio: 1 / 1;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 .pj small {
   display: block;
-  opacity: 0.7;
+  font-size: 12px;
+  color: var(--color-stone);
+}
+.pj b {
+  font-family: var(--font-display);
+  font-size: 15px;
 }
 /* [/SECTION: MITRA] */
 
-/* [SECTION: GRADE] tombol Grade + tabel spesifikasi (dipakai GradePicker) */
+/* [SECTION: GRADE] tombol Grade + tabel spesifikasi (GradePicker: kartu Produk DAN form order) */
 .gradeRow {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 .gradeBtn {
   flex: 1;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(128, 128, 128, 0.4);
-  background: transparent;
-  color: inherit;
+  padding: 10px 8px;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: var(--color-carbon);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.gradeBtn:hover {
+  border-color: rgba(196, 94, 32, 0.5);
+  transform: translateY(-1px);
 }
 .gradeBtn small {
   display: block;
-  opacity: 0.7;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-stone);
 }
-.gradeAktif {
-  background: var(--aksen, #1d6fd6);
-  border-color: var(--aksen, #1d6fd6);
+.gradeAktif,
+.gradeAktif:hover {
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 4px 14px rgba(196, 94, 32, 0.3);
+}
+.gradeAktif small {
+  color: rgba(255, 255, 255, 0.85);
 }
 .spek {
   margin-top: 8px;
@@ -137,39 +488,55 @@
 /* [SECTION: BAYAR] metode pembayaran + info rekening/QRIS */
 .bayarRow {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 .bayarBtn {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(128, 128, 128, 0.4);
-  background: transparent;
-  color: inherit;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: var(--color-carbon);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.8rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.bayarBtn:hover:not(:disabled) {
+  border-color: rgba(196, 94, 32, 0.5);
 }
 .bayarBtn img {
   height: 24px;
   object-fit: contain;
+}
+.bayarBtn.gradeAktif {
+  background: #fff;
+  border-color: var(--color-ember);
+  color: var(--color-ember);
+  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.12);
 }
 .terkunci {
   opacity: 0.45;
   cursor: not-allowed;
 }
 .info {
-  padding: 12px;
-  border-radius: 10px;
-  background: rgba(128, 128, 128, 0.12);
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(196, 94, 32, 0.06);
+  border: 1px dashed rgba(196, 94, 32, 0.35);
+  font-size: 14px;
+  line-height: 1.6;
 }
 .brokerHead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 .brokerHead img {
   width: 28px;
@@ -181,6 +548,8 @@
   max-width: 240px;
   display: block;
   margin-top: 8px;
+  border-radius: 12px;
+  background: #fff;
 }
 /* [/SECTION: BAYAR] */
 
@@ -194,11 +563,12 @@
   background: #fff;
   color: #111;
   padding: 6cqw;
-  font-size: 2.6cqw;
+  font-size: 2.4cqw;
   display: flex;
   flex-direction: column;
-  gap: 1.2cqw;
+  gap: 1cqw;
   border: 1px solid #ccc;
+  border-radius: 8px;
   overflow: hidden;
 }
 .invoice h3 {
@@ -206,7 +576,7 @@
   font-size: 5cqw;
 }
 .invSub {
-  margin: 0 0 2cqw;
+  margin: 0 0 1.6cqw;
   color: #555;
 }
 .invRow {
@@ -214,22 +584,24 @@
   justify-content: space-between;
   gap: 3cqw;
   border-bottom: 1px dashed #ddd;
-  padding-bottom: 0.8cqw;
+  padding-bottom: 0.7cqw;
 }
 .invRow span {
   color: #555;
+  flex-shrink: 0;
 }
 .invRow b {
   text-align: right;
+  overflow-wrap: anywhere;
 }
 .invTotal {
-  font-size: 3.4cqw;
+  font-size: 3.2cqw;
   border-bottom: 2px solid #111;
 }
 .invNote {
   margin-top: auto;
   color: #777;
-  font-size: 2.2cqw;
+  font-size: 2.1cqw;
 }
 @media print {
   .invoice {
@@ -238,18 +610,73 @@
 }
 /* [/SECTION: INVOICE] */
 
-/* [SECTION: SELESAI] tombol Selesai */
+/* [SECTION: SELESAI] tombol Selesai + daftar yang belum lengkap */
+.selesaiWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .selesai {
-  padding: 14px;
-  border-radius: 10px;
+  padding: 15px 28px;
+  border-radius: 100px;
   border: 0;
-  background: var(--aksen, #1d6fd6);
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
   color: #fff;
+  font: inherit;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(196, 94, 32, 0.3);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+.selesai:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(196, 94, 32, 0.45);
+  transform: translateY(-1px);
 }
 .selesai:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+  box-shadow: none;
+}
+.petunjuk {
+  font-size: 13px;
+  color: var(--color-stone);
+  text-align: center;
+  line-height: 1.5;
+}
+.petunjuk b {
+  color: var(--color-graphite);
+  font-weight: 600;
 }
 /* [/SECTION: SELESAI] */
+
+@media (max-width: 640px) {
+  .form {
+    padding: 28px 18px;
+    border-radius: 20px;
+    gap: 22px;
+  }
+  .form::before {
+    left: 18px;
+    right: 18px;
+  }
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+  .aksi {
+    width: 100%;
+  }
+  .tombolAksi {
+    flex: 1;
+    padding: 12px 16px;
+  }
+  .baris {
+    flex-direction: column;
+  }
+  .peta iframe {
+    height: 200px;
+  }
+  .hargaBox strong {
+    font-size: 22px;
+  }
+}
