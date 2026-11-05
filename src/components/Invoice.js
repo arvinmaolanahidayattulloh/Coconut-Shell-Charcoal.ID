@@ -4,6 +4,7 @@ import styles from "./Order.module.css";
 import { formatUang } from "@/lib/csc/harga";
 
 const fmtKoord = (l) => `${Number(l.lat).toFixed(6)}, ${Number(l.lng).toFixed(6)}`;
+const fmtTon = (n) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(n);
 
 // [SECTION: INVOICE-A4] rasio 210:297, font memakai cqw agar skala ikut lebar
 export default function Invoice({ o }) {
@@ -18,7 +19,8 @@ export default function Invoice({ o }) {
     ["Penanggung Jawab", [o.pj, o.pjJabatan].filter(Boolean).join(" — ")],
     ...(o.pjWa ? [["WhatsApp PJ", o.pjWa]] : []),
     ["Produk", o.grade ? `${o.produk} — Grade ${o.grade}` : o.produk],
-    ["Jumlah", `${o.qty} ${o.satuan}`],
+    // jumlah selalu ditampilkan dalam Ton (domestik disimpan dalam Kg → ÷1000)
+    ["Jumlah", o.satuan === "Kg" ? `${fmtTon(o.qty / 1000)} Ton` : `${o.qty} ${o.satuan}`],
     ["Metode Bayar", o.metode.toUpperCase()],
     ...(o.dana ? [[o.dana.jenis === "bank" ? "Rekening Pembeli" : "E-Wallet Pembeli", `${o.dana.nama} · ${o.dana.nomor} · a.n. ${o.dana.atasNama || "dicek sistem"}`]] : []),
     ["Bukti Bayar", o.buktiNama || "—"],

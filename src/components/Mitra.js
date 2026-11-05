@@ -30,6 +30,13 @@ export const partnersData = [
     anRekening: "PT. Tunas Kembar Abadi",
     noRekening: "8692824902",
     swiftCode: "CENAIDJA",
+    // Kantor cabang tempat rekening dibuka. Peta memakai pencarian Google Maps berdasarkan nama;
+    // bila alamat / koordinat pasti sudah ada, isi alamatCabangBank dan ganti embed/maps dengan koordinat
+    // (format seperti embedMap di bawah: ...?q=LAT,LNG&output=embed).
+    cabangBank: "KCU Depok",
+    alamatCabangBank: "",
+    mapsCabangBank: "https://www.google.com/maps/search/?api=1&query=BCA+KCU+Depok",
+    embedMapCabangBank: "https://maps.google.com/maps?q=BCA+KCU+Depok&t=&z=16&ie=UTF8&iwloc=&output=embed",
     // [/SECTION: REKENING]
 
     // [SECTION: DIREKTUR] direktur = Penanggung Jawab di OrderForm

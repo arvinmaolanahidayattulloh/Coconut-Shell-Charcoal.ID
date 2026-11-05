@@ -5,7 +5,7 @@ import { partnersData } from "@/components/Mitra";
 
 // [SECTION: MAP-MITRA]
 export const MITRA = partnersData.map((p) => {
-  const rekening = { bank: p.bank, noRek: p.noRekening, atasNama: p.anRekening };
+  const rekening = { bank: p.bank, noRek: p.noRekening, atasNama: p.anRekening, cabang: p.cabangBank };
   return {
     id: p.id,
     nama: p.name,
@@ -18,6 +18,7 @@ export const MITRA = partnersData.map((p) => {
     maps: p.mapsLink,
     alamatOps: p.alamatOperasional,
     embedMap: p.embedMap,
+    cabangBank: { nama: p.cabangBank, alamat: p.alamatCabangBank, maps: p.mapsCabangBank, embedMap: p.embedMapCabangBank },
     penanggungJawab: { nama: p.direktur, jabatan: p.jabatan, wa: p.phone, foto: p.fotoPJ },
     pembayaran: {
       // SWIFT hanya relevan untuk transfer ekspor (USD)

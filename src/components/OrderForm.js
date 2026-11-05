@@ -42,16 +42,12 @@ function LogoQris() {
   return <img src={LOGO_QRIS_URL} alt="QRIS" className={rev.logoQris} referrerPolicy="no-referrer" onError={() => setGagal(true)} />;
 }
 
-// Ikon Transfer dari tautan; bila gagal dimuat, tombol tetap menampilkan teks "Transfer"
+// Logo Transfer dari tautan (logo saja, tanpa teks); teks "Transfer" hanya muncul bila gambar gagal dimuat
 const LOGO_TRANSFER_URL = "https://static.vecteezy.com/system/resources/previews/000/513/057/non_2x/repeat-glyph-black-icon-vector.jpg";
 function LogoTransfer() {
   const [gagal, setGagal] = useState(false);
-  return (
-    <>
-      {!gagal && <img src={LOGO_TRANSFER_URL} alt="" className={rev.logoTransfer} referrerPolicy="no-referrer" onError={() => setGagal(true)} />}
-      <span>Transfer</span>
-    </>
-  );
+  if (gagal) return <span>Transfer</span>;
+  return <img src={LOGO_TRANSFER_URL} alt="Transfer" className={rev.logoTransfer} referrerPolicy="no-referrer" onError={() => setGagal(true)} />;
 }
 
 // grade / onGradeChange (opsional): bila diberikan, grade dikontrol dari luar (Products) sehingga
@@ -140,6 +136,8 @@ export default function OrderForm({
     () => (hargaTonIdr ? hitungHarga({ mode: config.mode, hargaTonIdr, usdIdr, persen: 0, qty: 0 }) : null),
     [config.mode, hargaTonIdr, usdIdr]
   );
+  // harga & jumlah di form SELALU per Ton (domestik dihitung per Kg di belakang layar → ×1000, total tetap sama)
+  const perTon = (h) => (h ? (domestik ? h.satuan * 1000 : h.satuan) : 0);
   // [/SECTION: HARGA]
 
   // [SECTION: VALIDASI] lokasi GPS sengaja TIDAK wajib
@@ -312,6 +310,26 @@ export default function OrderForm({
                 )}
               </div>
             )}
+            {/* kantor cabang bank tempat rekening dibuka: alamat + peta, sama seperti Lokasi Operasional */}
+            {mitra.cabangBank?.nama && (
+              <div className={styles.brokerPeta}>
+                <div className={styles.brokerPetaJudul}>
+                  <b>Kantor Cabang Bank</b>
+                  <span>
+                    {[bankPenerima?.singkat, mitra.cabangBank.nama].filter(Boolean).join(" ")}
+                    {mitra.cabangBank.alamat ? ` — ${mitra.cabangBank.alamat}` : ""}
+                  </span>
+                </div>
+                {mitra.cabangBank.embedMap && (
+                  <iframe title={`Peta kantor cabang bank ${mitra.cabangBank.nama}`} src={mitra.cabangBank.embedMap}
+                    loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                )}
+                {mitra.cabangBank.maps && (
+                  <a className={rev.btnMapsBawah} href={mitra.cabangBank.maps} target="_blank" rel="noopener noreferrer">
+                    Buka Kantor Cabang di Maps</a>
+                )}
+              </div>
+            )}
             <div className={`${styles.pj} ${rev.pjKartu}`}>
               {/* judul di pojok kiri atas kartu, warna sama dengan Penerima Pembayaran */}
               <small className={rev.judulOranye}>Penanggung Jawab</small>
@@ -345,8 +363,8 @@ export default function OrderForm({
         )}
         <label className={styles.label}>Jumlah (Ton) — min. {fmtAngka(minTon)}
           <span className={rev.qtyRow}>
-            <button type="button" className={rev.btnTambah} aria-label="Kurangi 10 Ton" onClick={() => tambahTon(-10)}>−10</button>
             <button type="button" className={rev.btnTambah} aria-label="Kurangi 1 Ton" onClick={() => tambahTon(-1)}>−1</button>
+            <button type="button" className={rev.btnTambah} aria-label="Kurangi 10 Ton" onClick={() => tambahTon(-10)}>−10</button>
             <input className={`${styles.input} ${rev.qtyInput}`} type="number" min={minTon} step="0.1" inputMode="decimal"
               placeholder={`mis. ${fmtAngka(minTon)} atau ${fmtAngka(minTon + 0.2)}`} value={f.qty} onChange={set("qty")} />
             <button type="button" className={rev.btnTambah} aria-label="Tambah 1 Ton" onClick={() => tambahTon(1)}>+1</button>
@@ -362,12 +380,12 @@ export default function OrderForm({
             </div>
             <div>
               <small>Harga Dasar (chart CSC)</small>
-              <span>{formatUang(hargaDasar.satuan, hargaDasar.mataUang)} / {config.satuan}</span>
+              <span>{formatUang(perTon(hargaDasar), hargaDasar.mataUang)} / Ton</span>
             </div>
             {adaGrade && kodeGrade && persen > 0 && (
               <div>
                 <small>Harga Grade {kodeGrade} (+{String(persen).replace(".", ",")}%)</small>
-                <span>{formatUang(harga.satuan, harga.mataUang)} / {config.satuan}</span>
+                <span>{formatUang(perTon(harga), harga.mataUang)} / Ton</span>
               </div>
             )}
             <div>
@@ -385,7 +403,7 @@ export default function OrderForm({
       <section className={styles.seksi}>
         <h5 className={styles.seksiJudul}><i>5</i>Pembayaran</h5>
         <div className={styles.bayarRow}>
-          <button type="button" className={`${styles.bayarBtn} ${f.metode === "transfer" ? styles.gradeAktif : ""}`}
+          <button type="button" aria-label="Transfer" className={`${styles.bayarBtn} ${f.metode === "transfer" ? styles.gradeAktif : ""}`}
             onClick={() => setF((s) => ({ ...s, metode: "transfer" }))}>
             <LogoTransfer /></button>
           <button type="button" aria-label="QRIS" className={`${styles.bayarBtn} ${f.metode === "qris" ? styles.gradeAktif : ""}`}
@@ -420,7 +438,8 @@ export default function OrderForm({
                     <dd className={rev.nomorBank}>{tf.noRek}</dd>
                     <button type="button" className={styles.btnSalin} onClick={salin}>{tersalin ? "Tersalin ✓" : "Salin"}</button>
                   </div>
-                  <div><dt>a.n.</dt><dd>{tf.atasNama}{tf.swift ? ` · SWIFT ${tf.swift}` : ""}</dd></div>
+                  <div><dt>Cabang</dt><dd>{tf.cabang || "—"}</dd></div>
+                  {tf.swift && <div><dt>SWIFT</dt><dd>{tf.swift}</dd></div>}
                 </dl>
               </div>
             )}

@@ -162,6 +162,15 @@
   object-fit: contain;
 }
 
+/* logo penyedia & logo bank di kartu putih: tanpa bingkai, menyatu dengan latar */
+.kartuTerima.kartuTerima .logoPutih,
+.kartuTerima.kartuTerima .logoBank {
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 /* ===== Penanggung Jawab: judul kiri atas kartu ===== */
 .pjKartu.pjKartu {
   flex-direction: column;
@@ -247,7 +256,7 @@
 
 /* ===== ikon Transfer (JPG berlatar putih → dilebur ke tombol) ===== */
 .logoTransfer.logoTransfer {
-  height: 24px;
+  height: 28px;
   width: auto;
   object-fit: contain;
   mix-blend-mode: multiply;
