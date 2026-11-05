@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import auth from './AuthShared.module.css';
 import reg from './Register.module.css';
+import CountryPicker from './CountryPicker';
+import { DEFAULT_ISO } from '@/data/Countries';
 import {
   ProviderIcon,
   useAuthForm,
@@ -181,6 +183,7 @@ const Register = ({ open, onClose, onRegistered }) => {
   const [otpInput, setOtpInput] = useState('');
 
   const [countryCode, setCountryCode] = useState('+62');
+  const [countryIso, setCountryIso] = useState(DEFAULT_ISO);
   const [isLoading, setIsLoading] = useState(false);
 
   const [isAgreed, setIsAgreed] = useState(false);
@@ -193,6 +196,7 @@ const Register = ({ open, onClose, onRegistered }) => {
       setStep('provider');
       setOtpInput('');
       setCountryCode('+62');
+      setCountryIso(DEFAULT_ISO);
       setIsLoading(false);
       setIsAgreed(false);
       setShakeError(false);
@@ -480,7 +484,7 @@ const Register = ({ open, onClose, onRegistered }) => {
         title="Verifikasi OTP Email"
         desc={<>Kode dikirim ke <b>{data.email}</b>.</>}
         onSubmit={handleOtpEmailSubmit}
-        submitLabel="VERIFIKASI EMAIL"
+        submitLabel="VERIFIKASI"
         onBack={onClose}
       >
         <input
@@ -527,16 +531,24 @@ const Register = ({ open, onClose, onRegistered }) => {
         onBack={onClose}
         busy={isLoading}
       >
-        <div className={reg.waRow}>
-          <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className={reg.waSelect}>
-            <option value="+62">ID +62</option>
-            <option value="+65">SG +65</option>
-            <option value="+60">MY +60</option>
-            <option value="+86">CN +86</option>
-            <option value="+1">US +1</option>
-          </select>
-          <input type="tel" placeholder="8123456789" autoFocus {...bind('whatsapp')} />
-        </div>
+        <CountryPicker
+          value={countryIso}
+          onChange={(c) => { setCountryIso(c.iso); setCountryCode(c.dial); }}
+        >
+          <input
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel-national"
+            placeholder="8123456789"
+            autoFocus
+            {...bind('whatsapp')}
+            onChange={(e) => bind('whatsapp').onChange({ target: { value: e.target.value.replace(/\D/g, '') } })}
+          />
+        </CountryPicker>
+        <p className={reg.waHint}>
+          Nomor lengkap:{' '}
+          <b>{countryCode} {(values.whatsapp || '').replace(/^0+/, '') || '8123456789'}</b>
+        </p>
       </RegForm>
     );
   } else if (step === 'otp_wa') {
