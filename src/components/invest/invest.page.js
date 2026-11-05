@@ -5,45 +5,9 @@ import { useAccount } from '../Account'; // Sesuaikan lokasi impor Account jika 
 import { usePrice } from '@/context/PriceContext';
 import Login from '../Login'; // Sesuaikan lokasi impor Login jika perlu
 import AksiBtn from '../AksiBtn';
+import { PAYMENT_CATEGORIES, isEwallet, SYARAT_RISIKO } from '@/data/investOptions';
+import { hitungInvest } from '@/lib/investCalc';
 import { partnersData } from '../Mitra'; // Sesuaikan lokasi impor Mitra jika perlu
-
-const PAYMENT_CATEGORIES = [
-  {
-    category: "Transfer Bank Resmi",
-    items: [
-      { name: "Bank Central Asia", logo: "https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia_logo.svg" },
-      { name: "Bank Mandiri", logo: "https://upload.wikimedia.org/wikipedia/commons/a/ad/Bank_Mandiri_logo_2016.svg" },
-      { name: "Bank Negara Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_BNI.svg" },
-      { name: "Bank Rakyat Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/2/28/Logo_Bank_Rakyat_Indonesia.svg" },
-      { name: "Bank Syariah Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a0/Bank_Syariah_Indonesia_logo.svg" },
-      { name: "CIMB Niaga", logo: "https://upload.wikimedia.org/wikipedia/commons/b/b3/CIMB_Niaga_logo.svg" },
-      { name: "Bank Permata", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/PermataBank_logo.svg" },
-      { name: "Bank Danamon", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a6/Bank_Danamon_logo.svg" },
-      { name: "Bank Tabungan Negara", logo: "https://upload.wikimedia.org/wikipedia/commons/d/d1/Bank_BTN_logo.svg" },
-      { name: "Bank Mega", logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Bank_Mega_logo.svg" },
-      { name: "OCBC NISP", logo: "https://upload.wikimedia.org/wikipedia/commons/7/77/OCBC_logo_2023.svg" },
-      { name: "Panin Bank", logo: "https://upload.wikimedia.org/wikipedia/commons/8/8c/PaninBank_logo.svg" },
-      { name: "Bank Jago", logo: "https://upload.wikimedia.org/wikipedia/commons/3/36/Bank_Jago_logo.svg" },
-      { name: "SeaBank Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/d/de/SeaBank_Logo.svg" },
-      { name: "Bank Neo Commerce", logo: "https://upload.wikimedia.org/wikipedia/commons/2/23/Bank_Neo_Commerce_logo.svg" },
-      { name: "BCA Syariah", logo: "https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia_logo.svg" },
-      { name: "Bank Muamalat", logo: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Bank_Muamalat_Indonesia_logo.svg" },
-      { name: "BTPN / Jenius", logo: "https://upload.wikimedia.org/wikipedia/commons/f/fc/BTPN_logo_2019.svg" },
-      { name: "Maybank Indonesia", logo: "https://upload.wikimedia.org/wikipedia/commons/8/8c/Maybank_logo.svg" },
-      { name: "Bank Jabar Banten", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Bank_BJB_logo.svg" },
-      { name: "Bank DKI", logo: "https://upload.wikimedia.org/wikipedia/commons/3/3a/Logo_Bank_DKI.svg" }
-    ]
-  },
-  {
-    category: "Dompet Digital (E-Wallet)",
-    items: [
-      { name: "Dana", logo: "https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" },
-      { name: "Gopay", logo: "https://upload.wikimedia.org/wikipedia/commons/8/86/Gopay_logo.svg" },
-      { name: "OVO", logo: "https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" },
-      { name: "LinkAja", logo: "https://upload.wikimedia.org/wikipedia/commons/8/89/LinkAja_logo.svg" }
-    ]
-  }
-];
 
 const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
   const { user, logout } = useAccount();
@@ -87,20 +51,7 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
   }, [providerSearch]);
 
   // [PATCH:PRICE-READY] harga dipakai hanya setelah termuat; tanpa harga sementara & tanpa kurs tebakan
-  const priceReady = !!index && index.usd > 0 && index.idr > 0;
-
-  const unitPriceUSD = priceReady ? index.usd * 0.90 : 0;
-  const unitPriceIDR = priceReady ? index.idr * 0.90 : 0;
-
-  const currentTotalCalculated = invData.currency === 'IDR'
-    ? invData.ton * unitPriceIDR
-    : invData.ton * unitPriceUSD;
-
-  const displayTotal = !priceReady
-    ? "Memuat harga..."
-    : invData.currency === 'IDR'
-      ? `Rp ${Math.round(currentTotalCalculated).toLocaleString('id-ID')}`
-      : `$ ${currentTotalCalculated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const { priceReady, display: displayTotal } = hitungInvest(index, invData.ton, invData.currency);
   // [/PATCH:PRICE-READY]
 
   const selectedMitraData = partnersData?.find(p => p.name === invData.mitra) || null;
@@ -488,11 +439,11 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
 
                             <div>
                               <label style={labelStyle}>
-                                {invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'Nomor HP Akun' : 'Nomor Rekening Pengirim'}
+                                {isEwallet(invData.senderBank) ? 'Nomor HP Akun' : 'Nomor Rekening Pengirim'}
                               </label>
                               <input 
                                 type="text" 
-                                placeholder={invData.senderBank.toLowerCase().includes('dana') || invData.senderBank.toLowerCase().includes('gopay') || invData.senderBank.toLowerCase().includes('ovo') || invData.senderBank.toLowerCase().includes('linkaja') ? 'No. HP e-Wallet' : 'No. Rekening'} 
+                                placeholder={isEwallet(invData.senderBank) ? 'No. HP e-Wallet' : 'No. Rekening'} 
                                 required 
                                 value={invData.senderAccount} 
                                 onChange={(e) => setInvData({...invData, senderAccount: e.target.value})} 
@@ -544,9 +495,9 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
                             </div>
                             {showTerms && (
                               <div style={{ marginTop: '14px', padding: '14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', color: '#4b5563', maxHeight: '150px', overflowY: 'auto', lineHeight: '1.6' }}>
-                                <p style={{ margin: '0 0 8px 0' }}><b>1. Risiko Fluktuasi Pasar:</b> Nilai investasi komoditas dapat berubah sewaktu-waktu tergantung pada dinamika pasar global.</p>
-                                <p style={{ margin: '0 0 8px 0' }}><b>2. Regulasi Ekspor:</b> Proses distribusi komoditas dipengaruhi oleh regulasi internasional serta jalur logistik.</p>
-                                <p style={{ margin: '0' }}><b>3. Kebijakan Dana:</b> Dana yang dialokasikan tidak dapat ditarik kembali secara sepihak.</p>
+                                {SYARAT_RISIKO.map((t, i) => (
+                                  <p key={t.judul} style={{ margin: i < SYARAT_RISIKO.length - 1 ? '0 0 8px 0' : '0' }}><b>{i + 1}. {t.judul}:</b> {t.isi}</p>
+                                ))}
                               </div>
                             )}
                           </div>
