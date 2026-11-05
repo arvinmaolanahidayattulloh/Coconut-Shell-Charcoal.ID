@@ -34,11 +34,12 @@ function FotoAkun({ user }) {
     referrerPolicy="no-referrer" onError={() => setGagal(true)} />;
 }
 
-// Logo QRIS (public/pembayaran/qris.png); bila file belum ada → teks "QRIS" sebagai cadangan
+// Logo QRIS dari tautan logo aslinya (sama dengan yang dipakai di halaman invest); bila gagal dimuat → teks "QRIS" sebagai cadangan
+const LOGO_QRIS_URL = "https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg";
 function LogoQris() {
   const [gagal, setGagal] = useState(false);
   if (gagal) return <span>QRIS</span>;
-  return <img src="/pembayaran/qris.png" alt="QRIS" className={rev.logoQris} onError={() => setGagal(true)} />;
+  return <img src={LOGO_QRIS_URL} alt="QRIS" className={rev.logoQris} referrerPolicy="no-referrer" onError={() => setGagal(true)} />;
 }
 
 // grade / onGradeChange (opsional): bila diberikan, grade dikontrol dari luar (Products) sehingga
