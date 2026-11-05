@@ -8,7 +8,10 @@ import { GRADE, PRODUK_BERGRADE, GRADE_AWAL } from "@/data/Grade";
 import { hitungHarga, formatUang } from "@/lib/csc/harga";
 import GradePicker from "./GradePicker";
 import LokasiPicker from "./LokasiPicker";
+import ProviderSelect from "./ProviderSelect";
+import VerifikasiOrder from "./VerifikasiOrder";
 import Invoice from "./Invoice";
+import { useAccount } from "./Account";
 
 const fmtAngka = (n) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(n);
 // "0851-6815-2525" → "6285168152525" (untuk tautan wa.me)
@@ -17,12 +20,7 @@ const waLink = (no) => {
   return d ? `https://wa.me/${d.startsWith("0") ? "62" + d.slice(1) : d}` : null;
 };
 
-// Logo provider; bila file belum ada di public/pembayaran/provider/ → tampil inisial
-function LogoProvider({ p }) {
-  const [gagal, setGagal] = useState(false);
-  if (gagal) return <span className={styles.logoCadangan} aria-hidden="true">{p.singkat.slice(0, 3)}</span>;
-  return <img src={p.logo} alt="" className={styles.logoProvider} onError={() => setGagal(true)} />;
-}
+const MAKS_BUKTI = 3 * 1024 * 1024; // 3 MB (batas body server)
 
 // grade / onGradeChange (opsional): bila diberikan, grade dikontrol dari luar (Products) sehingga
 // pilihan di kartu Produk dan di form selalu sama. Tanpa itu, grade dipegang form sendiri.
@@ -31,7 +29,7 @@ export default function OrderForm({
   grade: gradeProp, onGradeChange,
 }) {
   // [SECTION: STATE]
-  const [f, setF] = useState({ nama: "", wa: "", alamat: "", mitraId: MITRA[0]?.id ?? "", qty: "", metode: "transfer" });
+  const [f, setF] = useState({ nama: "", wa: "", alamat: "", catatan: "", mitraId: MITRA[0]?.id ?? "", qty: "", metode: "transfer" });
   const [gradeLokal, setGradeLokal] = useState(GRADE_AWAL);
   const [lokasi, setLokasi] = useState(null); // { lat, lng, akurasi, sumber, label } | null (opsional)
   // rekening / e-wallet pembeli: provider DIPILIH dari daftar (kode), nama pemilik diisi & dicek sistem (tidak bisa diketik)
@@ -41,6 +39,11 @@ export default function OrderForm({
   const [invId] = useState(
     () => `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
   ); // dibuat SEKALI, tidak berubah tiap render
+  // Selesai → Verifikasi → simpan sebagai Pending
+  const { user } = useAccount();
+  const [verif, setVerif] = useState(false);
+  const [simpan, setSimpan] = useState({ status: "idle", pesan: "" }); // idle | menyimpan | tersimpan | galat
+  const [verifTerakhir, setVerifTerakhir] = useState(null);
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
   const mitra = MITRA.find((m) => m.id === f.mitraId);
 
@@ -80,6 +83,7 @@ export default function OrderForm({
     kurang.push(dana.jenis === "bank" ? "bank & nomor rekening Anda" : "e-wallet & nomor akun Anda");
   }
   if (!bukti) kurang.push("bukti pembayaran");
+  else if (bukti.size > MAKS_BUKTI) kurang.push("bukti pembayaran maksimal 3 MB");
   if (!setuju) kurang.push("persetujuan Syarat dan Ketentuan");
   const valid = kurang.length === 0;
   // [/SECTION: VALIDASI]
@@ -88,7 +92,7 @@ export default function OrderForm({
   const order = harga && mitra ? {
     id: invId,
     tanggal: new Date().toLocaleDateString("id-ID", { dateStyle: "long" }),
-    jenis: config.judul, nama: f.nama, wa, alamat: f.alamat, lokasi,
+    jenis: config.judul, nama: f.nama, wa, alamat: f.alamat, catatan: f.catatan.trim(), lokasi,
     mitra: mitra.nama, ahu: mitra.ahu, nib: mitra.nib,
     pj: mitra.penanggungJawab.nama, pjJabatan: mitra.penanggungJawab.jabatan, pjWa: mitra.penanggungJawab.wa,
     produk, grade: adaGrade ? kodeGrade : null,
@@ -103,6 +107,29 @@ export default function OrderForm({
   // [SECTION: INFO-BAYAR]
   const tf = mitra?.pembayaran.transfer[config.mode];
   // [/SECTION: INFO-BAYAR]
+
+  // [SECTION: SIMPAN-PENDING] dipanggil setelah verifikasi berhasil; order masuk server berstatus "pending"
+  const simpanOrder = async (hasil) => {
+    setVerif(false);
+    setVerifTerakhir(hasil);
+    setSimpan({ status: "menyimpan", pesan: "" });
+    try {
+      const fd = new FormData();
+      fd.append("order", JSON.stringify(order));
+      fd.append("bukti", bukti);
+      fd.append("metode", hasil.metode);
+      fd.append("bukti_verifikasi", hasil.bukti || "");
+      fd.append("email", user?.email || "");
+      const r = await fetch("/api/orders", { method: "POST", body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.pesan || "Gagal menyimpan order. Coba lagi.");
+      setSimpan({ status: "tersimpan", pesan: "" });
+      onSelesai?.(order, { status: "pending", metode: hasil.metode });
+    } catch (e) {
+      setSimpan({ status: "galat", pesan: e?.message || "Gagal menyimpan order. Coba lagi." });
+    }
+  };
+  // [/SECTION: SIMPAN-PENDING]
 
   return (
     <div className={`${styles.form} ${className}`}>
@@ -124,7 +151,13 @@ export default function OrderForm({
         <label className={styles.label}>Alamat Tujuan
           <textarea className={styles.input} rows={3} value={f.alamat} onChange={set("alamat")} /></label>
 
-        {/* [SECTION: LOKASI-GPS] tepat setelah Alamat Tujuan */}
+        {/* [SECTION: CATATAN] tepat di bawah Alamat Tujuan */}
+        <label className={styles.label}>Catatan (opsional)
+          <textarea className={styles.input} rows={2} maxLength={500} value={f.catatan} onChange={set("catatan")}
+            placeholder="mis. jam bongkar, patokan lokasi, kontak di lapangan" /></label>
+        {/* [/SECTION: CATATAN] */}
+
+        {/* [SECTION: LOKASI-GPS] setelah Catatan */}
         <LokasiPicker value={lokasi} onChange={setLokasi} />
         {/* [/SECTION: LOKASI-GPS] */}
       </section>
@@ -133,21 +166,34 @@ export default function OrderForm({
       {/* [SECTION: BROKER] */}
       <section className={styles.seksi}>
         <h5 className={styles.seksiJudul}><i>2</i>Broker (mitra terdaftar)</h5>
-        <div className={styles.mitraList}>
-          {MITRA.map((m) => (
-            <button key={m.id} type="button"
-              className={`${styles.mitraItem} ${m.id === f.mitraId ? styles.mitraAktif : ""}`}
-              onClick={() => setF((s) => ({ ...s, mitraId: m.id }))}>
-              <img src={m.logo} alt={m.nama} className={styles.mitraLogo} /><span>{m.nama}</span>
-            </button>
-          ))}
-        </div>
+        {MITRA.length > 1 && (
+          <div className={styles.mitraList}>
+            {MITRA.map((m) => (
+              <button key={m.id} type="button"
+                className={`${styles.mitraItem} ${m.id === f.mitraId ? styles.mitraAktif : ""}`}
+                onClick={() => setF((s) => ({ ...s, mitraId: m.id }))}>
+                <img src={m.logo} alt={m.nama} className={styles.mitraLogo} /><span>{m.nama}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {mitra && (
           <>
-            <dl className={styles.legal}>
-              <div><dt>Nomor AHU</dt><dd>{mitra.ahu || "—"}</dd></div>
-              <div><dt>NIB</dt><dd>{mitra.nib || "—"}</dd></div>
-            </dl>
+            {/* satu kartu: logo + nama + AHU + NIB + alamat + tombol Maps */}
+            <div className={styles.brokerCard}>
+              <img src={mitra.logo} alt={mitra.nama} className={styles.brokerLogo} />
+              <div className={styles.brokerIsi}>
+                <b className={styles.brokerNama}>{mitra.nama}</b>
+                <dl className={styles.legal}>
+                  <div><dt>Nomor AHU</dt><dd>{mitra.ahu || "—"}</dd></div>
+                  <div><dt>NIB</dt><dd>{mitra.nib || "—"}</dd></div>
+                  <div><dt>Alamat</dt><dd>{mitra.alamat || "—"}</dd></div>
+                </dl>
+                {mitra.maps && (
+                  <a className={styles.btnMaps} href={mitra.maps} target="_blank" rel="noopener noreferrer">Ke Maps</a>
+                )}
+              </div>
+            </div>
             <div className={styles.pj}>
               <img src={mitra.penanggungJawab.foto} alt={mitra.penanggungJawab.nama} className={styles.pjFoto} />
               <div>
@@ -238,16 +284,10 @@ export default function OrderForm({
         </div>
 
         {/* pilih provider (logo + nama lengkap), tidak bisa diketik bebas */}
-        <div className={styles.label} id="lbl-provider">{bank ? "Nama Bank" : "Nama E-Wallet"}</div>
-        <div className={styles.providerGrid} role="radiogroup" aria-labelledby="lbl-provider">
-          {daftarProvider.map((p) => (
-            <button key={p.kode} type="button" role="radio" aria-checked={p.kode === dana.kode}
-              className={`${styles.providerItem} ${p.kode === dana.kode ? styles.providerAktif : ""}`}
-              onClick={() => setDana((s) => ({ ...s, kode: p.kode }))}>
-              <LogoProvider p={p} />
-              <span>{p.nama}</span>
-            </button>
-          ))}
+        <div className={styles.label}>{bank ? "Nama Bank" : "Nama E-Wallet"}
+          <ProviderSelect daftar={daftarProvider} value={dana.kode}
+            onChange={(kode) => setDana((x) => ({ ...x, kode }))}
+            placeholder={bank ? "Pilih bank" : "Pilih e-wallet"} ariaLabel={bank ? "Nama Bank" : "Nama E-Wallet"} />
         </div>
 
         <label className={styles.label}>{bank ? "Nomor Rekening" : "Nomor HP / Akun E-Wallet"}
@@ -275,16 +315,32 @@ export default function OrderForm({
       {order && <Invoice o={order} />}
       {/* [/SECTION: PREVIEW-INVOICE] */}
 
-      {/* [SECTION: SELESAI] onSelesai(order, bukti) → batch 2: Verifikasi */}
-      <div className={styles.selesaiWrap}>
-        <label className={styles.setuju}>
-          <input type="checkbox" checked={setuju} onChange={(e) => setSetuju(e.target.checked)} />
-          <span>Saya menyetujui Syarat dan Ketentuan</span>
-        </label>
-        <button type="button" className={styles.selesai} disabled={!valid}
-          onClick={() => onSelesai?.(order, bukti)}>Selesai</button>
-        {!valid && <p className={styles.petunjuk}>Lengkapi dulu: <b>{kurang.join(", ")}</b></p>}
-      </div>
+      {/* [SECTION: SELESAI] Selesai → minta verifikasi → simpan order berstatus Pending */}
+      {simpan.status === "tersimpan" ? (
+        <div className={styles.tersimpan} role="status">
+          <b>Order tersimpan · Status: PENDING</b>
+          <span>No. Invoice <strong>{invId}</strong>. Order Anda menunggu validasi. Simpan nomor invoice ini.</span>
+        </div>
+      ) : (
+        <div className={styles.selesaiWrap}>
+          <label className={styles.setuju}>
+            <input type="checkbox" checked={setuju} onChange={(e) => setSetuju(e.target.checked)} />
+            <span>Saya menyetujui Syarat dan Ketentuan</span>
+          </label>
+          <button type="button" className={styles.selesai}
+            disabled={!valid || simpan.status === "menyimpan"} onClick={() => setVerif(true)}>
+            {simpan.status === "menyimpan" ? "Menyimpan order…" : "Selesai"}
+          </button>
+          {!valid && <p className={styles.petunjuk}>Lengkapi dulu: <b>{kurang.join(", ")}</b></p>}
+          {simpan.status === "galat" && (
+            <p className={styles.galatSimpan} role="alert">
+              {simpan.pesan}{" "}
+              {verifTerakhir && <button type="button" className={styles.btnLink} onClick={() => simpanOrder(verifTerakhir)}>Coba simpan lagi</button>}
+            </p>
+          )}
+        </div>
+      )}
+      {verif && <VerifikasiOrder user={user} onSukses={simpanOrder} onBatal={() => setVerif(false)} />}
       {/* [/SECTION: SELESAI] */}
     </div>
   );

@@ -657,12 +657,6 @@ textarea.input {
   display: grid;
   gap: 6px;
 }
-.legal {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(26, 26, 26, 0.08);
-}
 .legal > div,
 .pjData > div {
   display: flex;
@@ -690,35 +684,6 @@ textarea.input {
   text-decoration: underline;
 }
 
-.providerGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
-}
-.providerItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1.5px solid #e5e7eb;
-  background: #fff;
-  color: var(--color-carbon);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.providerItem:hover {
-  border-color: rgba(196, 94, 32, 0.5);
-}
-.providerAktif {
-  border-color: var(--color-ember);
-  color: var(--color-ember);
-  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.12);
-}
 .logoProvider,
 .logoCadangan {
   flex: none;
@@ -757,6 +722,164 @@ textarea.input {
   height: 18px;
   accent-color: var(--color-ember);
   cursor: pointer;
+}
+/* broker: satu kartu (logo + nama + AHU + NIB + alamat + Maps) */
+.brokerCard {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+}
+.brokerLogo {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+.brokerIsi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.brokerNama {
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+.btnMaps {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.btnMaps:hover {
+  filter: brightness(1.08);
+}
+
+/* select Bank / E-Wallet (gaya sama dengan pilihan mata uang di Price Chart) */
+.selWrap {
+  position: relative;
+  margin-top: 6px;
+}
+.selBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.selBtn:hover {
+  border-color: #c45e20;
+  box-shadow: 0 2px 8px rgba(196, 94, 32, 0.1);
+}
+.selNama {
+  flex: 1;
+  min-width: 0;
+}
+.selKosong {
+  flex: 1;
+  color: #9ca3af;
+  font-weight: 600;
+}
+.selDrop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+}
+.selOpt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #4b5563;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.selOpt:hover {
+  background: #f9fafb;
+  color: #c45e20;
+}
+.selAktif {
+  background: #fef3ec !important;
+  color: #c45e20 !important;
+}
+.selSingkat {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* penanda GPS Live */
+.liveTanda {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #22c55e;
+}
+.liveTanda i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: liveKedip 1.4s ease-in-out infinite;
+}
+@keyframes liveKedip {
+  50% { opacity: 0.25; }
+}
+
+/* hasil simpan order */
+.tersimpan {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.galatSimpan {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #f23645;
+  text-align: center;
 }
 /* [/SECTION: ORDER-TAMBAHAN] */
 

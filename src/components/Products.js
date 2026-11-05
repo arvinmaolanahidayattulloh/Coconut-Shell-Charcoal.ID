@@ -557,7 +557,7 @@ export default function Products() {
             usdIdr={orderUsdIdr}
             grade={grade}
             onGradeChange={setGrade}
-            onSelesai={() => {}} // batch 2: Verifikasi
+            onSelesai={() => {}} // dipanggil setelah order tersimpan (Pending); verifikasi & simpan ada di OrderForm
           />
         </div>
       )}

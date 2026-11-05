@@ -99,6 +99,52 @@ export async function getFxRecent(sinceSec) {
 }
 // [/PATCH:DB-UPDATE]
 
+// [PATCH:DB-ORDERS] order (status awal "pending", menunggu validasi) + rahasia Authenticator (TOTP)
+let _skemaOrder = false;
+export async function ensureOrderSchema() {
+  if (_skemaOrder) return;
+  await sql`CREATE TABLE IF NOT EXISTS orders (
+    id text PRIMARY KEY,
+    status text NOT NULL DEFAULT 'pending',
+    pemesan_email text,
+    data jsonb NOT NULL,
+    bukti_nama text, bukti_mime text, bukti_b64 text,
+    verifikasi_metode text NOT NULL,
+    verifikasi_server boolean NOT NULL DEFAULT false,
+    dibuat bigint NOT NULL
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS totp_secrets (
+    email text PRIMARY KEY,
+    secret text NOT NULL,
+    aktif boolean NOT NULL DEFAULT false,
+    dibuat bigint NOT NULL
+  )`;
+  _skemaOrder = true;
+}
+
+export async function simpanOrder(o) {
+  await sql`INSERT INTO orders (id, status, pemesan_email, data, bukti_nama, bukti_mime, bukti_b64, verifikasi_metode, verifikasi_server, dibuat)
+    VALUES (${o.id}, 'pending', ${o.email}, ${JSON.stringify(o.data)}::jsonb, ${o.buktiNama}, ${o.buktiMime}, ${o.buktiB64},
+            ${o.metode}, ${o.verifikasiServer}, ${Math.floor(Date.now() / 1000)})`;
+}
+
+export async function getTotp(email) {
+  const r = await sql`SELECT secret, aktif FROM totp_secrets WHERE email=${email}`;
+  return r[0] ?? null;
+}
+
+// hanya menimpa rahasia yang BELUM aktif (rahasia aktif tidak bisa diganti dari luar)
+export async function setTotpBaru(email, secret) {
+  await sql`INSERT INTO totp_secrets (email, secret, aktif, dibuat)
+    VALUES (${email}, ${secret}, false, ${Math.floor(Date.now() / 1000)})
+    ON CONFLICT (email) DO UPDATE SET secret=EXCLUDED.secret, dibuat=EXCLUDED.dibuat WHERE totp_secrets.aktif = false`;
+}
+
+export async function aktifkanTotp(email) {
+  await sql`UPDATE totp_secrets SET aktif = true WHERE email=${email}`;
+}
+// [/PATCH:DB-ORDERS]
+
 export async function getRaw(symbol, iv) {
   return sql`SELECT t, o, h, l, c FROM raw_candles WHERE symbol=${symbol} AND iv=${iv} ORDER BY t`;
 }

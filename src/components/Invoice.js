@@ -10,6 +10,7 @@ export default function Invoice({ o }) {
   const baris = [
     ["No. Invoice", o.id], ["Tanggal", o.tanggal], ["Jenis", o.jenis],
     ["Penerima", o.nama], ["WhatsApp", o.wa], ["Alamat Tujuan", o.alamat],
+    ...(o.catatan ? [["Catatan", o.catatan]] : []),
     ...(o.lokasi ? [["Lokasi GPS", fmtKoord(o.lokasi)]] : []),
     ["Broker / Mitra", o.mitra],
     ...(o.ahu ? [["Nomor AHU", o.ahu]] : []), ...(o.nib ? [["NIB", o.nib]] : []),

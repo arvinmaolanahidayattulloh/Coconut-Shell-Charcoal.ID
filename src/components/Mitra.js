@@ -47,7 +47,7 @@ export const partnersData = [
     // [/SECTION: KONTAK]
 
     // [SECTION: ORDER-FIELD] dipakai OrderForm
-    fotoPJ: "/mitra/TunasKembarAbadi/Direktur.jpg", // wajib rasio 1:1 (public/mitra/TunasKembarAbadi/)
+    fotoPJ: "https://www.coconutshellcharcoal.id/founder.jpg", // sementara; nanti ganti ke /mitra/TunasKembarAbadi/Direktur.jpg (rasio 1:1)
     qris: "/mitra/TunasKembarAbadi/QRIS.png",       // gambar QRIS mitra
     // [/SECTION: ORDER-FIELD]
 

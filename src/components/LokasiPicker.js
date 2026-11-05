@@ -1,10 +1,10 @@
 "use client";
 // [FILE: src/components/LokasiPicker.js]
 // Lokasi GPS pembeli. Tiga cara, semuanya opsional (lokasi tidak harus sama dengan posisi pembeli):
-//   1. GPS akurat      : navigator.geolocation (high accuracy), ambil pembacaan terbaik ±15 dtk
+//   1. GPS live       : navigator.geolocation.watchPosition (high accuracy), lokasi diperbarui terus sampai dihentikan
 //   2. Cari di peta    : nama tempat / alamat → OpenStreetMap Nominatim, atau tempel koordinat / tautan
 //   3. Koordinat       : "-6.2, 106.8" atau tautan Google Maps (yang memuat koordinat)
-// Nilai: { lat, lng, akurasi|null, sumber: "gps"|"cari"|"koordinat", label? } atau null.
+// Nilai: { lat, lng, akurasi|null, sumber: "gps"|"cari"|"koordinat", label?, waktu? } atau null.
 import { useEffect, useRef, useState } from "react";
 import styles from "./Order.module.css";
 
@@ -36,6 +36,14 @@ export function parseKoordinat(teks) {
 
 const fmt = (n) => Number(n).toFixed(6);
 
+// jarak dua titik (meter), rumus haversine
+function jarakM(a, b) {
+  const R = 6371000, rad = (x) => (x * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 function petaSrc({ lat, lng }) {
   const d = 0.004;
   const bbox = [lng - d, lat - d, lng + d, lat + d].join("%2C");
@@ -56,64 +64,60 @@ export default function LokasiPicker({ value, onChange }) {
   const [q, setQ] = useState("");
   const [hasil, setHasil] = useState([]);
   const [koord, setKoord] = useState("");
+  const [live, setLive] = useState(false);
   const watchRef = useRef(null);
-  const timerRef = useRef(null);
+  const terakhirRef = useRef(null);
 
   const stopGps = () => {
     if (watchRef.current != null && typeof navigator !== "undefined") {
       navigator.geolocation.clearWatch(watchRef.current);
     }
     watchRef.current = null;
-    clearTimeout(timerRef.current);
   };
   useEffect(() => () => stopGps(), []);
 
+  const hentikanLive = () => { stopGps(); setLive(false); setSibuk(false); };
+
   const pilih = (lat, lng, sumber, label) => {
+    hentikanLive();
     onChange({ lat, lng, akurasi: null, sumber, label });
     setHasil([]);
     setStatus("");
   };
 
-  // --- 1. GPS akurat: pantau beberapa detik, simpan pembacaan dengan akurasi terbaik ---
-  const ambilGps = () => {
+  // --- 1. GPS live: terus memantau posisi pengguna; nilai diperbarui otomatis saat bergerak ---
+  const mulaiLive = () => {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
       setStatus("Browser ini tidak mendukung GPS. Pakai Cari di Peta / Koordinat.");
       return;
     }
     stopGps();
+    terakhirRef.current = null;
+    setLive(true);
     setSibuk(true);
     setHasil([]);
     setStatus("Mencari sinyal GPS… tunggu beberapa detik agar akurat.");
-    let terbaik = null;
-
-    const selesai = (pesan) => {
-      stopGps();
-      setSibuk(false);
-      setStatus(pesan);
-    };
 
     watchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
-        if (!terbaik || accuracy < terbaik.akurasi) {
-          terbaik = { lat: latitude, lng: longitude, akurasi: Math.round(accuracy), sumber: "gps" };
-          onChange(terbaik);
-          setStatus(`Memperbaiki akurasi… ±${terbaik.akurasi} m`);
+        const baru = { lat: latitude, lng: longitude, akurasi: Math.round(accuracy), sumber: "gps", waktu: Date.now() };
+        const lama = terakhirRef.current;
+        // peta & nilai hanya diperbarui bila bergeser ≥ 5 m atau akurasi membaik ≥ 10 m (agar peta tidak berkedip)
+        if (!lama || jarakM(lama, baru) >= 5 || lama.akurasi - baru.akurasi >= 10) {
+          terakhirRef.current = baru;
+          onChange(baru);
         }
-        if (accuracy <= 20) selesai(`Lokasi didapat · akurasi ±${terbaik.akurasi} m`);
+        setSibuk(false);
+        setStatus(`Live · akurasi ±${Math.round(accuracy)} m · diperbarui ${new Date().toLocaleTimeString("id-ID")}`);
       },
-      (err) => { if (!terbaik) selesai(pesanGalat(err)); else selesai(`Lokasi didapat · akurasi ±${terbaik.akurasi} m`); },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      (err) => {
+        if (err?.code === 1) { hentikanLive(); setStatus(pesanGalat(err)); return; } // izin ditolak → berhenti
+        // sinyal sementara hilang / timeout: tetap memantau, hanya beri tahu bila belum pernah dapat lokasi
+        if (!terakhirRef.current) setStatus(pesanGalat(err));
+      },
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
-
-    timerRef.current = setTimeout(() => {
-      if (!terbaik) return selesai("Sinyal GPS tidak ditemukan. Coba lagi, atau pakai Cari di Peta / Koordinat.");
-      selesai(
-        terbaik.akurasi > 100
-          ? `Akurasi ±${terbaik.akurasi} m kurang tepat. Coba di area terbuka, atau pakai Cari di Peta / Koordinat.`
-          : `Lokasi didapat · akurasi ±${terbaik.akurasi} m`
-      );
-    }, 15000);
   };
 
   // --- 2. Cari di peta (OpenStreetMap Nominatim) ---
@@ -172,12 +176,19 @@ export default function LokasiPicker({ value, onChange }) {
       {tab === "gps" && (
         <>
           <div className={styles.baris}>
-            <button type="button" className={styles.btnSolid} onClick={ambilGps} disabled={sibuk}>
-              {sibuk ? "Mencari GPS…" : value?.sumber === "gps" ? "Ambil Ulang GPS" : "Gunakan Lokasi Saya"}
-            </button>
+            {live ? (
+              <button type="button" className={styles.btnSolid} onClick={() => { hentikanLive(); setStatus("Pemantauan lokasi dihentikan."); }}>
+                Hentikan Live
+              </button>
+            ) : (
+              <button type="button" className={styles.btnSolid} onClick={mulaiLive}>
+                {value?.sumber === "gps" ? "Aktifkan Live Lagi" : "Aktifkan Lokasi Live"}
+              </button>
+            )}
+            {live && !sibuk && <span className={styles.liveTanda}><i />LIVE</span>}
           </div>
           <span className={styles.hint}>
-            Aktifkan GPS dan izinkan akses lokasi. Hasil paling akurat di area terbuka. Bukan di lokasi tujuan? Pakai tab Cari di Peta atau Koordinat.
+            Lokasi Anda diperbarui otomatis selama Live aktif. Aktifkan GPS dan izinkan akses lokasi; paling akurat di area terbuka. Bukan di lokasi tujuan? Pakai tab Cari di Peta atau Koordinat.
           </span>
         </>
       )}
@@ -231,7 +242,7 @@ export default function LokasiPicker({ value, onChange }) {
             <a href={`https://www.google.com/maps?q=${value.lat},${value.lng}`} target="_blank" rel="noopener noreferrer">
               Buka di Google Maps
             </a>
-            <button type="button" className={styles.btnLink} onClick={() => { stopGps(); setSibuk(false); setStatus(""); onChange(null); }}>
+            <button type="button" className={styles.btnLink} onClick={() => { hentikanLive(); setStatus(""); onChange(null); }}>
               Hapus lokasi
             </button>
             {value.label && <span className={styles.lokasiLabel}>{value.label}</span>}

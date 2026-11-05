@@ -1,0 +1,79 @@
+/* [FILE: src/components/Verifikasi.module.css] gaya khusus modal VerifikasiOrder (dasar modal: AuthShared.module.css) */
+.metode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 14px;
+}
+.metode button {
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #4b5563;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.metode button:hover:not(:disabled) {
+  border-color: rgba(196, 94, 32, 0.5);
+  color: #c45e20;
+}
+.metode button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.metode .metodeAktif {
+  border-color: #c45e20;
+  background: #fef3ec;
+  color: #c45e20;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.info {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+.info a {
+  color: #c45e20;
+}
+.rahasia {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: center;
+  word-break: break-all;
+  user-select: all;
+}
+.linkKecil {
+  align-self: center;
+  border: 0;
+  background: none;
+  color: #c45e20;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.galat {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #f23645;
+  color: #f23645;
+  font-size: 13px;
+  line-height: 1.5;
+}
