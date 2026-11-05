@@ -1,0 +1,22 @@
+.wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+.judul { font-family: var(--font-display, inherit); font-size: 22px; margin: 0 0 16px; }
+.kartu {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 24px; background: #fff;
+  border: 1px solid rgba(26, 26, 26, 0.08); border-radius: 16px;
+}
+.label {
+  font-family: var(--font-display, inherit); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ember, #c8501e);
+}
+.nilaiRow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.nilai { font-size: clamp(36px, 10vw, 56px); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.satuan { font-size: 20px; font-weight: 600; opacity: 0.7; }
+.catatan { font-size: 13px; opacity: 0.65; }
+.muat { font-size: 16px; opacity: 0.6; }
+.galat { font-size: 14px; color: #b3261e; }
+.tombol {
+  align-self: flex-start; margin-top: 8px; padding: 8px 14px; font: inherit; font-size: 14px;
+  background: transparent; border: 1px solid rgba(26, 26, 26, 0.2); border-radius: 10px; cursor: pointer;
+}
+.tombol:disabled { opacity: 0.5; cursor: default; }
