@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## ChatGPT GitHub Integration
+
+This repository's README has been accessed and updated with assistance from ChatGPT through the authorized GitHub integration.
+
+- **Repository:** `arvinmaolanahidayattulloh/Coconut-Shell-Charcoal.ID`
+- **Connection:** GitHub repository access was verified for this update.
+- **Read access:** The existing `README.md` was retrieved from the `main` branch.
+- **Write access:** This documentation update is being committed to the `main` branch through the connected GitHub integration.
+- **Initialization:** ChatGPT can assist with repository setup and initialization tasks when the required repository permissions and project context are available.
+
+**Attribution note:** ChatGPT provided assistance with this documentation change. GitHub contributor attribution is determined by the Git author/committer identity attached to the commit; this section does not create a separate ChatGPT GitHub account or contributor identity.
