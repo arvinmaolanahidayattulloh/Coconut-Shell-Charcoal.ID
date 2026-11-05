@@ -35,7 +35,7 @@ export const partnersData = [
     // (format seperti embedMap di bawah: ...?q=LAT,LNG&output=embed).
     cabangBank: "KCU Depok",
     alamatCabangBank: "",
-    mapsCabangBank: "https://www.google.com/maps/search/?api=1&query=BCA+KCU+Depok",
+    mapsCabangBank: "https://share.google/O7C3fQCh20R59DZVr", // tautan tempat BCA KCU Depok dari pemilik
     embedMapCabangBank: "https://maps.google.com/maps?q=BCA+KCU+Depok&t=&z=16&ie=UTF8&iwloc=&output=embed",
     // [/SECTION: REKENING]
 
