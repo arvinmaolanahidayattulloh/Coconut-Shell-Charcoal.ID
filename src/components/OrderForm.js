@@ -42,6 +42,18 @@ function LogoQris() {
   return <img src={LOGO_QRIS_URL} alt="QRIS" className={rev.logoQris} referrerPolicy="no-referrer" onError={() => setGagal(true)} />;
 }
 
+// Ikon Transfer dari tautan; bila gagal dimuat, tombol tetap menampilkan teks "Transfer"
+const LOGO_TRANSFER_URL = "https://static.vecteezy.com/system/resources/previews/000/513/057/non_2x/repeat-glyph-black-icon-vector.jpg";
+function LogoTransfer() {
+  const [gagal, setGagal] = useState(false);
+  return (
+    <>
+      {!gagal && <img src={LOGO_TRANSFER_URL} alt="" className={rev.logoTransfer} referrerPolicy="no-referrer" onError={() => setGagal(true)} />}
+      <span>Transfer</span>
+    </>
+  );
+}
+
 // grade / onGradeChange (opsional): bila diberikan, grade dikontrol dari luar (Products) sehingga
 // pilihan di kartu Produk dan di form selalu sama. Tanpa itu, grade dipegang form sendiri.
 export default function OrderForm({
@@ -65,7 +77,7 @@ export default function OrderForm({
   useEffect(() => {
     fetch("/api/device-ip").then((r) => r.json()).then((j) => setDeviceIp(j.ip || "")).catch(() => {});
   }, []);
-  // tombol +1 / +10 pada Jumlah (dibulatkan 2 desimal agar tidak muncul 2.3000000001)
+  // tombol +0,1 / +1 / +10 pada Jumlah (dibulatkan 2 desimal agar tidak muncul 2.3000000001)
   const tambahTon = (n) => setF((s) => {
     const kini = Number(String(s.qty).replace(",", ".")) || 0;
     return { ...s, qty: String(Math.round((kini + n) * 100) / 100) };
@@ -79,12 +91,15 @@ export default function OrderForm({
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
   const mitra = MITRA.find((m) => m.id === f.mitraId);
 
-  // Alamat Tujuan terisi otomatis dari lokasi (GPS live / pencarian). Berhenti menimpa begitu pengguna
-  // mengetik atau menghapus alamat; pengguna bebas mengubahnya.
+  // Alamat Tujuan sinkron dengan lokasi. GPS live berhenti menimpa begitu pengguna mengetik / menghapus alamat,
+  // tetapi memilih lokasi dengan sengaja (geser pin, cari di peta, koordinat) SELALU memperbarui alamat.
   useEffect(() => {
-    if (!lokasi || alamatSentuhRef.current) return;
+    if (!lokasi) return;
+    const pilihanSengaja = lokasi.sumber !== "gps";
+    if (pilihanSengaja) alamatSentuhRef.current = false;
+    if (alamatSentuhRef.current) return;
     if (lokasi.label) { setF((s) => ({ ...s, alamat: lokasi.label })); return; } // hasil pencarian sudah berupa alamat
-    if (geoRef.current && jarakM(geoRef.current, lokasi) < 30) return; // belum berpindah jauh
+    if (!pilihanSengaja && geoRef.current && jarakM(geoRef.current, lokasi) < 30) return; // GPS belum berpindah jauh
     const ac = new AbortController();
     const t = setTimeout(async () => {
       try {
@@ -99,7 +114,7 @@ export default function OrderForm({
           setF((s) => ({ ...s, alamat: j.display_name }));
         }
       } catch { /* dibatalkan / offline: biarkan alamat apa adanya */ }
-    }, 800);
+    }, pilihanSengaja ? 400 : 800);
     return () => { clearTimeout(t); ac.abort(); };
   }, [lokasi]);
 
@@ -119,6 +134,11 @@ export default function OrderForm({
   const harga = useMemo(
     () => (hargaTonIdr ? hitungHarga({ mode: config.mode, hargaTonIdr, usdIdr, persen, qty }) : null),
     [config.mode, hargaTonIdr, usdIdr, persen, qty]
+  );
+  // harga dasar = harga asli dari chart CSC (tanpa persen grade); tampil sejak awal, sebelum grade dipilih
+  const hargaDasar = useMemo(
+    () => (hargaTonIdr ? hitungHarga({ mode: config.mode, hargaTonIdr, usdIdr, persen: 0, qty: 0 }) : null),
+    [config.mode, hargaTonIdr, usdIdr]
   );
   // [/SECTION: HARGA]
 
@@ -152,7 +172,7 @@ export default function OrderForm({
     jenis: config.judul, nama: f.nama, wa, alamat: f.alamat, catatan: f.catatan.trim(), lokasi,
     mitra: mitra.nama, ahu: mitra.ahu, nib: mitra.nib,
     pj: mitra.penanggungJawab.nama, pjJabatan: mitra.penanggungJawab.jabatan, pjWa: mitra.penanggungJawab.wa,
-    produk, grade: adaGrade ? kodeGrade : null,
+    produk, grade: adaGrade && kodeGrade ? kodeGrade : null,
     qty, satuan: config.satuan, harga, metode: f.metode,
     // atasNama TIDAK diisi pembeli: sistem mengecek pemilik rekening/e-wallet saat verifikasi
     dana: provider ? { jenis: dana.jenis, nama: provider.nama, nomor: dana.nomor.trim(), atasNama: null, cekPemilik: "menunggu" } : null,
@@ -233,7 +253,7 @@ export default function OrderForm({
         <label className={styles.label}>Alamat Tujuan
           <textarea className={styles.input} rows={3} value={f.alamat}
             onChange={(e) => { alamatSentuhRef.current = true; set("alamat")(e); }} />
-          {lokasi && <span className={styles.hint}>Terisi otomatis dari lokasi GPS. Anda bebas mengubah atau menghapusnya.</span>}
+          {lokasi && <span className={styles.hint}>Sinkron dengan lokasi GPS: alamat terisi dan ikut berubah saat Anda menggeser pin atau memilih lokasi. Anda juga bebas mengubahnya.</span>}
         </label>
 
         {/* [SECTION: CATATAN] tepat di bawah Alamat Tujuan */}
@@ -292,10 +312,11 @@ export default function OrderForm({
                 )}
               </div>
             )}
-            <div className={styles.pj}>
-              <img src={mitra.penanggungJawab.foto} alt={mitra.penanggungJawab.nama} className={styles.pjFoto} />
-              <div>
-                <small className={rev.judulOranye}>Penanggung Jawab</small>
+            <div className={`${styles.pj} ${rev.pjKartu}`}>
+              {/* judul di pojok kiri atas kartu, warna sama dengan Penerima Pembayaran */}
+              <small className={rev.judulOranye}>Penanggung Jawab</small>
+              <div className={rev.pjBaris}>
+                <img src={mitra.penanggungJawab.foto} alt={mitra.penanggungJawab.nama} className={styles.pjFoto} />
                 <dl className={styles.pjData}>
                   <div><dt>Nama</dt><dd>{mitra.penanggungJawab.nama}</dd></div>
                   <div><dt>Jabatan</dt><dd>{mitra.penanggungJawab.jabatan || "—"}</dd></div>
@@ -326,6 +347,7 @@ export default function OrderForm({
           <span className={rev.qtyRow}>
             <input className={`${styles.input} ${rev.qtyInput}`} type="number" min={minTon} step="0.1" inputMode="decimal"
               placeholder={`mis. ${fmtAngka(minTon)} atau ${fmtAngka(minTon + 0.2)}`} value={f.qty} onChange={set("qty")} />
+            <button type="button" className={rev.btnTambah} onClick={() => tambahTon(0.1)}>+0,1</button>
             <button type="button" className={rev.btnTambah} onClick={() => tambahTon(1)}>+1</button>
             <button type="button" className={rev.btnTambah} onClick={() => tambahTon(10)}>+10</button>
           </span>
@@ -334,9 +356,19 @@ export default function OrderForm({
         {harga ? (
           <div className={styles.hargaBox}>
             <div>
-              <small>Produk{adaGrade ? ` · Grade ${kodeGrade}` : ""}</small>
+              <small>Produk{adaGrade ? (kodeGrade ? ` · Grade ${kodeGrade}` : " · Grade: None") : ""}</small>
               <span>{produk}</span>
             </div>
+            <div>
+              <small>Harga Dasar (chart CSC)</small>
+              <span>{formatUang(hargaDasar.satuan, hargaDasar.mataUang)} / {config.satuan}</span>
+            </div>
+            {adaGrade && kodeGrade && persen > 0 && (
+              <div>
+                <small>Harga Grade {kodeGrade} (+{String(persen).replace(".", ",")}%)</small>
+                <span>{formatUang(harga.satuan, harga.mataUang)} / {config.satuan}</span>
+              </div>
+            )}
             <div>
               <small>Harga</small>
               <strong>{qty > 0 ? formatUang(harga.total, harga.mataUang) : "—"}</strong>
@@ -354,7 +386,7 @@ export default function OrderForm({
         <div className={styles.bayarRow}>
           <button type="button" className={`${styles.bayarBtn} ${f.metode === "transfer" ? styles.gradeAktif : ""}`}
             onClick={() => setF((s) => ({ ...s, metode: "transfer" }))}>
-            Transfer</button>
+            <LogoTransfer /></button>
           <button type="button" aria-label="QRIS" className={`${styles.bayarBtn} ${f.metode === "qris" ? styles.gradeAktif : ""}`}
             onClick={() => setF((s) => ({ ...s, metode: "qris" }))}>
             <LogoQris /></button>
@@ -363,26 +395,35 @@ export default function OrderForm({
 
         {/* [SECTION: INFO-PEMBAYARAN] rekening / QR tujuan transfer */}
         {mitra && (
-          <div className={`${styles.brokerCard} ${styles.bayarCard}`}>
-            <div className={rev.logoPutih}><img src={mitra.logo} alt={mitra.nama} /></div>
-            <div className={styles.brokerIsi}>
-              <small className={rev.judulOranye}>Penerima Pembayaran</small>
-              <b className={styles.brokerNama}>{mitra.nama}</b>
-              {f.metode === "transfer" && tf && (
-                <div className={`${styles.rekPenerima} ${rev.rekGrid}`}>
-                  <div className={styles.rekBank}>
-                    {bankPenerima && <LogoProvider key={bankPenerima.kode} p={bankPenerima} besar />}
-                    <span>{bankPenerima?.nama ?? tf.bank}</span>
-                  </div>
-                  <div className={styles.rekNomor}>
-                    <b>{tf.noRek}</b>
+          <div className={`${styles.brokerCard} ${rev.kartuTerima}`}>
+            {/* judul di pojok kiri atas; latar putih agar serasi dengan logo penyedia & logo bank */}
+            <small className={rev.judulOranye}>Penerima Pembayaran</small>
+            <div className={rev.terimaBaris}>
+              <div className={rev.logoPutih}><img src={mitra.logo} alt={mitra.nama} /></div>
+              <dl className={rev.terimaData}>
+                <div><dt>Nama</dt><dd>{mitra.nama}</dd></div>
+                <div><dt>NPWP</dt><dd>{mitra.npwp || "—"}</dd></div>
+              </dl>
+            </div>
+            {f.metode === "transfer" && tf && (
+              <div className={rev.terimaBaris}>
+                {/* logo bank saja, tanpa nama bank */}
+                <div className={rev.logoBank}>
+                  {bankPenerima
+                    ? <LogoProvider key={bankPenerima.kode} p={bankPenerima} besar />
+                    : <span>{tf.bank}</span>}
+                </div>
+                <dl className={rev.terimaData}>
+                  <div>
+                    <dt>Nomor</dt>
+                    <dd className={rev.nomorBank}>{tf.noRek}</dd>
                     <button type="button" className={styles.btnSalin} onClick={salin}>{tersalin ? "Tersalin ✓" : "Salin"}</button>
                   </div>
-                  <span className={styles.hint}>a.n. {tf.atasNama}{tf.swift ? ` · SWIFT ${tf.swift}` : ""}</span>
-                </div>
-              )}
-              {f.metode === "qris" && <img src={mitra.pembayaran.qris} alt="QRIS" className={styles.qris} />}
-            </div>
+                  <div><dt>a.n.</dt><dd>{tf.atasNama}{tf.swift ? ` · SWIFT ${tf.swift}` : ""}</dd></div>
+                </dl>
+              </div>
+            )}
+            {f.metode === "qris" && <img src={mitra.pembayaran.qris} alt="QRIS" className={styles.qris} />}
           </div>
         )}
         {/* [/SECTION: INFO-PEMBAYARAN] */}

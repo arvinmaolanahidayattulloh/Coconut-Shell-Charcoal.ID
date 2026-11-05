@@ -13,6 +13,7 @@ export const MITRA = partnersData.map((p) => {
     // legal: ditampilkan di form order agar pembeli bisa memeriksa keabsahan broker
     ahu: p.skKemenkumham,
     nib: p.nib,
+    npwp: p.npwp,
     alamat: p.alamatKantor,
     maps: p.mapsLink,
     alamatOps: p.alamatOperasional,

@@ -92,3 +92,174 @@
     align-items: center;
   }
 }
+
+/* ===== Penerima Pembayaran: kartu putih, judul kiri atas ===== */
+.kartuTerima.kartuTerima {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  background: #fff;
+  border-color: rgba(26, 26, 26, 0.1);
+}
+.terimaBaris.terimaBaris {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.terimaData.terimaData {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.terimaData.terimaData > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.terimaData.terimaData dt {
+  min-width: 52px;
+  color: var(--color-stone);
+}
+.terimaData.terimaData dt::after {
+  content: " :";
+}
+.terimaData.terimaData dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-carbon);
+  word-break: break-word;
+}
+.nomorBank.nomorBank {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+/* kotak logo bank: sama dengan kotak logo penyedia (putih, bingkai tipis) */
+.logoBank.logoBank {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.logoBank.logoBank > * {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ===== Penanggung Jawab: judul kiri atas kartu ===== */
+.pjKartu.pjKartu {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.pjBaris.pjBaris {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.pjKartu.pjKartu dt {
+  color: var(--color-stone);
+}
+.pjKartu.pjKartu dd {
+  color: var(--color-carbon);
+}
+
+/* ===== Pilihan bank / e-wallet: hanya logo + kolom cari ===== */
+.cariRow.cariRow {
+  display: flex;
+  gap: 6px;
+  padding: 2px 2px 8px;
+}
+.cariInput.cariInput {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: var(--color-carbon);
+  font: inherit;
+  font-size: 13px;
+}
+.cariInput.cariInput:focus {
+  outline: none;
+  border-color: var(--color-ember);
+}
+.cariBtn.cariBtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-ember);
+  background: #fff;
+  color: var(--color-ember);
+  cursor: pointer;
+}
+.cariBtn.cariBtn:hover {
+  background: rgba(196, 94, 32, 0.08);
+}
+.logoGrid.logoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 6px;
+}
+.logoOpt.logoOpt {
+  display: grid;
+  place-items: center;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+}
+.logoOpt.logoOpt:hover {
+  border-color: var(--color-ember);
+  background: #fff7ed;
+}
+.logoOptAktif.logoOptAktif {
+  border-color: var(--color-ember);
+  background: #fef3ec;
+  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.12);
+}
+.tidakAda.tidakAda {
+  padding: 10px 6px;
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* ===== ikon Transfer (JPG berlatar putih → dilebur ke tombol) ===== */
+.logoTransfer.logoTransfer {
+  height: 24px;
+  width: auto;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+/* ===== peta yang bisa digeser (Leaflet) ===== */
+.petaGeser.petaGeser {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+.petaGeserEl.petaGeserEl {
+  width: 100%;
+  height: 260px;
+}

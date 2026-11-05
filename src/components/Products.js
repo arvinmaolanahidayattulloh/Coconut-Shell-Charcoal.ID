@@ -132,7 +132,9 @@ function LivePrice({ product, live, orderMode, onOrderMode, grade, onGrade }) {
       <div className={styles.livePriceInfo}>
         <div className={styles.livePriceHead}>
           <span className={styles.liveDot} aria-hidden="true" />
-          <span className={styles.liveLabel}>Harga Realtime</span>
+          <span className={styles.liveLabel}>
+            Harga Realtime{adaGrade ? (grade ? ` · Grade ${grade}` : " · Harga Dasar CSC") : ""}
+          </span>
         </div>
         {live.ready ? (
           <>

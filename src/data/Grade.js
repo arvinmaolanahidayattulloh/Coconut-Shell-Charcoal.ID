@@ -9,5 +9,5 @@ export const GRADE = [
 
 // [SECTION: PRODUK-BERGRADE] hanya produk ini yang punya pilihan Grade (nama sama dengan PRODUCTS di Products.js)
 export const PRODUK_BERGRADE = ["Natural"];
-export const GRADE_AWAL = "C"; // +0% = harga indeks apa adanya
+export const GRADE_AWAL = ""; // None = belum memilih grade → tampil harga dasar indeks CSC (+0%)
 // [/SECTION: PRODUK-BERGRADE]

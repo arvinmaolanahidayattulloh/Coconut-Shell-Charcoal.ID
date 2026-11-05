@@ -7,6 +7,8 @@
 // Nilai: { lat, lng, akurasi|null, sumber: "gps"|"cari"|"koordinat", label?, waktu? } atau null.
 import { useEffect, useRef, useState } from "react";
 import styles from "./Order.module.css";
+import rev from "./OrderRevisi.module.css";
+import PetaGeser from "./PetaGeser";
 
 // [SECTION: PARSE-KOORDINAT]
 const ANGKA = "(-?\\d{1,3}(?:\\.\\d+)?)";
@@ -44,12 +46,6 @@ export function jarakM(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-function petaSrc({ lat, lng }) {
-  const d = 0.004;
-  const bbox = [lng - d, lat - d, lng + d, lat + d].join("%2C");
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
-}
-
 function pesanGalat(err) {
   if (err?.code === 1) return "Izin lokasi ditolak. Aktifkan izin lokasi di browser, atau pakai Cari di Peta / Koordinat.";
   if (err?.code === 2) return "Posisi tidak tersedia. Coba di area terbuka, atau pakai Cari di Peta / Koordinat.";
@@ -83,6 +79,15 @@ export default function LokasiPicker({ value, onChange }) {
     onChange({ lat, lng, akurasi: null, sumber, label });
     setHasil([]);
     setStatus("");
+  };
+
+  // --- Geser pin / ketuk peta: titik dipilih sengaja → live GPS berhenti (agar pin tidak ditarik kembali)
+  //     dan Alamat Tujuan di form diperbarui mengikuti titik baru ---
+  const geser = (lat, lng) => {
+    hentikanLive();
+    onChange({ lat, lng, akurasi: null, sumber: "geser", waktu: Date.now() });
+    setHasil([]);
+    setStatus("Pin digeser. Alamat Tujuan diperbarui sesuai titik ini.");
   };
 
   // --- 1. GPS live: terus memantau posisi pengguna; nilai diperbarui otomatis saat bergerak ---
@@ -246,9 +251,10 @@ export default function LokasiPicker({ value, onChange }) {
 
       {value && (
         <>
-          <div className={styles.peta}>
-            <iframe title="Peta lokasi" src={petaSrc(value)} loading="lazy" referrerPolicy="no-referrer" />
+          <div className={`${styles.peta} ${rev.petaGeser}`}>
+            <PetaGeser lat={value.lat} lng={value.lng} onGeser={geser} />
           </div>
+          <span className={styles.hint}>Geser pin atau ketuk peta untuk mengubah titik; Alamat Tujuan ikut diperbarui.</span>
           <div className={styles.lokasiMeta}>
             <b>{fmt(value.lat)}, {fmt(value.lng)}</b>
             {value.akurasi != null && <span>akurasi ±{value.akurasi} m</span>}
