@@ -1,37 +1,709 @@
-/* Register.module.css: pelengkap tampilan Register agar sama dengan modal Login */
+/* ============================================================
+   Register.module.css — modal pendaftaran CSCID
+   Tema: ember (oranye bara) + carbon + cream, sesuai globals.css
+   Tombol Approve selalu di KANAN, Batal di KIRI.
+   ============================================================ */
 
+/* ---------- Backdrop & kartu ---------- */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(196, 94, 32, 0.22), transparent 62%),
+    rgba(17, 17, 17, 0.58);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow-y: auto;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 22px 26px 26px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, var(--color-warm-white, #faf8f5) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(196, 94, 32, 0.08),
+    0 30px 70px -20px rgba(17, 17, 17, 0.45),
+    0 12px 30px -12px rgba(196, 94, 32, 0.25);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 94, 32, 0.4) transparent;
+}
+
+/* Garis aksen atas: gradien bara yang bergerak pelan */
+.accentLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-ember-dark, #9a4a18),
+    var(--color-ember, #c45e20),
+    var(--color-ember-light, #d4890a),
+    var(--color-ember, #c45e20),
+    var(--color-ember-dark, #9a4a18)
+  );
+  background-size: 220% 100%;
+  animation: emberFlow 6s linear infinite;
+}
+
+/* Cahaya bara melayang di pojok kanan atas */
+.orb {
+  position: absolute;
+  top: -70px;
+  right: -60px;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 137, 10, 0.28), rgba(196, 94, 32, 0) 70%);
+  pointer-events: none;
+  animation: orbFloat 7s ease-in-out infinite;
+}
+
+/* ---------- Bar atas: brand + tombol tutup ---------- */
+.topBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-ember, #c45e20), var(--color-ember-dark, #9a4a18));
+  box-shadow: 0 4px 12px rgba(196, 94, 32, 0.35);
+}
+
+.brandText {
+  font-family: var(--font-display, inherit);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--color-carbon, #1a1a1a);
+}
+
+.closeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17, 17, 17, 0.05);
+  color: #4b5563;
+  cursor: pointer;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, color 0.2s ease;
+}
+
+.closeBtn:hover {
+  background: rgba(196, 94, 32, 0.12);
+  color: var(--color-ember, #c45e20);
+  transform: rotate(90deg);
+}
+
+/* ---------- Progress ---------- */
+.progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.07);
+  overflow: hidden;
+}
+
+.progressFill {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-ember, #c45e20), var(--color-ember-light, #d4890a));
+  overflow: hidden;
+}
+
+/* Kilau yang menyapu bar progress */
+.progressFill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: sheen 2.4s ease-in-out infinite;
+}
+
+.progressText {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* ---------- Isi langkah ---------- */
+.stepWrap {
+  position: relative;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.iconBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 4px;
+  border-radius: 16px;
+  color: var(--color-ember, #c45e20);
+  background: linear-gradient(135deg, #fef3ec, #fde4d1);
+  box-shadow:
+    inset 0 0 0 1px rgba(196, 94, 32, 0.15),
+    0 8px 18px -8px rgba(196, 94, 32, 0.45);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-carbon, #1a1a1a);
+}
+
+.desc {
+  margin: 0;
+  max-width: 320px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.desc b {
+  color: var(--color-carbon, #1a1a1a);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+/* ---------- Input ---------- */
+.fieldWrap {
+  width: 100%;
+}
+
+.fieldWrap input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--color-carbon, #1a1a1a);
+  font-size: 15px;
+  font-family: var(--font-body, inherit);
+  outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, transform 0.25s ease;
+}
+
+.fieldWrap input::placeholder {
+  color: #a8a29e;
+}
+
+.fieldWrap input:hover {
+  border-color: #d6d3d1;
+}
+
+.fieldWrap input:focus {
+  border-color: var(--color-ember, #c45e20);
+  background: #fffdfb;
+  box-shadow: 0 0 0 4px rgba(196, 94, 32, 0.14);
+}
+
+.fieldWrap .otpInput {
+  text-align: center;
+  letter-spacing: 0.55em;
+  padding-left: calc(16px + 0.55em);
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-display, inherit);
+}
+
+.waWrap {
+  width: 100%;
+}
+
+.waRow {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.waRow input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.waHint {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.waHint b {
+  color: var(--color-ember-dark, #9a4a18);
+  font-family: var(--font-display, inherit);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Pemilih negara ---------- */
+.countryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--color-carbon, #1a1a1a);
+  cursor: pointer;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.countryBtn:hover {
+  border-color: #d6d3d1;
+  background: #fffdfb;
+}
+
+.countryBtnOpen,
+.countryBtn:focus-visible {
+  border-color: var(--color-ember, #c45e20);
+  box-shadow: 0 0 0 4px rgba(196, 94, 32, 0.14);
+  outline: none;
+}
+
+.flag {
+  width: 22px;
+  height: 16px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.12);
+}
+
+.flagFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  background: #f5f5f4;
+  color: #6b7280;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dial {
+  font-family: var(--font-display, inherit);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chevron {
+  color: #9ca3af;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+  color: var(--color-ember, #c45e20);
+}
+
+.countryPanel {
+  overflow: hidden;
+}
+
+.countryPanelInner {
+  margin-top: 10px;
+  border: 1.5px solid #ece8e3;
+  border-radius: 14px;
+  background: var(--color-warm-white, #faf8f5);
+  overflow: hidden;
+}
+
+.countrySearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid #ece8e3;
+  background: #ffffff;
+  color: var(--color-ember, #c45e20);
+}
+
+.fieldWrap .countrySearch input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-body, inherit);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+.fieldWrap .countrySearch input:focus,
+.fieldWrap .countrySearch input:hover {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.countryCount {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3ec;
+  color: var(--color-ember-dark, #9a4a18);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.countryList {
+  max-height: 224px;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 94, 32, 0.45) transparent;
+}
+
+.countryList::-webkit-scrollbar {
+  width: 5px;
+}
+
+.countryList::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(196, 94, 32, 0.45);
+}
+
+.countryItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-carbon, #1a1a1a);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.countryItem:hover,
+.countryItem:focus-visible {
+  background: #fef3ec;
+  outline: none;
+  transform: translateX(2px);
+}
+
+.countryItemSel {
+  background: #fde8d8;
+  font-weight: 600;
+}
+
+.countryName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.countryDial {
+  flex-shrink: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #6b7280;
+}
+
+.countryTick {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-ember, #c45e20);
+}
+
+.countryDivider {
+  padding: 10px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.countryEmpty {
+  padding: 18px 10px;
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* ---------- Tombol aksi: BATAL kiri, APPROVE kanan ---------- */
+.actions {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.btnCancel {
+  flex: 1;
+  padding: 13px 16px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.btnCancel:hover:not(:disabled) {
+  background: #f5f5f4;
+  border-color: #d6d3d1;
+  color: var(--color-carbon, #1a1a1a);
+}
+
+.btnCancel:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btnCancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnApprove {
+  position: relative;
+  flex: 1.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 18px;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--color-ember, #c45e20), var(--color-ember-dark, #9a4a18));
+  box-shadow:
+    0 8px 20px -6px rgba(196, 94, 32, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: box-shadow 0.3s ease, filter 0.3s ease;
+}
+
+/* Kilau menyapu saat hover */
+.btnApprove::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.btnApprove:hover:not(:disabled) {
+  box-shadow:
+    0 14px 28px -8px rgba(196, 94, 32, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  filter: brightness(1.04);
+}
+
+.btnApprove:hover:not(:disabled)::after {
+  left: 130%;
+}
+
+.btnApprove:focus-visible,
+.btnCancel:focus-visible,
+.providerBtn:focus-visible,
+.closeBtn:focus-visible {
+  outline: 3px solid rgba(196, 94, 32, 0.35);
+  outline-offset: 2px;
+}
+
+.btnApprove:disabled {
+  cursor: wait;
+  filter: saturate(0.8);
+  opacity: 0.9;
+}
+
+.btnLabel {
+  position: relative;
+}
+
+.arrow {
+  position: relative;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btnApprove:hover:not(:disabled) .arrow,
+.providerBtn:hover:not(:disabled) .arrow {
+  transform: translateX(4px);
+}
+
+/* ---------- Spinner ---------- */
+.spinner,
+.spinnerDark {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: spin 0.7s linear infinite;
+}
+
+.spinnerDark {
+  border-color: rgba(196, 94, 32, 0.25);
+  border-top-color: var(--color-ember, #c45e20);
+}
+
+/* ---------- Langkah 1: S&K + pilih platform ---------- */
 .termsBlock {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #fafaf9;
-  transition: border-color 0.2s ease;
+  gap: 10px;
+  padding: 14px;
+  border: 1.5px solid #ece8e3;
+  border-radius: 14px;
+  background: var(--color-warm-white, #faf8f5);
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.termsAgreed {
+  border-color: rgba(196, 94, 32, 0.45);
+  background: #fffaf6;
+  box-shadow: 0 0 0 4px rgba(196, 94, 32, 0.07);
+}
+
+.termsError {
+  border-color: #dc2626;
+  background: #fef2f2;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
 }
 
 .termsTitle {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--color-ember, #c45e20);
+}
+
+.termsError .termsTitle {
+  color: #dc2626;
 }
 
 .termsScroll {
-  max-height: 120px;
+  max-height: 112px;
   overflow-y: auto;
-  padding-right: 6px;
+  padding-right: 8px;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: #4b5563;
   outline: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 94, 32, 0.45) transparent;
+  -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 82%, transparent 100%);
+}
+
+.termsScroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.termsScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(196, 94, 32, 0.45);
 }
 
 .termsScroll:focus-visible {
-  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.15);
+  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.18);
   border-radius: 6px;
 }
 
@@ -41,82 +713,217 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  list-style: decimal;
+}
+
+.termsList li::marker {
+  color: var(--color-ember, #c45e20);
+  font-weight: 700;
 }
 
 .termsCheck {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  padding-top: 10px;
+  border-top: 1px solid #ece8e3;
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-carbon, #1a1a1a);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Checkbox native disembunyikan tapi tetap aksesibel (keyboard & screen reader) */
+.checkInput {
+  position: absolute;
+  opacity: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
   cursor: pointer;
 }
 
-.termsCheck input {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: #c45e20;
+.checkBox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 1.8px solid #cfc9c2;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #ffffff;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+
+.checkPath {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.05s;
+}
+
+.termsCheck:hover .checkBox {
+  border-color: var(--color-ember, #c45e20);
+}
+
+.checkInput:checked + .checkBox {
+  background: linear-gradient(135deg, var(--color-ember, #c45e20), var(--color-ember-dark, #9a4a18));
+  border-color: var(--color-ember, #c45e20);
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(196, 94, 32, 0.4);
+}
+
+.checkInput:checked + .checkBox .checkPath {
+  stroke-dashoffset: 0;
+}
+
+.checkInput:focus-visible + .checkBox {
+  outline: 3px solid rgba(196, 94, 32, 0.35);
+  outline-offset: 2px;
+}
+
+.checkText {
+  transition: color 0.25s ease;
+}
+
+.termsAgreed .checkText {
+  color: var(--color-ember-dark, #9a4a18);
 }
 
 .providerList {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: opacity 0.2s ease;
+  gap: 10px;
+  transition: opacity 0.35s ease, filter 0.35s ease;
 }
 
 .providerDim {
-  opacity: 0.55;
+  opacity: 0.5;
+  filter: grayscale(0.4);
 }
 
 .providerBtn {
+  position: relative;
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  gap: 12px;
+  padding: 11px 16px 11px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
   background: #ffffff;
-  color: #111827;
+  color: var(--color-carbon, #1a1a1a);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.3s ease;
+}
+
+.providerIconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: #f5f5f4;
+  transition: background 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.providerLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.providerBtn .arrow {
+  color: #a8a29e;
+  opacity: 0.6;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s ease, opacity 0.25s ease;
 }
 
 .providerBtn:hover:not(:disabled) {
-  border-color: #c45e20;
+  border-color: var(--color-ember, #c45e20);
   background: #fef3ec;
+  box-shadow: 0 10px 22px -10px rgba(196, 94, 32, 0.45);
+}
+
+.providerBtn:hover:not(:disabled) .providerIconWrap {
+  background: #ffffff;
+  transform: scale(1.1) rotate(-4deg);
+}
+
+.providerBtn:hover:not(:disabled) .arrow {
+  color: var(--color-ember, #c45e20);
+  opacity: 1;
 }
 
 .providerBtn:disabled {
   cursor: wait;
 }
 
-.waRow {
+.footerRow {
   display: flex;
-  gap: 8px;
   width: 100%;
 }
 
-.waRow input {
-  flex: 1;
-  min-width: 0;
+.footerRow .btnCancel {
+  width: 100%;
 }
 
-.waSelect {
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #111827;
-  font-size: 14px;
-  font-weight: 700;
+/* ---------- Animasi ---------- */
+@keyframes emberFlow {
+  from { background-position: 0% 0; }
+  to { background-position: 220% 0; }
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-16px, 14px) scale(1.12); }
+}
+
+@keyframes sheen {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Responsif ---------- */
+@media (max-width: 480px) {
+  .card {
+    padding: 20px 18px 22px;
+    border-radius: 20px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .progressText {
+    font-size: 10px;
+  }
+}
+
+/* ---------- Hormati preferensi kurangi gerak ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .accentLine,
+  .orb,
+  .progressFill::after {
+    animation: none;
+  }
+
+  .btnApprove::after,
+  .closeBtn,
+  .arrow,
+  .checkPath,
+  .checkBox {
+    transition: none;
+  }
 }

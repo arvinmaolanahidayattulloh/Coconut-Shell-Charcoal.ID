@@ -28,6 +28,7 @@
 }
 
 .modalForm {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -35,20 +36,45 @@
   justify-content: center;
   width: 100%;
   max-width: 380px;
-  padding: 28px 24px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  padding: 30px 24px 24px;
+  background: linear-gradient(180deg, #ffffff 0%, var(--color-warm-white, #faf8f5) 100%);
+  border: 1px solid rgba(196, 94, 32, 0.12);
   border-radius: 20px;
-  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 24px 48px -16px rgba(17, 17, 17, 0.25),
+    0 10px 24px -12px rgba(196, 94, 32, 0.25);
+  overflow: hidden;
+  animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Garis aksen bara di atas kartu */
+.modalForm::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-ember-dark, #9a4a18),
+    var(--color-ember, #c45e20),
+    var(--color-ember-light, #d4890a),
+    var(--color-ember, #c45e20),
+    var(--color-ember-dark, #9a4a18)
+  );
+  background-size: 220% 100%;
+  animation: emberFlow 6s linear infinite;
 }
 
 .modalTitle {
   margin: 0 0 2px 0;
-  color: #111827;
-  font-size: 18px;
+  color: var(--color-carbon, #1a1a1a);
+  font-family: var(--font-display, inherit);
+  font-size: 20px;
   font-weight: 700;
   text-align: center;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 .modalDesc {
@@ -56,69 +82,158 @@
   color: #6b7280;
   margin: 0 0 12px 0;
   text-align: center;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .inputField {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
+  padding: 13px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
   font-size: 14px;
   outline: none;
   background: #ffffff;
-  color: #111827;
-  transition: all 0.2s;
+  color: var(--color-carbon, #1a1a1a);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.inputField:hover {
+  border-color: #d6d3d1;
 }
 
 .inputField:focus {
-  border-color: #c45e20;
-  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.12);
+  border-color: var(--color-ember, #c45e20);
+  background: #fffdfb;
+  box-shadow: 0 0 0 4px rgba(196, 94, 32, 0.14);
 }
 
+/* Batal di KIRI, tombol approve di KANAN */
 .modalActionsRow {
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
   gap: 10px;
   width: 100%;
   margin-top: 6px;
 }
 
-.btnSubmit {
-  flex: 1;
-  padding: 12px 16px;
-  background: #c45e20;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btnSubmit:hover {
-  background: #a84e1a;
-}
-
 .btnCancel {
   flex: 1;
-  padding: 12px 16px;
-  background: #f3f4f6;
+  padding: 13px 16px;
+  background: #ffffff;
   color: #4b5563;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .btnCancel:hover {
-  background: #e5e7eb;
+  background: #f5f5f4;
+  border-color: #d6d3d1;
+  color: var(--color-carbon, #1a1a1a);
+}
+
+.btnCancel:active {
+  transform: scale(0.97);
+}
+
+.btnSubmit {
+  position: relative;
+  flex: 1.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 18px;
+  overflow: hidden;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--color-ember, #c45e20), var(--color-ember-dark, #9a4a18));
+  box-shadow:
+    0 8px 20px -6px rgba(196, 94, 32, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, filter 0.3s ease;
+}
+
+/* Kilau menyapu saat hover */
+.btnSubmit::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.btnSubmit:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+  box-shadow:
+    0 14px 28px -8px rgba(196, 94, 32, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.btnSubmit:hover::after {
+  left: 130%;
+}
+
+.btnSubmit:active {
+  transform: scale(0.97);
+}
+
+.btnArrow {
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btnSubmit:hover .btnArrow {
+  transform: translateX(4px);
+}
+
+.btnSubmit:focus-visible,
+.btnCancel:focus-visible {
+  outline: 3px solid rgba(196, 94, 32, 0.35);
+  outline-offset: 2px;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes emberFlow {
+  from { background-position: 0% 0; }
+  to { background-position: 220% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalForm,
+  .modalForm::before {
+    animation: none;
+  }
+
+  .btnSubmit,
+  .btnSubmit::after,
+  .btnArrow {
+    transition: none;
+  }
 }
 /* [MODAL-END] */
