@@ -17,6 +17,8 @@ const DIVERIFIKASI_SERVER = ["authenticator", "email", "wa"];
 
 const galat = (pesan, status = 400) => NextResponse.json({ ok: false, pesan }, { status });
 const teks = (v, maks = 500) => String(v ?? "").trim().slice(0, maks);
+// IP perangkat dibaca server dari header proxy (tidak dipercaya dari klien)
+const ipDariHeader = (req) => teks((req.headers.get("x-forwarded-for") || "").split(",")[0] || req.headers.get("x-real-ip"), 60);
 
 export async function POST(req) {
   try {
@@ -50,7 +52,7 @@ export async function POST(req) {
     const buktiB64 = Buffer.from(await bukti.arrayBuffer()).toString("base64");
 
     const data = {
-      id: o.id, pembeli: { id: teks(o.pembeli?.id, 120), email: teks(form.get("email"), 200).toLowerCase() }, tanggal: teks(o.tanggal, 60), jenis: teks(o.jenis, 30),
+      id: o.id, pembeli: { id: teks(o.pembeli?.id, 120), userId: teks(o.pembeli?.userId, 40), username: teks(o.pembeli?.username, 120), nickname: teks(o.pembeli?.nickname, 120), ip: ipDariHeader(req), email: teks(form.get("email"), 200).toLowerCase() }, tanggal: teks(o.tanggal, 60), jenis: teks(o.jenis, 30),
       nama: teks(o.nama, 120), wa: String(o.wa).replace(/\D/g, ""), alamat: teks(o.alamat, 500), catatan: teks(o.catatan, 500),
       lokasi: o.lokasi && Number.isFinite(Number(o.lokasi.lat)) && Number.isFinite(Number(o.lokasi.lng))
         ? { lat: Number(o.lokasi.lat), lng: Number(o.lokasi.lng), akurasi: o.lokasi.akurasi ?? null, sumber: teks(o.lokasi.sumber, 20), waktu: o.lokasi.waktu ?? null }

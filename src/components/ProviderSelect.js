@@ -56,7 +56,6 @@ export default function ProviderSelect({ daftar, value, onChange, placeholder = 
               onClick={() => { onChange(p.kode); setBuka(false); }}>
               <LogoProvider p={p} />
               <span className={styles.selNama}>{p.nama}</span>
-              <span className={styles.selSingkat}>{p.singkat}</span>
             </button>
           ))}
         </div>

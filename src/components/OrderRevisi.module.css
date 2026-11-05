@@ -1,0 +1,94 @@
+/* [FILE: src/components/OrderRevisi.module.css] */
+/* Gaya tambahan form order. Selector digandakan (.x.x) agar menang atas Order.module.css tanpa bergantung urutan muat. */
+
+/* judul oranye: Penanggung Jawab & Penerima Pembayaran */
+.judulOranye.judulOranye {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ember);
+}
+
+/* logo mitra berlatar putih */
+.logoPutih {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  border-radius: 14px;
+}
+.logoPutih img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Jumlah: input + tombol +1 / +10 */
+.qtyRow {
+  display: flex;
+  gap: 8px;
+}
+.qtyInput.qtyInput {
+  flex: 1;
+  min-width: 0;
+}
+.btnTambah {
+  flex: none;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-ember);
+  background: #fff;
+  color: var(--color-ember);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btnTambah:hover {
+  background: rgba(196, 94, 32, 0.08);
+}
+
+/* tombol Maps di bawah peta */
+.btnMapsBawah {
+  display: block;
+  margin: 12px 14px 14px;
+  padding: 10px 16px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+.btnMapsBawah:hover {
+  filter: brightness(1.08);
+}
+
+/* logo QRIS pada tombol metode bayar */
+.logoQris.logoQris {
+  height: 28px;
+  object-fit: contain;
+}
+
+/* bank & nomor rekening: atas-bawah di layar kecil, kiri-kanan di layar lebar */
+.rekGrid.rekGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.rekGrid.rekGrid > :last-child {
+  grid-column: 1 / -1;
+}
+@media (min-width: 560px) {
+  .rekGrid.rekGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    align-items: center;
+  }
+}

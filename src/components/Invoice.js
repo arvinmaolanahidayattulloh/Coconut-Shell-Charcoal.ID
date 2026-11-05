@@ -13,7 +13,7 @@ export default function Invoice({ o }) {
     ["Penerima", o.nama], ["WhatsApp", o.wa], ["Alamat Tujuan", o.alamat],
     ...(o.catatan ? [["Catatan", o.catatan]] : []),
     ...(o.lokasi ? [["Lokasi GPS", fmtKoord(o.lokasi)]] : []),
-    ["Broker / Mitra", o.mitra],
+    ["Penyedia", o.mitra],
     ...(o.ahu ? [["Nomor AHU", o.ahu]] : []), ...(o.nib ? [["NIB", o.nib]] : []),
     ["Penanggung Jawab", [o.pj, o.pjJabatan].filter(Boolean).join(" — ")],
     ...(o.pjWa ? [["WhatsApp PJ", o.pjWa]] : []),

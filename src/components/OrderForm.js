@@ -2,6 +2,7 @@
 // [FILE: src/components/OrderForm.jsx]
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Order.module.css";
+import rev from "./OrderRevisi.module.css";
 import { MITRA } from "@/data/Mitra";
 import { BANK, EWALLET, cariProvider } from "@/data/Provider";
 import { GRADE, PRODUK_BERGRADE, GRADE_AWAL } from "@/data/Grade";
@@ -33,6 +34,13 @@ function FotoAkun({ user }) {
     referrerPolicy="no-referrer" onError={() => setGagal(true)} />;
 }
 
+// Logo QRIS (public/pembayaran/qris.png); bila file belum ada → teks "QRIS" sebagai cadangan
+function LogoQris() {
+  const [gagal, setGagal] = useState(false);
+  if (gagal) return <span>QRIS</span>;
+  return <img src="/pembayaran/qris.png" alt="QRIS" className={rev.logoQris} onError={() => setGagal(true)} />;
+}
+
 // grade / onGradeChange (opsional): bila diberikan, grade dikontrol dari luar (Products) sehingga
 // pilihan di kartu Produk dan di form selalu sama. Tanpa itu, grade dipegang form sendiri.
 export default function OrderForm({
@@ -52,6 +60,15 @@ export default function OrderForm({
   ); // dibuat SEKALI, tidak berubah tiap render
   // Selesai → Verifikasi → simpan sebagai Pending
   const { user } = useAccount();
+  const [deviceIp, setDeviceIp] = useState("");
+  useEffect(() => {
+    fetch("/api/device-ip").then((r) => r.json()).then((j) => setDeviceIp(j.ip || "")).catch(() => {});
+  }, []);
+  // tombol +1 / +10 pada Jumlah (dibulatkan 2 desimal agar tidak muncul 2.3000000001)
+  const tambahTon = (n) => setF((s) => {
+    const kini = Number(String(s.qty).replace(",", ".")) || 0;
+    return { ...s, qty: String(Math.round((kini + n) * 100) / 100) };
+  });
   const [verif, setVerif] = useState(false);
   const [simpan, setSimpan] = useState({ status: "idle", pesan: "" }); // idle | menyimpan | tersimpan | galat
   const [verifTerakhir, setVerifTerakhir] = useState(null);
@@ -114,7 +131,7 @@ export default function OrderForm({
   if (!f.nama.trim()) kurang.push("nama penerima");
   if (wa.length < 9) kurang.push("nomor WhatsApp");
   if (!f.alamat.trim()) kurang.push("alamat tujuan");
-  if (!mitra) kurang.push("broker");
+  if (!mitra) kurang.push("penyedia");
   if (!(qtyTon >= minTon)) kurang.push(`jumlah minimal ${fmtAngka(minTon)} Ton`);
   if (!harga) kurang.push("harga (masih dimuat)");
   if (!provider || nomorDana.length < 5) {
@@ -129,7 +146,7 @@ export default function OrderForm({
   // [SECTION: DATA-ORDER]
   const order = harga && mitra ? {
     id: invId,
-    pembeli: { id: user?.name || "", email: user?.email || "" },
+    pembeli: { id: user?.name || "", userId: user?.id || "", username: user?.username || user?.name || "", nickname: user?.nickname || user?.name || "", ip: deviceIp, email: user?.email || "" },
     tanggal: new Date().toLocaleDateString("id-ID", { dateStyle: "long" }),
     jenis: config.judul, nama: f.nama, wa, alamat: f.alamat, catatan: f.catatan.trim(), lokasi,
     mitra: mitra.nama, ahu: mitra.ahu, nib: mitra.nib,
@@ -192,7 +209,10 @@ export default function OrderForm({
         <div className={styles.pembeli}>
           <FotoAkun user={user} />
           <dl className={styles.pjData}>
-            <div><dt>ID Akun</dt><dd>{user?.name || "—"}</dd></div>
+            <div><dt>Nickname</dt><dd>{user?.nickname || user?.name || "—"}</dd></div>
+            <div><dt>Device IP</dt><dd>{deviceIp || "—"}</dd></div>
+            <div><dt>UserID</dt><dd>{user?.id || "—"}</dd></div>
+            <div><dt>Username</dt><dd>{user?.username || user?.name || "—"}</dd></div>
             <div><dt>Email</dt><dd>{user?.email || "—"}</dd></div>
           </dl>
         </div>
@@ -229,7 +249,7 @@ export default function OrderForm({
 
       {/* [SECTION: BROKER] */}
       <section className={styles.seksi}>
-        <h5 className={styles.seksiJudul}><i>3</i>Broker (mitra terdaftar)</h5>
+        <h5 className={styles.seksiJudul}><i>3</i>Penyedia</h5>
         {MITRA.length > 1 && (
           <div className={styles.mitraList}>
             {MITRA.map((m) => (
@@ -243,9 +263,9 @@ export default function OrderForm({
         )}
         {mitra && (
           <>
-            {/* satu kartu: logo + nama + AHU + NIB + alamat + tombol Maps */}
+            {/* satu kartu: logo + nama + AHU + NIB + alamat; tombol Maps ada di bawah peta */}
             <div className={styles.brokerCard}>
-              <img src={mitra.logo} alt={mitra.nama} className={styles.brokerLogo} />
+              <div className={rev.logoPutih}><img src={mitra.logo} alt={mitra.nama} /></div>
               <div className={styles.brokerIsi}>
                 <b className={styles.brokerNama}>{mitra.nama}</b>
                 <dl className={styles.legal}>
@@ -253,25 +273,28 @@ export default function OrderForm({
                   <div><dt>NIB</dt><dd>{mitra.nib || "—"}</dd></div>
                   <div><dt>Kantor</dt><dd>{mitra.alamat || "—"}</dd></div>
                 </dl>
-                {mitra.maps && (
-                  <a className={styles.btnMaps} href={mitra.maps} target="_blank" rel="noopener noreferrer">Ke Maps</a>
-                )}
               </div>
             </div>
-            {mitra.embedMap && (
+            {(mitra.embedMap || mitra.maps) && (
               <div className={styles.brokerPeta}>
                 <div className={styles.brokerPetaJudul}>
                   <b>Lokasi Operasional</b>
                   {mitra.alamatOps && <span>{mitra.alamatOps}</span>}
                 </div>
-                <iframe title={`Peta lokasi operasional ${mitra.nama}`} src={mitra.embedMap}
-                  loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                {mitra.embedMap && (
+                  <iframe title={`Peta lokasi operasional ${mitra.nama}`} src={mitra.embedMap}
+                    loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                )}
+                {mitra.maps && (
+                  <a className={rev.btnMapsBawah} href={mitra.maps} target="_blank" rel="noopener noreferrer">
+                    Buka Alamat Operasional di Maps</a>
+                )}
               </div>
             )}
             <div className={styles.pj}>
               <img src={mitra.penanggungJawab.foto} alt={mitra.penanggungJawab.nama} className={styles.pjFoto} />
               <div>
-                <small>Penanggung Jawab</small>
+                <small className={rev.judulOranye}>Penanggung Jawab</small>
                 <dl className={styles.pjData}>
                   <div><dt>Nama</dt><dd>{mitra.penanggungJawab.nama}</dd></div>
                   <div><dt>Jabatan</dt><dd>{mitra.penanggungJawab.jabatan || "—"}</dd></div>
@@ -299,8 +322,12 @@ export default function OrderForm({
           <div className={styles.hint}>Produk: <b>{produk}</b> (tanpa pilihan grade)</div>
         )}
         <label className={styles.label}>Jumlah (Ton) — min. {fmtAngka(minTon)}
-          <input className={styles.input} type="number" min={minTon} step="0.1" inputMode="decimal"
-            placeholder={`mis. ${fmtAngka(minTon)} atau ${fmtAngka(minTon + 0.2)}`} value={f.qty} onChange={set("qty")} />
+          <span className={rev.qtyRow}>
+            <input className={`${styles.input} ${rev.qtyInput}`} type="number" min={minTon} step="0.1" inputMode="decimal"
+              placeholder={`mis. ${fmtAngka(minTon)} atau ${fmtAngka(minTon + 0.2)}`} value={f.qty} onChange={set("qty")} />
+            <button type="button" className={rev.btnTambah} onClick={() => tambahTon(1)}>+1</button>
+            <button type="button" className={rev.btnTambah} onClick={() => tambahTon(10)}>+10</button>
+          </span>
           <span className={styles.hint}>Boleh desimal, mis. 1,2 Ton. Minimal order {fmtAngka(minTon)} Ton.</span>
         </label>
         {harga ? (
@@ -326,25 +353,25 @@ export default function OrderForm({
         <div className={styles.bayarRow}>
           <button type="button" className={`${styles.bayarBtn} ${f.metode === "transfer" ? styles.gradeAktif : ""}`}
             onClick={() => setF((s) => ({ ...s, metode: "transfer" }))}>
-            <img src="/pembayaran/transfer.png" alt="Transfer" />Transfer</button>
-          <button type="button" className={`${styles.bayarBtn} ${f.metode === "qris" ? styles.gradeAktif : ""}`}
+            Transfer</button>
+          <button type="button" aria-label="QRIS" className={`${styles.bayarBtn} ${f.metode === "qris" ? styles.gradeAktif : ""}`}
             onClick={() => setF((s) => ({ ...s, metode: "qris" }))}>
-            <img src="/pembayaran/qris.png" alt="QRIS" />QRIS</button>
+            <LogoQris /></button>
         </div>
         {/* [/SECTION: METODE-BAYAR] */}
 
         {/* [SECTION: INFO-PEMBAYARAN] rekening / QR tujuan transfer */}
         {mitra && (
           <div className={`${styles.brokerCard} ${styles.bayarCard}`}>
-            <img src={mitra.logo} alt={mitra.nama} className={styles.brokerLogo} />
+            <div className={rev.logoPutih}><img src={mitra.logo} alt={mitra.nama} /></div>
             <div className={styles.brokerIsi}>
-              <small className={styles.kecil}>Penerima Pembayaran</small>
+              <small className={rev.judulOranye}>Penerima Pembayaran</small>
               <b className={styles.brokerNama}>{mitra.nama}</b>
               {f.metode === "transfer" && tf && (
-                <div className={styles.rekPenerima}>
+                <div className={`${styles.rekPenerima} ${rev.rekGrid}`}>
                   <div className={styles.rekBank}>
                     {bankPenerima && <LogoProvider key={bankPenerima.kode} p={bankPenerima} besar />}
-                    <span>{tf.bank}</span>
+                    <span>{bankPenerima?.nama ?? tf.bank}</span>
                   </div>
                   <div className={styles.rekNomor}>
                     <b>{tf.noRek}</b>
