@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import RevealWrapper from "./RevealWrapper";
 import { usePrice } from "@/context/PriceContext";
 import { useAccount } from "./Account";
+import BuyAction from "./BuyAction";
 import styles from "./Products.module.css";
 
 const PRODUCTS = [
@@ -110,20 +111,18 @@ function useLiveCsc() {
 
   const base = openUsd || firstRef.current; // acuan dalam USD
   const chgIdr = base > 0 ? idr - idr * (base / usd) : 0; // perubahan dalam Rupiah
-  return { ready: true, idr, chgIdr, flash };
+  return { ready: true, idr, usd, chgIdr, flash };
 }
 
 function LivePrice({ product, live }) {
   const { user } = useAccount();
-  // Belum login: buka Register. Sudah login: lanjut ke bagian Kontak.
-  const onBuy = () => {
-    if (user) {
-      document.getElementById("kontak")?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      window.dispatchEvent(new CustomEvent("open-register"));
-    }
-  };
+  // Belum login: buka Register. Sudah login: tampil form Ekspor / Domestik (BuyAction).
+  const onBuy = () => window.dispatchEvent(new CustomEvent("open-register"));
   const k = 1 + (product.markup || 0); // Karbon Aktif +25%, Briket +50% dari harga dasar
+  // Harga order: Rupiah per TON (sudah termasuk markup produk). Persen grade
+  // (A +5%, B +2,5%, C +0%) ditambahkan di OrderForm lewat hitungHarga() di harga.js.
+  const hargaTonIdr = live.ready ? live.idr * k : 0;
+  const usdIdr = live.ready && live.usd > 0 ? live.idr / live.usd : 0;
   const chg = live.ready ? live.chgIdr * k : 0;
   const up = chg >= 0;
 
@@ -152,19 +151,31 @@ function LivePrice({ product, live }) {
         )}
       </div>
 
-      <button type="button" className={styles.detailsCta} onClick={onBuy}>
-        Buy
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="3" y1="8" x2="13" y2="8"></line>
-          <polyline points="9 4 13 8 9 12"></polyline>
-        </svg>
-      </button>
+      {user ? (
+        <BuyAction
+          isLoggedIn
+          onBuyGuest={onBuy}
+          produk={product.name}
+          hargaTonIdr={hargaTonIdr}
+          usdIdr={usdIdr}
+          onSelesai={() => {}} // batch 2: Verifikasi
+        />
+      ) : (
+        <button type="button" className={styles.detailsCta} onClick={onBuy}>
+          Buy
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="8" x2="13" y2="8"></line>
+            <polyline points="9 4 13 8 9 12"></polyline>
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
 
 export default function Products() {
   const live = useLiveCsc();
+  const { user } = useAccount();
   const [activeIndex, setActiveIndex] = useState(0);
   const [windowWidth, setWindowWidth] = useState(1200);
   const [isHovered, setIsHovered] = useState(false);
@@ -237,10 +248,12 @@ export default function Products() {
   };
 
   useEffect(() => {
-    if (isHovered) return;
+    // Setelah login ada form order di kartu detail: autoplay dimatikan agar form
+    // tidak ter-reset saat carousel berganti produk tiap 3 detik.
+    if (isHovered || user) return;
     const timer = setInterval(handleNext, 3000);
     return () => clearInterval(timer);
-  }, [isHovered, activeIndex]);
+  }, [isHovered, activeIndex, user]);
 
   useEffect(() => {
     const event = new CustomEvent("product-changed", { detail: activeIndex });

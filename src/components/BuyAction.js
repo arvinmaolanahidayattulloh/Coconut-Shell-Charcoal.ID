@@ -6,10 +6,10 @@ import Ekspor from "./Ekspor";
 import Domestik from "./Domestik";
 
 // [SECTION: BUY-ACTION] belum login → Buy lama; sudah login → Ekspor / Domestik
-export default function BuyAction({ isLoggedIn, onBuyGuest, hargaTonIdr, usdIdr, onSelesai }) {
+export default function BuyAction({ isLoggedIn, onBuyGuest, produk = "Natural", hargaTonIdr, usdIdr, onSelesai }) {
   const [mode, setMode] = useState(null);
   if (!isLoggedIn) return <button type="button" className={styles.tombolAksi} onClick={onBuyGuest}>Buy</button>;
-  const p = { hargaTonIdr, usdIdr, onSelesai };
+  const p = { produk, hargaTonIdr, usdIdr, onSelesai };
   return (
     <div>
       <div className={styles.aksi}>
