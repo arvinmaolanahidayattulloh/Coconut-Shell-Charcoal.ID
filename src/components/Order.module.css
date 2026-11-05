@@ -650,6 +650,116 @@ textarea.input {
 }
 /* [/SECTION: SELESAI] */
 
+/* [SECTION: ORDER-TAMBAHAN] legal broker, data PJ, pilihan provider, Atas Nama terkunci, persetujuan S&K */
+.legal,
+.pjData {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.legal {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+}
+.legal > div,
+.pjData > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.legal dt,
+.pjData dt {
+  min-width: 112px;
+  color: var(--color-stone);
+}
+.legal dd,
+.pjData dd {
+  margin: 0;
+  font-weight: 600;
+  word-break: break-word;
+}
+.pjData dd a {
+  color: var(--color-ember);
+  text-decoration: none;
+}
+.pjData dd a:hover {
+  text-decoration: underline;
+}
+
+.providerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.providerItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: var(--color-carbon);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.providerItem:hover {
+  border-color: rgba(196, 94, 32, 0.5);
+}
+.providerAktif {
+  border-color: var(--color-ember);
+  color: var(--color-ember);
+  box-shadow: 0 0 0 3px rgba(196, 94, 32, 0.12);
+}
+.logoProvider,
+.logoCadangan {
+  flex: none;
+  width: 40px;
+  height: 28px;
+}
+.logoProvider {
+  object-fit: contain;
+}
+.logoCadangan {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(196, 94, 32, 0.1);
+  color: var(--color-ember);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.terkunciInput {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.setuju {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.setuju input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-ember);
+  cursor: pointer;
+}
+/* [/SECTION: ORDER-TAMBAHAN] */
+
 @media (max-width: 640px) {
   .form {
     padding: 28px 18px;

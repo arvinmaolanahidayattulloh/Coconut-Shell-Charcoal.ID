@@ -10,7 +10,10 @@ export const MITRA = partnersData.map((p) => {
     id: p.id,
     nama: p.name,
     logo: p.logo,
-    penanggungJawab: { nama: p.direktur, foto: p.fotoPJ },
+    // legal: ditampilkan di form order agar pembeli bisa memeriksa keabsahan broker
+    ahu: p.skKemenkumham,
+    nib: p.nib,
+    penanggungJawab: { nama: p.direktur, jabatan: p.jabatan, wa: p.phone, foto: p.fotoPJ },
     pembayaran: {
       // SWIFT hanya relevan untuk transfer ekspor (USD)
       transfer: {

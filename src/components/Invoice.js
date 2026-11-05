@@ -11,12 +11,14 @@ export default function Invoice({ o }) {
     ["No. Invoice", o.id], ["Tanggal", o.tanggal], ["Jenis", o.jenis],
     ["Penerima", o.nama], ["WhatsApp", o.wa], ["Alamat Tujuan", o.alamat],
     ...(o.lokasi ? [["Lokasi GPS", fmtKoord(o.lokasi)]] : []),
-    ["Broker / Mitra", o.mitra], ["Penanggung Jawab", o.pj],
+    ["Broker / Mitra", o.mitra],
+    ...(o.ahu ? [["Nomor AHU", o.ahu]] : []), ...(o.nib ? [["NIB", o.nib]] : []),
+    ["Penanggung Jawab", [o.pj, o.pjJabatan].filter(Boolean).join(" — ")],
+    ...(o.pjWa ? [["WhatsApp PJ", o.pjWa]] : []),
     ["Produk", o.grade ? `${o.produk} — Grade ${o.grade}` : o.produk],
     ["Jumlah", `${o.qty} ${o.satuan}`],
-    ["Harga Satuan", `${formatUang(o.harga.satuan, o.harga.mataUang)} / ${o.satuan}`],
     ["Metode Bayar", o.metode.toUpperCase()],
-    ...(o.dana ? [[o.dana.jenis === "bank" ? "Rekening Pembeli" : "E-Wallet Pembeli", `${o.dana.nama} · ${o.dana.nomor} · a.n. ${o.dana.atasNama}`]] : []),
+    ...(o.dana ? [[o.dana.jenis === "bank" ? "Rekening Pembeli" : "E-Wallet Pembeli", `${o.dana.nama} · ${o.dana.nomor} · a.n. ${o.dana.atasNama || "dicek sistem"}`]] : []),
     ["Bukti Bayar", o.buktiNama || "—"],
   ];
   return (
