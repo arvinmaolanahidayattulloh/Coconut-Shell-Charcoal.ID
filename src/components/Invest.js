@@ -21,26 +21,28 @@ export default function Invest({ embedded = false }) {
   };
 
   const full = !embedded;
+  // Di halaman utama sudah ada <main id="beranda">; <main> kedua tidak valid, jadi pakai <div>.
+  const Content = embedded ? "div" : "main";
 
   return (
     <>
       <InvestIntro />
 
-      <div className={`${styles.shell} ${full ? styles.shellFull : ""}`}>
+      <div className={`${styles.shell} ${full ? styles.shellFull : styles.shellEmbedded}`}>
         <div className={`${styles.appBar} ${full ? styles.appBarFull : ""}`}>
-          <div>
+          <div className={styles.appBarText}>
             <strong>Gunakan Aplikasi CSCID</strong>
             <span>Lebih cepat dan stabil di aplikasi resmi</span>
           </div>
           <button type="button" className={styles.openApp} onClick={handleOpenApp}>Buka di Apps</button>
         </div>
 
-        <main className={styles.content}>
+        <Content className={styles.content}>
           {activeTab === "invest" && (
             <InvestPageContent invested={invested} setInvested={setInvested} setActiveTab={setActiveTab} />
           )}
           {activeTab === "profil" && <InvestProfileContent setActiveTab={setActiveTab} />}
-        </main>
+        </Content>
 
         <nav className={`${styles.bottomNav} ${full ? styles.bottomNavFull : ""}`} aria-label="Menu Invest">
           {[["invest", "Beranda"], ["profil", "Profil"]].map(([id, label]) => (
