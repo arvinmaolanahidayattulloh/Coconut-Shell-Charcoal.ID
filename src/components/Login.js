@@ -13,7 +13,7 @@ import {
   sameText,
 } from './AuthShared';
 
-const Login = ({ children } = {}) => {
+const Login = ({ children, hideTitle = false } = {}) => {
   const { loginGoogle, runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
   const [authMode, setAuthMode] = useState(null);
@@ -177,7 +177,7 @@ const Login = ({ children } = {}) => {
 
   return (
     <div className={styles.loginContainer}>
-      <h2 className={styles.cardTitle}>Investasi CSCID</h2>
+      {!hideTitle && <h2 className={styles.cardTitle}>Investasi CSCID</h2>}
 
       <p className={styles.subtitle}>
         Amankan alokasi kuota komoditas ekspor Anda sekarang.

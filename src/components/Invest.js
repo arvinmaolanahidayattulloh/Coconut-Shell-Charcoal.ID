@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import InvestIntro from "./invest/InvestIntro";
 import InvestTotal from "./invest/InvestTotal";
+import InvestAlur from "./invest/InvestAlur";
 import InvestPageContent from "./invest/invest.page";
 import InvestProfileContent from "./invest/invest.profile";
 import styles from "./invest/invest.module.css";
@@ -10,7 +10,8 @@ import { useAccount } from "./Account";
 
 export const TAB_INVEST = { id: "invest", label: "Invest CSCID" };
 
-// embedded: true di halaman utama (mengalir di dalam bagian), false di /invest (layar penuh).
+// Satu panel "Invest CSCID": judul, total stok, alur, lalu area masuk/investasi.
+// embedded: true di halaman utama (mengalir di dalam bagian), false di /invest (halaman penuh).
 export default function Invest({ embedded = false }) {
   const [activeTab, setActiveTab] = useState("invest");
   const [invested, setInvested] = useState(false);
@@ -25,47 +26,54 @@ export default function Invest({ embedded = false }) {
     }, 1500);
   };
 
-  const full = !embedded;
   // Di halaman utama sudah ada <main id="beranda">; <main> kedua tidak valid, jadi pakai <div>.
-  const Content = embedded ? "div" : "main";
+  const Outer = embedded ? "div" : "main";
 
   return (
-    <>
-      <InvestIntro />
-      <InvestTotal />
-
-      <div className={`${styles.shell} ${full ? styles.shellFull : styles.shellEmbedded}`}>
-        <div className={`${styles.appBar} ${full ? styles.appBarFull : ""}`}>
-          <div className={styles.appBarText}>
-            <strong>Gunakan Aplikasi CSCID</strong>
-            <span>Lebih cepat dan stabil di aplikasi resmi</span>
+    <Outer className={embedded ? styles.luar : `${styles.luar} ${styles.luarPenuh}`}>
+      <section className={styles.panel} aria-labelledby="invest-judul">
+        <header className={styles.kepala}>
+          <div className={styles.kepalaTeks}>
+            <span className={styles.eyebrow}>Stok arang batok kelapa</span>
+            <h2 id="invest-judul" className={styles.judul}>Invest CSCID</h2>
+            <p className={styles.lead}>
+              Prosesnya seperti membeli: pilih jumlah, lalu bayar. Bedanya, barang tetap di gudang kami dan Anda menerima bagi hasil dari penjualannya.
+            </p>
           </div>
-          <button type="button" className={styles.openApp} onClick={handleOpenApp}>Buka di Apps</button>
-        </div>
+          <button type="button" className={styles.bukaApp} onClick={handleOpenApp}>
+            <span className={styles.bukaAppLabel}>Lebih cepat di aplikasi</span>
+            <strong>Buka di Apps</strong>
+          </button>
+        </header>
 
-        <Content className={styles.content}>
+        <InvestTotal />
+        <InvestAlur />
+
+        <div className={`${styles.bagian} ${styles.aksi}`} id="mulai-invest">
+          <h3 className={styles.sub}>{user ? "Investasi Anda" : "Mulai Invest"}</h3>
           {activeTab === "invest" && (
             <InvestPageContent invested={invested} setInvested={setInvested} setActiveTab={setActiveTab} />
           )}
           {activeTab === "profil" && <InvestProfileContent setActiveTab={setActiveTab} />}
-        </Content>
+        </div>
 
-        {/* Menu bawah hanya relevan setelah masuk (Profil butuh akun); sebelum masuk cukup kartu masuk/daftar. */}
+        {/* Tab hanya relevan setelah masuk (Profil butuh akun). */}
         {user && (
-          <nav className={`${styles.bottomNav} ${full ? styles.bottomNavFull : ""}`} aria-label="Menu Invest">
+          <nav className={styles.tab} aria-label="Menu Invest">
             {[["invest", "Beranda"], ["profil", "Profil"]].map(([id, label]) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setActiveTab(id)}
-                className={`${styles.navBtn} ${activeTab === id ? styles.navBtnActive : ""}`}
+                aria-current={activeTab === id ? "page" : undefined}
+                className={`${styles.tabBtn} ${activeTab === id ? styles.tabAktif : ""}`}
               >
                 {label}
               </button>
             ))}
           </nav>
         )}
-      </div>
-    </>
+      </section>
+    </Outer>
   );
 }

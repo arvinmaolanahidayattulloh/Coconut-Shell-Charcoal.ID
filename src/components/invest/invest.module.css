@@ -1,78 +1,138 @@
-/* Gaya bersama Invest (halaman utama & /invest). Memakai token dari globals.css. */
-.section { padding: 56px 0 24px; }
-.head { max-width: 640px; margin: 0 auto 36px; text-align: center; }
-.head h2 { font-size: var(--text-3xl); margin-bottom: 12px; }
-.lead { color: var(--color-graphite); font-size: var(--text-lg); }
+/* Panel tunggal "Invest CSCID" (halaman utama & /invest). Memakai token dari globals.css. */
 
-.block { margin: 0 auto 40px; max-width: 900px; }
-.block h3 { font-size: var(--text-xl); margin-bottom: 16px; }
+.luar { max-width: 960px; margin: 0 auto; }
+.luarPenuh { padding: 56px 16px 72px; }
 
-/* Beli vs Invest */
-.tableWrap { overflow-x: auto; border: 1px solid var(--color-smoke); border-radius: var(--radius-lg); background: var(--color-white); }
-.table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: var(--text-sm); }
-.table th, .table td { padding: 14px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--color-smoke); }
-.table tr:last-child td { border-bottom: 0; }
-.table th { font-family: var(--font-display); font-weight: 600; background: var(--color-cream); }
-.table th.invest { color: var(--color-ember-dark); }
-.table td:first-child { font-weight: 600; color: var(--color-carbon); width: 22%; }
-.table td.invest { background: #fff7ed; }
-
-/* Langkah (urutan nyata, jadi bernomor) */
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; counter-reset: s; list-style: none; margin: 0; padding: 0; }
-.step { counter-increment: s; padding: 18px; background: var(--color-white); border: 1px solid var(--color-smoke); border-radius: var(--radius-lg); }
-.step::before { content: counter(s); display: grid; place-items: center; width: 28px; height: 28px; margin-bottom: 12px; border-radius: var(--radius-full); background: var(--color-ember); color: #fff; font: 600 var(--text-sm) var(--font-display); }
-.step h4 { font-size: var(--text-base); margin-bottom: 6px; }
-.step p { font-size: var(--text-sm); color: var(--color-stone); }
-
-/* Alur hasil penjualan */
-.flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-.flowItem { position: relative; padding: 20px; background: var(--color-white); border: 1px solid var(--color-smoke); }
-.flowItem:first-child { border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
-.flowItem:last-child { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; background: #fff7ed; border-color: #fdba74; }
-.flowItem + .flowItem { border-left: 0; }
-.flowItem h4 { font-size: var(--text-base); margin-bottom: 4px; }
-.flowItem p { font-size: var(--text-sm); color: var(--color-stone); margin-bottom: 10px; }
-.flowValue { display: inline-block; font-size: var(--text-xs); font-weight: 600; padding: 3px 10px; border-radius: var(--radius-full); background: var(--color-cream); color: var(--color-graphite); }
-/* Panah kecil di sambungan antar kotak, supaya terbaca sebagai urutan */
-.flowItem:not(:last-child)::after { content: "→"; position: absolute; z-index: 1; top: 50%; right: -12px; transform: translateY(-50%); display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-full); background: var(--color-white); border: 1px solid var(--color-smoke); color: var(--color-ember); font-size: var(--text-xs); font-weight: 700; }
-.note { margin-top: 16px; padding: 12px 16px; font-size: var(--text-sm); color: var(--color-graphite); background: var(--color-cream); border-left: 3px solid var(--color-ember); border-radius: 0 var(--radius-md) var(--radius-md) 0; }
-
-/* Pembungkus aplikasi Invest */
-.shell { background: var(--color-cream); border-radius: var(--radius-xl); overflow: hidden; }
-/* Di halaman utama: selebar dan sejajar dengan blok penjelasan di atasnya (900px) */
-.shellEmbedded { max-width: 900px; margin: 8px auto 0; border: 1px solid var(--color-smoke); box-shadow: var(--shadow-sm); }
-.shellFull { min-height: 100vh; padding-bottom: 72px; }
-.appBar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; background: var(--color-white); border-bottom: 1px solid var(--color-smoke); }
-.appBarFull { position: sticky; top: 72px; z-index: 101; }
-.appBarText { min-width: 0; }
-.appBar strong { display: block; font-size: var(--text-sm); }
-.appBar span { display: block; font-size: var(--text-xs); color: var(--color-stone); }
-.openApp { flex-shrink: 0; min-height: 40px; background: var(--color-ember); color: #fff; border: 0; padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 700; white-space: nowrap; cursor: pointer; }
-.openApp:hover { background: var(--color-ember-dark); }
-.content { padding-top: 10px; }
-.bottomNav { display: flex; background: var(--color-white); border-top: 1px solid var(--color-smoke); }
-.bottomNavFull { position: fixed; left: 0; right: 0; bottom: 0; z-index: 100; box-shadow: var(--shadow-md); }
-.navBtn { flex: 1; padding: 12px 0; background: none; border: 0; font-size: var(--text-xs); font-weight: 700; color: var(--color-stone); cursor: pointer; }
-.navBtnActive { color: var(--color-ember); }
-.openApp:focus-visible, .navBtn:focus-visible { outline: 2px solid var(--color-ember); outline-offset: 2px; }
-
-@media (max-width: 768px) {
-  .section { padding-top: 40px; }
-  .head h2 { font-size: var(--text-2xl); }
-  .steps { grid-template-columns: 1fr 1fr; }
-  .flow { grid-template-columns: 1fr; }
-  .flowItem, .flowItem:first-child, .flowItem:last-child { border-radius: 0; border-left: 1px solid var(--color-smoke); }
-  .flowItem:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-  .flowItem:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg); border-left-color: #fdba74; }
-  .flowItem + .flowItem { border-top: 0; }
-  /* Panah pindah ke sambungan bawah dan menghadap ke bawah */
-  .flowItem:not(:last-child)::after { top: auto; right: auto; bottom: -12px; left: 50%; transform: translateX(-50%) rotate(90deg); }
-  .table { min-width: 0; }
-  .table th, .table td { padding: 10px 12px; }
-  .shellEmbedded { border-radius: var(--radius-lg); }
+.panel {
+  background: var(--color-white);
+  border: 1px solid var(--color-smoke);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
-@media (max-width: 480px) {
-  .steps { grid-template-columns: 1fr; }
-  .appBar { padding: 10px 12px; }
+/* ---------- Kepala ---------- */
+.kepala {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+  padding: 32px 32px 28px;
+  background: linear-gradient(180deg, var(--color-warm-white) 0%, var(--color-white) 100%);
+}
+.kepalaTeks { min-width: 0; max-width: 580px; }
+.eyebrow {
+  display: inline-block; margin-bottom: 10px;
+  font: 600 var(--text-xs)/1 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-ember);
+}
+.judul { font-size: var(--text-3xl); line-height: 1.1; margin: 0 0 10px; }
+.lead { margin: 0; font-size: var(--text-base); color: var(--color-graphite); }
+
+.bukaApp {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-height: 44px; padding: 10px 16px; text-align: left; cursor: pointer;
+  background: var(--color-white); border: 1px solid var(--color-smoke); border-radius: var(--radius-lg);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.bukaAppLabel { font-size: var(--text-xs); color: var(--color-stone); }
+.bukaApp strong { font-size: var(--text-sm); color: var(--color-ember-dark); }
+.bukaApp:hover { border-color: var(--color-ember); box-shadow: var(--shadow-sm); }
+
+/* ---------- Bagian di dalam panel ---------- */
+.bagian { padding: 28px 32px; border-top: 1px solid var(--color-smoke); }
+.sub { margin: 0 0 20px; font-size: var(--text-lg); }
+
+/* ---------- Alur Invest (stepper bernomor, dihubungkan garis) ---------- */
+.langkah { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; counter-reset: l; }
+.langkahItem { position: relative; counter-increment: l; padding-top: 46px; }
+.langkahItem::before {
+  content: counter(l); position: absolute; top: 0; left: 0; z-index: 1;
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-full);
+  background: var(--color-ember); color: #fff; font: 600 var(--text-sm) var(--font-display);
+  box-shadow: 0 0 0 4px var(--color-white);
+}
+.langkahItem:not(:last-child)::after {
+  content: ""; position: absolute; top: 15px; left: 38px; right: -18px; height: 2px;
+  background: linear-gradient(90deg, var(--color-ember), var(--color-smoke));
+}
+.langkahItem h4 { margin: 0 0 6px; font-size: var(--text-base); }
+.langkahItem p { margin: 0; font-size: var(--text-sm); color: var(--color-stone); }
+
+/* ---------- Alur bagi hasil ---------- */
+.alur { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.alurItem {
+  position: relative; padding: 18px;
+  background: var(--color-warm-white); border: 1px solid var(--color-smoke); border-radius: var(--radius-lg);
+}
+.alurItem:last-child { background: #fff7ed; border-color: #fdba74; }
+.alurItem:not(:last-child)::after {
+  content: "→"; position: absolute; top: 50%; right: -32px; width: 32px; transform: translateY(-50%);
+  text-align: center; font-size: var(--text-lg); font-weight: 700; color: var(--color-ember);
+}
+.alurItem h4 { margin: 0 0 4px; font-size: var(--text-base); }
+.alurItem p { margin: 0 0 12px; font-size: var(--text-sm); color: var(--color-stone); }
+.chip {
+  display: inline-block; padding: 3px 10px; border-radius: var(--radius-full);
+  background: var(--color-white); border: 1px solid var(--color-smoke);
+  font-size: var(--text-xs); font-weight: 600; color: var(--color-graphite);
+}
+.catatan {
+  margin: 20px 0 0; padding: 12px 16px; font-size: var(--text-sm); color: var(--color-graphite);
+  background: var(--color-cream); border-left: 3px solid var(--color-ember); border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+/* ---------- Beda dengan membeli (bisa dilipat) ---------- */
+.bandingJudul {
+  display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none;
+  font: 600 var(--text-lg) var(--font-display);
+}
+.bandingJudul::-webkit-details-marker { display: none; }
+.bandingJudul::after {
+  content: ""; width: 8px; height: 8px; margin-right: 4px;
+  border-right: 2px solid var(--color-stone); border-bottom: 2px solid var(--color-stone);
+  transform: rotate(45deg); transition: transform 0.2s ease;
+}
+.banding[open] > .bandingJudul::after { transform: rotate(-135deg); }
+.tabelWrap { margin-top: 16px; overflow-x: auto; border: 1px solid var(--color-smoke); border-radius: var(--radius-lg); }
+.tabel { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.tabel th, .tabel td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--color-smoke); }
+.tabel tbody tr:last-child th, .tabel tbody tr:last-child td { border-bottom: 0; }
+.tabel thead th { font-family: var(--font-display); font-weight: 600; background: var(--color-cream); }
+.tabel tbody th { width: 22%; font-weight: 600; color: var(--color-carbon); }
+.tabel td.kolomInvest { background: #fff7ed; }
+.tabel th.kolomInvest { background: #ffedd5; color: var(--color-ember-dark); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Area masuk / investasi ---------- */
+.aksi { background: var(--color-warm-white); }
+
+/* ---------- Tab (setelah masuk) ---------- */
+.tab { display: flex; background: var(--color-white); border-top: 1px solid var(--color-smoke); }
+.tabBtn {
+  flex: 1; min-height: 48px; padding: 12px 0; background: none; border: 0; cursor: pointer;
+  font-size: var(--text-sm); font-weight: 700; color: var(--color-stone);
+}
+.tabAktif { color: var(--color-ember); box-shadow: inset 0 -2px 0 var(--color-ember); }
+
+.bukaApp:focus-visible, .tabBtn:focus-visible, .bandingJudul:focus-visible { outline: 2px solid var(--color-ember); outline-offset: 2px; }
+
+/* ---------- Responsif ---------- */
+@media (max-width: 768px) {
+  .luarPenuh { padding: 32px 12px 48px; }
+  .kepala { flex-direction: column; gap: 16px; padding: 24px 20px 20px; }
+  .judul { font-size: var(--text-2xl); }
+  .bukaApp { align-self: stretch; }
+  .bagian { padding: 24px 20px; }
+
+  /* Stepper vertikal: garis menyambung ke bawah */
+  .langkah { grid-template-columns: 1fr; gap: 0; }
+  .langkahItem { padding: 0 0 24px 48px; min-height: 32px; }
+  .langkahItem:last-child { padding-bottom: 0; }
+  .langkahItem:not(:last-child)::after {
+    top: 38px; bottom: 4px; left: 15px; right: auto; width: 2px; height: auto;
+    background: linear-gradient(180deg, var(--color-ember), var(--color-smoke));
+  }
+
+  .alur { grid-template-columns: 1fr; gap: 32px; }
+  .alurItem:not(:last-child)::after { content: "↓"; top: auto; right: auto; bottom: -32px; left: 0; width: 100%; height: 32px; line-height: 32px; transform: none; }
+
+  .tabel th, .tabel td { padding: 10px 12px; }
 }

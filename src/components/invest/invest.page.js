@@ -164,14 +164,13 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
   };
 
   return (
-    <section style={{ position: 'relative', padding: '20px' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', background: '#fff', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}>
-        
-        {/* Judul hanya setelah masuk; sebelum masuk, <Login /> sudah punya judul "Investasi CSCID" sendiri (hindari judul dobel). */}
-        {user && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#c45e20', margin: 0 }}>Investasi Indeks CSCID</h2>
+    // Tanpa kartu sendiri: pembungkus panel "Invest CSCID" ada di Invest.js (satu panel, tidak ada kartu di dalam kartu).
+    <div style={{ position: 'relative' }}>
+      <div>
 
+        {/* Judul panel ada di Invest.js; di sini hanya menu akun setelah masuk. */}
+        {user && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ position: 'relative' }}>
               <button onClick={() => setMenuOpen(!menuOpen)} style={menuBtnStyle}>Menu ☰</button>
               {menuOpen && (
@@ -191,7 +190,7 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
         <div style={{ filter: showPasswordModal || verificationStep > 0 ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
           <div>
             {!user ? (
-              <Login />
+              <Login hideTitle />
             ) : (
               <div>
                 
@@ -610,7 +609,7 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
         )}
 
       </div>
-    </section>
+    </div>
   );
 };
 
