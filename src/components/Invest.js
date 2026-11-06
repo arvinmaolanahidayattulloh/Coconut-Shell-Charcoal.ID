@@ -1,55 +1,71 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
-import s from "./Invest.module.css";
+
+import React, { useState } from "react";
+import InvestIntro from "./invest/InvestIntro";
+import InvestTotal from "./invest/InvestTotal";
+import InvestPageContent from "./invest/invest.page";
+import InvestProfileContent from "./invest/invest.profile";
+import styles from "./invest/invest.module.css";
+import { useAccount } from "./Account";
 
 export const TAB_INVEST = { id: "invest", label: "Invest CSCID" };
 
-const fmtTon = (n) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(n);
+// embedded: true di halaman utama (mengalir di dalam bagian), false di /invest (layar penuh).
+export default function Invest({ embedded = false }) {
+  const [activeTab, setActiveTab] = useState("invest");
+  const [invested, setInvested] = useState(false);
+  const { user } = useAccount();
 
-export default function Invest() {
-  const [data, setData] = useState(null);
-  const [galat, setGalat] = useState("");
-  const [memuat, setMemuat] = useState(true);
+  const handleOpenApp = () => {
+    const start = Date.now();
+    window.location.href = "cscid://invest";
+    if (!embedded) return; // sudah di /invest, tidak ada tujuan web lain
+    setTimeout(() => {
+      if (Date.now() - start < 2000 && document.hasFocus()) window.location.href = "/invest";
+    }, 1500);
+  };
 
-  const muat = useCallback(async () => {
-    setMemuat(true);
-    setGalat("");
-    try {
-      const r = await fetch("/api/invest/total", { cache: "no-store" });
-      const j = await r.json();
-      if (!r.ok || !j.ok) throw new Error(j.pesan || "Gagal memuat data");
-      setData(j);
-    } catch (e) {
-      setGalat(e.message || "Gagal memuat data");
-    } finally {
-      setMemuat(false);
-    }
-  }, []);
-
-  useEffect(() => { muat(); }, [muat]);
+  const full = !embedded;
+  // Di halaman utama sudah ada <main id="beranda">; <main> kedua tidak valid, jadi pakai <div>.
+  const Content = embedded ? "div" : "main";
 
   return (
-    <section className={s.wrap} aria-labelledby="judul-invest">
-      <h2 id="judul-invest" className={s.judul}>Invest CSCID</h2>
-      <div className={s.kartu}>
-        <span className={s.label}>Total Keseluruhan Stock Investor</span>
-        {memuat && !data ? (
-          <span className={s.muat}>Memuat…</span>
-        ) : galat ? (
-          <span className={s.galat} role="alert">{galat}</span>
-        ) : (
-          <div className={s.nilaiRow}>
-            <span className={s.nilai}>{fmtTon(data?.totalTon ?? 0)}</span>
-            <span className={s.satuan}>Ton</span>
+    <>
+      <InvestIntro />
+      <InvestTotal />
+
+      <div className={`${styles.shell} ${full ? styles.shellFull : styles.shellEmbedded}`}>
+        <div className={`${styles.appBar} ${full ? styles.appBarFull : ""}`}>
+          <div className={styles.appBarText}>
+            <strong>Gunakan Aplikasi CSCID</strong>
+            <span>Lebih cepat dan stabil di aplikasi resmi</span>
           </div>
+          <button type="button" className={styles.openApp} onClick={handleOpenApp}>Buka di Apps</button>
+        </div>
+
+        <Content className={styles.content}>
+          {activeTab === "invest" && (
+            <InvestPageContent invested={invested} setInvested={setInvested} setActiveTab={setActiveTab} />
+          )}
+          {activeTab === "profil" && <InvestProfileContent setActiveTab={setActiveTab} />}
+        </Content>
+
+        {/* Menu bawah hanya relevan setelah masuk (Profil butuh akun); sebelum masuk cukup kartu masuk/daftar. */}
+        {user && (
+          <nav className={`${styles.bottomNav} ${full ? styles.bottomNavFull : ""}`} aria-label="Menu Invest">
+            {[["invest", "Beranda"], ["profil", "Profil"]].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={`${styles.navBtn} ${activeTab === id ? styles.navBtnActive : ""}`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
         )}
-        {data && !galat && (
-          <span className={s.catatan}>dari {fmtTon(data.jumlahInvestor)} investor</span>
-        )}
-        <button type="button" className={s.tombol} onClick={muat} disabled={memuat}>
-          {memuat ? "Memuat…" : "Muat ulang"}
-        </button>
       </div>
-    </section>
+    </>
   );
 }
