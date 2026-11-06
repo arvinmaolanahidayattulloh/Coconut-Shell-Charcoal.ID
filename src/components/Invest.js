@@ -8,9 +8,9 @@ import InvestProfileContent from "./invest/invest.profile";
 import styles from "./invest/invest.module.css";
 import { useAccount } from "./Account";
 
-export const TAB_INVEST = { id: "invest", label: "Invest CSCID" };
+export const TAB_INVEST = { id: "invest", label: "Investasi CSCID" };
 
-// Satu panel "Invest CSCID": judul, total stok, alur, lalu area masuk/investasi.
+// Satu panel (tab) "Investasi CSCID": judul, total stok, alur, lalu area masuk/investasi.
 // embedded: true di halaman utama (mengalir di dalam bagian), false di /invest (halaman penuh).
 export default function Invest({ embedded = false }) {
   const [activeTab, setActiveTab] = useState("invest");
@@ -34,8 +34,8 @@ export default function Invest({ embedded = false }) {
       <section className={styles.panel} aria-labelledby="invest-judul">
         <header className={styles.kepala}>
           <div className={styles.kepalaTeks}>
-            <span className={styles.eyebrow}>Stok arang batok kelapa</span>
-            <h2 id="invest-judul" className={styles.judul}>Invest CSCID</h2>
+            <h2 id="invest-judul" className={styles.judul}>Investasi CSCID</h2>
+            <h3 className={styles.subjudul}>Invest di stok arang batok kelapa</h3>
             <p className={styles.lead}>
               Prosesnya seperti membeli: pilih jumlah, lalu bayar. Bedanya, barang tetap di gudang kami dan Anda menerima bagi hasil dari penjualannya.
             </p>
