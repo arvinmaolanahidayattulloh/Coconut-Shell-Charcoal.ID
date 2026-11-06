@@ -14,7 +14,17 @@ import {
   sameText,
 } from './AuthShared';
 
-const Login = ({ children } = {}) => {
+// Props (semua opsional):
+// - children: fungsi, untuk mode panel ({ openRegister, openLogin, openForgot }) => ...
+// - listenRegister: instance form langsung ini ikut mendengarkan event 'open-register'
+//   (dipakai bagian Akun & Bantuan; cukup SATU instance per halaman supaya tidak ada dua popup Register).
+// - imageAlt / formLabel: teks aksesibilitas, supaya dua form di satu halaman tidak bernama sama.
+const Login = ({
+  children,
+  listenRegister = false,
+  imageAlt = 'Ilustrasi Invest CSCID',
+  formLabel = 'Masuk akun',
+} = {}) => {
   const { loginGoogle, runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
   const [authMode, setAuthMode] = useState(null);
@@ -24,15 +34,16 @@ const Login = ({ children } = {}) => {
   const goLogin = () => openMode('login_username');
 
   // Tombol lain (mis. "Buy" di Produk) membuka Register lewat event ini.
-  // Hanya instance mode panel (children = fungsi) yang mendengarkan.
+  // Hanya instance mode panel (children = fungsi) atau yang diberi listenRegister yang mendengarkan.
   const isPanel = typeof children === 'function';
+  const listens = isPanel || listenRegister;
   useEffect(() => {
-    if (!isPanel) return;
+    if (!listens) return;
     const onOpen = () => { reset(); setAuthMode('register'); };
     window.addEventListener('open-register', onOpen);
     return () => window.removeEventListener('open-register', onOpen);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPanel]);
+  }, [listens]);
 
   // Auto-login setelah registrasi selesai (MENERIMA FOTO PROFIL)
   const handleAutoLoginAfterRegister = (registeredData) => {
@@ -176,13 +187,13 @@ const Login = ({ children } = {}) => {
     );
   }
 
-  // Form langsung di panel Invest: gambar, username, password, lalu login alternatif.
-  // (Judul panel ada di Invest.js, jadi tidak diulang di sini.)
+  // Form langsung (panel Invest dan bagian Akun & Bantuan): gambar, username, password, lalu login alternatif.
+  // (Judul panel ada di pemanggil, jadi tidak diulang di sini.)
   return (
     <>
-      <form className={`${styles.loginContainer} ${styles.inlineForm}`} onSubmit={handleLoginSubmit} aria-label="Masuk akun">
+      <form className={`${styles.loginContainer} ${styles.inlineForm}`} onSubmit={handleLoginSubmit} aria-label={formLabel}>
         <div className={styles.imageWrapper}>
-          <img src="/NephiPhelia.png" alt="Ilustrasi Invest CSCID" className={styles.centerImage} />
+          <img src="/NephiPhelia.png" alt={imageAlt} className={styles.centerImage} />
         </div>
 
         <input type="text" placeholder="Username" autoComplete="username" {...bind('username')} />
@@ -230,4 +241,3 @@ const Login = ({ children } = {}) => {
 };
 
 export default Login;
-
