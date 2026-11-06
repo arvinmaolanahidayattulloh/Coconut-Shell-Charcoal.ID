@@ -4,7 +4,7 @@ import { neon } from "@neondatabase/serverless";
 // [PATCH:DB-LAZY] koneksi dibuat saat query pertama, bukan saat file dimuat
 // (build Vercel tidak gagal bila DATABASE_URL belum ada)
 let _sql = null;
-function sql(strings, ...values) {
+export function sql(strings, ...values) {
   if (!_sql) {
     if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL belum diatur");
     _sql = neon(process.env.DATABASE_URL);
