@@ -62,7 +62,7 @@ const InvestProfileContent = ({ setActiveTab }) => {
   };
 
   return (
-    <section style={{ padding: '20px', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+    <section style={{ fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
         
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>

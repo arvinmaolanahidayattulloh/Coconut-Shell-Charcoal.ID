@@ -1,22 +1,33 @@
-/* Selebar blok penjelasan dan kotak aplikasi (900px) supaya sejajar */
-.wrap { max-width: 900px; margin: 0 auto; padding: 0 0 20px; }
-.kartu {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 24px; background: #fff;
-  border: 1px solid rgba(26, 26, 26, 0.08); border-radius: 16px;
+/* Ringkasan total stok investor di dalam panel Invest CSCID */
+.band {
+  position: relative; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 20px 32px; background: var(--color-cream); border-top: 1px solid var(--color-smoke);
 }
-.label {
-  font-family: var(--font-display, inherit); font-size: 12px; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ember, #c8501e);
-}
+.band::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--color-ember); }
+.isi { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { font: 700 var(--text-xs) var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ember-dark); }
 .nilaiRow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.nilai { font-size: clamp(36px, 10vw, 56px); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.satuan { font-size: 20px; font-weight: 600; opacity: 0.7; }
-.catatan { font-size: 13px; opacity: 0.65; }
-.muat { font-size: 16px; opacity: 0.6; }
-.galat { font-size: 14px; color: #b3261e; }
-.tombol {
-  align-self: flex-start; margin-top: 8px; padding: 8px 14px; font: inherit; font-size: 14px;
-  background: transparent; border: 1px solid rgba(26, 26, 26, 0.2); border-radius: 10px; cursor: pointer;
+.nilai { font: 800 clamp(32px, 6vw, 44px)/1.1 var(--font-display); font-variant-numeric: tabular-nums; color: var(--color-carbon); }
+.satuan { font-size: var(--text-lg); font-weight: 600; color: var(--color-graphite); }
+.ket { margin-left: 4px; font-size: var(--text-sm); color: var(--color-stone); }
+.muat { font-size: var(--text-base); color: var(--color-stone); }
+.galat { font-size: var(--text-sm); color: #b3261e; }
+
+.muatUlang {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px;
+  background: var(--color-white); border: 1px solid var(--color-smoke); border-radius: var(--radius-md);
+  font: 600 var(--text-sm) var(--font-body); color: var(--color-graphite); cursor: pointer;
+  transition: border-color 0.15s ease;
 }
-.tombol:disabled { opacity: 0.5; cursor: default; }
+.muatUlang:hover:not(:disabled) { border-color: var(--color-ember); color: var(--color-ember-dark); }
+.muatUlang:disabled { opacity: 0.6; cursor: default; }
+.muatUlang:focus-visible { outline: 2px solid var(--color-ember); outline-offset: 2px; }
+.putar { animation: putar 1s linear infinite; }
+@keyframes putar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .putar { animation: none; } }
+
+@media (max-width: 640px) {
+  .band { padding: 16px 20px; }
+  .muatUlang { padding: 8px 10px; }
+  .muatUlang span { display: none; }
+}
