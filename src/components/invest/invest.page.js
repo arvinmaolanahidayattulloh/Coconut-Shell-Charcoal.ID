@@ -190,7 +190,7 @@ const InvestPageContent = ({ invested, setInvested, setActiveTab }) => {
         <div style={{ filter: showPasswordModal || verificationStep > 0 ? 'blur(5px)' : 'none', transition: 'filter 0.2s ease' }}>
           <div>
             {!user ? (
-              <Login hideTitle />
+              <Login />
             ) : (
               <div>
                 

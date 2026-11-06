@@ -13,28 +13,52 @@
 
 /* ---------- Kepala ---------- */
 .kepala {
-  display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
-  padding: 32px 32px 28px;
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 24px 32px 20px;
   background: linear-gradient(180deg, var(--color-warm-white) 0%, var(--color-white) 100%);
 }
-.kepalaTeks { min-width: 0; max-width: 580px; }
-.eyebrow {
-  display: inline-block; margin-bottom: 10px;
-  font: 600 var(--text-xs)/1 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--color-ember);
-}
-.judul { font-size: var(--text-3xl); line-height: 1.1; margin: 0 0 10px; }
-.lead { margin: 0; font-size: var(--text-base); color: var(--color-graphite); }
-
+.judul { margin: 0; font-size: var(--text-2xl); line-height: 1.15; color: var(--color-ember); }
 .bukaApp {
-  flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-  min-height: 44px; padding: 10px 16px; text-align: left; cursor: pointer;
+  flex-shrink: 0; min-height: 40px; padding: 8px 14px; cursor: pointer;
+  font: 600 var(--text-sm) var(--font-body); color: var(--color-ember-dark);
   background: var(--color-white); border: 1px solid var(--color-smoke); border-radius: var(--radius-lg);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.bukaAppLabel { font-size: var(--text-xs); color: var(--color-stone); }
-.bukaApp strong { font-size: var(--text-sm); color: var(--color-ember-dark); }
 .bukaApp:hover { border-color: var(--color-ember); box-shadow: var(--shadow-sm); }
+
+/* ---------- Tombol Panduan ---------- */
+.panduanBar { padding: 16px 32px; border-top: 1px solid var(--color-smoke); }
+.panduanBtn {
+  width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 16px; text-align: left; cursor: pointer;
+  background: var(--color-white); border: 1px solid var(--color-smoke); border-radius: var(--radius-lg);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.panduanBtn:hover { border-color: var(--color-ember); box-shadow: var(--shadow-sm); }
+.panduanIkon { flex-shrink: 0; display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-full); background: #fff7ed; color: var(--color-ember); }
+.panduanTeks { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.panduanTeks strong { font-size: var(--text-base); color: var(--color-carbon); }
+.panduanTeks span { font-size: var(--text-sm); color: var(--color-stone); }
+.panduanPanah { flex-shrink: 0; font-size: 24px; line-height: 1; color: var(--color-ember); }
+
+/* ---------- Jendela Panduan (dialog modal) ---------- */
+.dialog {
+  width: min(720px, calc(100vw - 24px)); max-height: calc(100dvh - 48px); margin: auto; padding: 0; border: 0;
+  border-radius: var(--radius-xl); background: var(--color-white); color: inherit; box-shadow: var(--shadow-xl); overflow: hidden;
+}
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog::backdrop { background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px); }
+.dialogKepala { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--color-smoke); }
+.dialogKepala h3 { margin: 0; font-size: var(--text-xl); }
+.dialogTutup {
+  display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: var(--radius-full);
+  background: var(--color-cream); color: var(--color-graphite); font-size: 24px; line-height: 1; cursor: pointer;
+}
+.dialogTutup:hover { background: var(--color-smoke); }
+.dialogIsi { overflow-y: auto; padding: 20px 28px 28px; overscroll-behavior: contain; }
+.dialogIsi .lead { margin: 0 0 4px; }
+.dialogIsi .bagian { padding: 24px 0; }
+.dialogIsi .bagian:last-child { padding-bottom: 0; }
+.lead { font-size: var(--text-base); color: var(--color-graphite); }
 
 /* ---------- Bagian di dalam panel ---------- */
 .bagian { padding: 28px 32px; border-top: 1px solid var(--color-smoke); }
@@ -102,7 +126,7 @@
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- Area masuk / investasi ---------- */
-.aksi { background: var(--color-warm-white); }
+.areaMasuk { background: var(--color-warm-white); }
 
 /* ---------- Tab (setelah masuk) ---------- */
 .tab { display: flex; background: var(--color-white); border-top: 1px solid var(--color-smoke); }
@@ -112,14 +136,15 @@
 }
 .tabAktif { color: var(--color-ember); box-shadow: inset 0 -2px 0 var(--color-ember); }
 
-.bukaApp:focus-visible, .tabBtn:focus-visible, .bandingJudul:focus-visible { outline: 2px solid var(--color-ember); outline-offset: 2px; }
+.bukaApp:focus-visible, .panduanBtn:focus-visible, .dialogTutup:focus-visible, .tabBtn:focus-visible, .bandingJudul:focus-visible { outline: 2px solid var(--color-ember); outline-offset: 2px; }
 
 /* ---------- Responsif ---------- */
 @media (max-width: 768px) {
   .luarPenuh { padding: 32px 12px 48px; }
-  .kepala { flex-direction: column; gap: 16px; padding: 24px 20px 20px; }
-  .judul { font-size: var(--text-2xl); }
-  .bukaApp { align-self: stretch; }
+  .kepala { padding: 20px 20px 16px; }
+  .panduanBar { padding: 14px 20px; }
+  .dialogKepala { padding: 14px 18px; }
+  .dialogIsi { padding: 16px 18px 24px; }
   .bagian { padding: 24px 20px; }
 
   /* Stepper vertikal: garis menyambung ke bawah */
