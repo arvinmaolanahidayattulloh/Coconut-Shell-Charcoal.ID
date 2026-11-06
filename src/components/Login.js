@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './Login.module.css';
 import Register from './Register';
 import Recovery from './Recovery';
+import AksiBtn from './AksiBtn';
 import {
   AuthModal,
   ProviderIcon,
@@ -13,7 +14,7 @@ import {
   sameText,
 } from './AuthShared';
 
-const Login = ({ children, hideTitle = false } = {}) => {
+const Login = ({ children } = {}) => {
   const { loginGoogle, runProvider, busyProvider, setBusyProvider } = useProviderAuth();
   const { values, bind, reset } = useAuthForm();
   const [authMode, setAuthMode] = useState(null);
@@ -175,34 +176,56 @@ const Login = ({ children, hideTitle = false } = {}) => {
     );
   }
 
+  // Form langsung di panel Invest: gambar, username, password, lalu login alternatif.
+  // (Judul panel ada di Invest.js, jadi tidak diulang di sini.)
   return (
-    <div className={styles.loginContainer}>
-      {!hideTitle && <h2 className={styles.cardTitle}>Investasi CSCID</h2>}
+    <>
+      <form className={`${styles.loginContainer} ${styles.inlineForm}`} onSubmit={handleLoginSubmit} aria-label="Masuk akun">
+        <div className={styles.imageWrapper}>
+          <img src="/NephiPhelia.png" alt="Ilustrasi Invest CSCID" className={styles.centerImage} />
+        </div>
 
-      <p className={styles.subtitle}>
-        Amankan alokasi kuota komoditas ekspor Anda sekarang.
-      </p>
+        <input type="text" placeholder="Username" autoComplete="username" {...bind('username')} />
+        <input type="password" placeholder="Password" autoComplete="current-password" {...bind('password')} />
+        <div className={styles.submitRow}>
+          <AksiBtn label="Masuk" />
+        </div>
 
-      <div className={styles.imageWrapper}>
-        <img 
-          src="/NephiPhelia.png" 
-          alt="NephiPhelia" 
-          className={styles.centerImage}
-        />
-      </div>
+        <div className={styles.dividerWrapper}>Atau Login with</div>
 
-      <div className={styles.authButtonsRow}>
-        <button onClick={() => openMode('register')} className={styles.secondaryAuthBtn}>Daftar</button>
-        <button onClick={goLogin} className={styles.primaryAuthBtn}>Masuk</button>
-      </div>
+        <button type="button" onClick={handleLoginPasskey} disabled={busyProvider !== null} className={styles.passkeyBtn}>
+          <ProviderIcon name="Passkey" />
+          {busyProvider === 'Passkey' ? 'Memverifikasi...' : 'Passkey'}
+        </button>
 
-      <div className={styles.linksRow}>
-        <button onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
-        <button onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
-      </div>
+        <div className={styles.socialGrid}>
+          {['Microsoft', 'Google', 'Apple'].map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => handleLoginProvider(p)}
+              disabled={busyProvider !== null}
+              className={styles.providerCard}
+              aria-label={`Masuk dengan ${p}`}
+            >
+              <ProviderIcon name={p} />
+              <span>{busyProvider === p ? '...' : p}</span>
+            </button>
+          ))}
+        </div>
+
+        <p className={styles.registerRow}>
+          Belum punya akun?{' '}
+          <button type="button" onClick={() => openMode('register')} className={styles.registerBtn}>Daftar</button>
+        </p>
+        <div className={styles.linksRow}>
+          <button type="button" onClick={() => openMode('forgot')} className={styles.linkBtn}>Lupa Akun?</button>
+          <button type="button" onClick={() => openMode('reset')} className={styles.linkBtn}>Reset Password</button>
+        </div>
+      </form>
 
       {modals}
-    </div>
+    </>
   );
 };
 

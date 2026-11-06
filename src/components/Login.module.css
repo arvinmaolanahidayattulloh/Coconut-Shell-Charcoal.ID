@@ -209,6 +209,15 @@
   cursor: pointer;
 }
 
+/* Form login langsung di panel Invest */
+.inlineForm { max-width: 420px; margin: 0 auto; }
+.submitRow { display: flex; justify-content: center; }
+.registerRow { margin: 0; text-align: center; font-size: 13px; color: #6b7280; }
+.registerBtn { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: #c45e20; cursor: pointer; }
+.registerBtn:hover { text-decoration: underline; }
+.passkeyBtn:disabled, .providerCard:disabled { opacity: 0.6; cursor: default; }
+.passkeyBtn:focus-visible, .providerCard:focus-visible, .registerBtn:focus-visible, .linkBtn:focus-visible { outline: 2px solid #c45e20; outline-offset: 2px; }
+
 @media (max-width: 480px) {
   .authButtonsRow {
     flex-direction: row;
