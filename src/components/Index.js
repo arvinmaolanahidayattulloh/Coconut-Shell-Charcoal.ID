@@ -26,7 +26,7 @@ function makeCandles() {
 export default function Index() {
   const [mode, setMode] = useState("demo");
   const [period, setPeriod] = useState("1D");
-  const [balance, setBalance] = useState(10000);
+  const [balance, setBalance] = useState(0);
   const [depositInput, setDepositInput] = useState("10000");
   const [buyInput, setBuyInput] = useState("1");
   const [sellInput, setSellInput] = useState("1");
