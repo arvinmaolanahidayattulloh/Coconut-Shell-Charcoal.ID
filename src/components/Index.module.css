@@ -56,13 +56,7 @@
 .marketStats>div{display:flex;flex-direction:column;gap:7px;padding:15px;border:1px solid #e5e7eb;border-radius:12px}
 .marketStats span{font:600 10px var(--font-body);letter-spacing:.5px;color:#9ca3af}
 .marketStats strong{font:700 16px var(--font-display);letter-spacing:-.01em;overflow-wrap:anywhere}
-.ipoProgress{margin:0 0 26px}
-.progressHeading,.progressLabels{display:flex;justify-content:space-between;gap:10px}
-.progressHeading{margin-bottom:9px;font-size:10px;font-weight:600;letter-spacing:.5px;color:#6b7280}
-.progressHeading strong{color:#c45e20}
 .progress{height:8px;border-radius:99px;background:#e5e7eb;overflow:hidden}
-.progress span{display:block;height:100%;min-width:0;border-radius:99px;background:#c45e20;transition:width .2s ease}
-.progressLabels{margin-top:7px;color:#9ca3af;font-size:10px}
 
 /* ===== ORDER ===== */
 .tradeLayout{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -120,7 +114,6 @@
   .periods{width:100%}
   .chartWrap{padding:10px}
   .tradeLayout,.accountGrid{grid-template-columns:1fr}
-  .progressLabels{font-size:9px}
   .historyRow{grid-template-columns:52px 1fr auto;font-size:11px}
 }
 
@@ -160,7 +153,6 @@
 .orderSwitch button:not([aria-selected="true"]):hover{color:#c45e20}
 .orderSwitch .orderSwitchBuyActive{background:#fff;color:#089981;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .orderSwitch .orderSwitchSellActive{background:#fff;color:#f23645;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.founderUnlimited{display:block;margin:0 0 14px;color:#089981;line-height:1.5}
 
 .tradeLayout{grid-template-columns:minmax(0,560px);justify-content:center}
 
