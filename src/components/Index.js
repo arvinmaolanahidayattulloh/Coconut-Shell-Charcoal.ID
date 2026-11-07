@@ -104,6 +104,8 @@ export default function Index() {
   const maxPrice = Math.max(...candles.map((c) => c.high)) + 3;
   const x = (i) => 14 + (i * 672) / (candles.length - 1);
   const y = (price) => 178 - ((price - minPrice) / (maxPrice - minPrice)) * 150;
+  const buyPrice = Math.max(0, Number(buyPriceInput) || 0);
+  const sellPrice = Math.max(0, Number(sellPriceInput) || 0);
   const ownedShares = owned;
   const ownedLots = ownedShares / SHARES_PER_LOT;
   const availableShares = marketData?.market?.ipoRemainingShares ?? TOTAL_SHARES;
@@ -121,8 +123,6 @@ export default function Index() {
   const buyQty = buyLots * SHARES_PER_LOT;
   const sellLots = Math.max(0, Number(sellInput) || 0);
   const sellQty = sellLots * SHARES_PER_LOT;
-  const buyPrice = Math.max(0, Number(buyPriceInput) || 0);
-  const sellPrice = Math.max(0, Number(sellPriceInput) || 0);
   const buyTotal = buyQty * buyPrice;
   const sellTotal = sellQty * sellPrice;
 
