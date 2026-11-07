@@ -1,5 +1,5 @@
-.section{max-width:1120px;margin:0 auto 80px;padding:0 24px;color:#111827}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:24px;padding:38px 42px;box-shadow:0 4px 24px rgba(0,0,0,.04)}
+.section{max-width:100%;margin:0 auto 80px;padding:0 24px;color:#111827}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:24px;padding:48px 56px;box-shadow:0 4px 24px rgba(0,0,0,.04)}
 .header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}
 .eyebrow{font-family:var(--font-display);font-size:12px;font-weight:800;letter-spacing:.15em;color:#c45e20}
 .header h2{font-family:var(--font-display);font-size:clamp(30px,4vw,42px);letter-spacing:-.04em;margin:8px 0 4px}
@@ -8,7 +8,7 @@
 .modeSwitch button{border:0;background:transparent;padding:9px 17px;border-radius:999px;font:700 11px var(--font-body);letter-spacing:.08em;color:#6b7280;cursor:pointer}
 .modeSwitch .modeActive{background:#fff;color:#c45e20;box-shadow:0 2px 8px rgba(0,0,0,.07)}
 .lock{font-size:8px;color:#d97706;vertical-align:2px}
-.quote{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;background:#fafaf9;border:1px solid #f0f0ed;border-radius:16px}
+.quote{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;background:#fafaf9;border:1px solid #f3f4f6;border-radius:16px}
 .quoteIdentity{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .symbol{font:800 29px var(--font-display);letter-spacing:-.04em}
 .exchange{font-size:10px;font-weight:750;letter-spacing:.1em;color:#9ca3af}
@@ -24,11 +24,11 @@
 .periods{display:flex;gap:4px;flex-wrap:wrap}
 .periods button{border:1px solid transparent;border-radius:7px;padding:7px 10px;background:transparent;color:#6b7280;font-size:10px;font-weight:800;cursor:pointer}
 .periods .periodActive{background:#fef3ec;border-color:#fce2d2;color:#c45e20}
-.chartWrap{padding:12px 10px 4px;border:1px solid #f0f0ed;border-radius:14px;background:#fafaf9;overflow:hidden}
+.chartWrap{padding:12px 10px 4px;border:1px solid #f3f4f6;border-radius:16px;background:#fafaf9;overflow:hidden}
 .chart{display:block;width:100%;height:auto;min-height:150px;overflow:visible}
-.gridLine{stroke:#e8e8e5;stroke-width:1}
-.axisText{fill:#9ca3af;font-size:9px;font-family:var(--font-body)}
-.candleUp{color:#16a34a}.candleDown{color:#dc2626}
+.gridLine{stroke:#f0f3fa;stroke-width:1}
+.axisText{fill:#787b86;font-size:9px;font-family:var(--font-body)}
+.candleUp{color:#089981}.candleDown{color:#f23645}
 .priceLine{stroke:#c45e20;stroke-width:1.2;opacity:.7}.priceDot{fill:#c45e20}
 .marketStats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 24px}
 .marketStats>div{display:flex;flex-direction:column;gap:7px;padding:15px;border:1px solid #eee;border-radius:11px}
@@ -44,7 +44,7 @@
 .tradeLayout{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .orderPanel{display:flex;flex-direction:column;gap:12px;padding:19px;border:1px solid #e5e7eb;border-radius:14px}
 .panelHeading{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.1em;color:#9ca3af}
-.buyLabel{color:#059669!important}.sellLabel{color:#dc2626!important}
+.buyLabel{color:#089981!important}.sellLabel{color:#f23645!important}
 .orderPanel label{font-size:11px;font-weight:700;color:#6b7280}
 .qtyPresets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .qtyPresets button{padding:9px 5px;border:1px solid #e5e7eb;border-radius:7px;background:#fff;color:#4b5563;font-size:12px;font-weight:750;cursor:pointer}
@@ -53,7 +53,7 @@
 .orderTotal{display:flex;justify-content:space-between;gap:10px;align-items:center;padding-top:4px;color:#6b7280;font-size:11px}
 .orderTotal strong{color:#111827;font-size:15px}
 .buyButton,.sellButton{border:0;border-radius:8px;padding:12px;font-weight:800;font-size:12px;cursor:pointer;transition:filter .15s ease}
-.buyButton{background:#059669;color:#fff}.sellButton{background:#dc2626;color:#fff}
+.buyButton{background:#089981;color:#fff}.sellButton{background:#f23645;color:#fff}
 .buyButton:hover,.sellButton:hover{filter:brightness(.94)}
 .accountGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
 .accountCard{display:flex;flex-direction:column;gap:8px;padding:17px;border:1px solid #e5e7eb;border-radius:12px}
@@ -67,9 +67,9 @@
 .historyTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .historyTitle h3{font:700 16px var(--font-display);margin:0}
 .historyTitle>span{font-size:10px;color:#9ca3af}
-.empty{font-size:12px;color:#9ca3af;padding:14px 0;border-top:1px solid #f1f5f9}
-.historyRow{display:grid;grid-template-columns:65px 1fr auto;gap:9px;align-items:center;padding:12px 0;border-top:1px solid #f1f5f9;font-size:12px}
+.empty{font-size:12px;color:#9ca3af;padding:14px 0;border-top:1px solid #f3f4f6}
+.historyRow{display:grid;grid-template-columns:65px 1fr auto;gap:9px;align-items:center;padding:12px 0;border-top:1px solid #f3f4f6;font-size:12px}
 .historyRow strong{font-size:12px}.historyRow small{grid-column:2/-1;color:#9ca3af;font-size:10px}
-.disclaimer{margin:24px 0 0;padding-top:16px;border-top:1px solid #eee;color:#9ca3af;font-size:10px;line-height:1.7}
+.disclaimer{margin:24px 0 0;padding-top:16px;border-top:1px solid #f3f4f6;color:#9ca3af;font-size:10px;line-height:1.7}
 @media(max-width:700px){.section{padding:0 16px}.card{padding:27px 20px;border-radius:18px}.header{align-items:flex-start;flex-direction:column}.modeSwitch{align-self:flex-start}.quote{align-items:flex-start;flex-direction:column;padding:19px}.quotePrice{align-items:flex-start}.marketStats{grid-template-columns:1fr 1fr}.marketStats>div{padding:12px}.marketStats strong{font-size:14px}}
 @media(max-width:480px){.card{padding:23px 15px}.quoteIdentity{gap:8px}.symbol{font-size:26px}.exchange{font-size:8px}.chartTop{align-items:flex-start;flex-direction:column}.chart{min-height:125px}.periods{width:100%;justify-content:space-between}.periods button{padding:7px 8px}.tradeLayout,.accountGrid{grid-template-columns:1fr}.progressLabels{font-size:9px}.historyRow{grid-template-columns:52px 1fr auto;font-size:11px}}
