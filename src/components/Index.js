@@ -115,10 +115,11 @@ export default function Index() {
     };
   }, [account]);
 
-  const rate = currency === "USD" ? 1 : Number(fxRates?.[currency]) || 1;
+  const rate = currency === "USD" ? 1 : Number(fxRates?.[currency]) || 0;
   const decimals = currency === "IDR" || currency === "JPY" ? 0 : 2;
   const formatMoney = (usdValue) => {
     if (usdValue == null || !Number.isFinite(Number(usdValue))) return "—";
+    if (rate <= 0) return "Memuat kurs...";
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency,
@@ -128,9 +129,9 @@ export default function Index() {
   };
   const toUsd = (displayValue) => {
     const amount = Number(displayValue);
-    return Number.isFinite(amount) ? amount / rate : 0;
+    return Number.isFinite(amount) && rate > 0 ? amount / rate : 0;
   };
-  const fromUsd = (usdValue) => Number((Number(usdValue || 0) * rate).toFixed(decimals));
+  const fromUsd = (usdValue) => rate > 0 ? Number((Number(usdValue || 0) * rate).toFixed(decimals)) : "";
   const recentTrades = marketData?.trades || [];
   const currentPrice = marketData?.market?.lastPriceCents > 0
     ? marketData.market.lastPriceCents / 100
