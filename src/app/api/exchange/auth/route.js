@@ -8,7 +8,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const scrypt = promisify(scryptCallback);
-const COOKIE = "cscid_demo_session";
+const EXCHANGE_ENV = process.env.CSCID_EXCHANGE_ENV === "real" ? "real" : "demo";
+const COOKIE = EXCHANGE_ENV === "real" ? "cscid_real_session" : "cscid_demo_session";
+const INITIAL_BALANCE_CENTS = EXCHANGE_ENV === "real" ? 0 : 1000000;
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
 
 async function schema() {
@@ -18,7 +20,7 @@ async function schema() {
     username_norm text NOT NULL UNIQUE,
     password_hash text NOT NULL,
     password_salt text NOT NULL,
-    balance_cents bigint NOT NULL DEFAULT 1000000,
+    balance_cents bigint NOT NULL DEFAULT 0,
     shares bigint NOT NULL DEFAULT 0,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
@@ -99,8 +101,8 @@ export async function POST(req) {
       const derived = await scrypt(password, salt, 64);
       try {
         await sql`INSERT INTO cscid_demo_users
-          (id, username, username_norm, password_hash, password_salt)
-          VALUES (${id}, ${username}, ${normalized}, ${Buffer.from(derived).toString("hex")}, ${salt})`;
+          (id, username, username_norm, password_hash, password_salt, balance_cents)
+          VALUES (${id}, ${username}, ${normalized}, ${Buffer.from(derived).toString("hex")}, ${salt}, ${INITIAL_BALANCE_CENTS})`;
       } catch (e) {
         if (e?.code === "23505") return json({ error: "Username sudah digunakan." }, 409);
         throw e;
