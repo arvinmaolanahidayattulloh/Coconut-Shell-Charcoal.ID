@@ -281,6 +281,9 @@ export async function POST(req) {
     return json({ok:true,...result[0].result},201);
   } catch (e) {
     console.error("[CSCID_MARKET_POST]",e);
+    const reason = String(e?.message || "");
+    if (reason.includes("INSUFFICIENT_CASH")) return json({error:"Saldo tersedia tidak mencukupi untuk order ini."},400);
+    if (reason.includes("INSUFFICIENT_SHARES")) return json({error:"Saham tersedia tidak mencukupi untuk order ini."},400);
     return json({error:"Order gagal diproses. Silakan muat ulang pasar dan coba lagi."},503);
   }
 }
