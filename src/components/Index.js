@@ -76,6 +76,8 @@ export default function Index() {
 
   const currentPrice = marketData?.market?.lastPriceCents ? marketData.market.lastPriceCents / 100 : IPO_PRICE;
   const change = ((currentPrice - IPO_PRICE) / IPO_PRICE) * 100;
+  const isLive = Boolean(demoUser && marketData && !marketError);
+  const liveLabel = !demoUser ? "OFFLINE" : marketError ? "ERROR" : marketData ? "LIVE" : "MENGHUBUNGKAN...";
   const buyPrice = Math.max(0, Number(buyPriceInput) || 0);
   const sellPrice = Math.max(0, Number(sellPriceInput) || 0);
   const ownedShares = owned;
@@ -154,38 +156,55 @@ export default function Index() {
     <section className={styles.section} id="index-cscid">
       <div className={styles.card}>
         <div className={styles.header}>
-          <div>
-            <span className={styles.eyebrow}>CSCID EXCHANGE · IPO MARKET</span>
-            <h2>Index CSCID</h2>
-            <p>Pasar saham Coconut Shell Charcoal Indonesia</p>
+          <div className={styles.headerTitle}>
+            <span className={styles.eyebrow}>Index CSCID</span>
+            <span className={styles.subtitle}>Coconut Shell Charcoal Indonesia · IPO Market</span>
           </div>
-          <div className={styles.modeSwitch} aria-label="Pilih mode perdagangan">
-            <button type="button" className={mode === "demo" ? styles.modeActive : ""} onClick={() => {
-              const url = process.env.NEXT_PUBLIC_CSCID_DEMO_URL;
-              if (url) window.location.assign(url);
-              else if (EXCHANGE_MODE === "demo") { setMode("demo"); setNotice("Anda sudah berada di server Demo."); }
-              else setNotice("Alamat server Demo belum dikonfigurasi pada server Real.");
-            }}>DEMO</button>
-            <button type="button" className={mode === "real" ? styles.modeActive : ""} onClick={() => {
-              const url = process.env.NEXT_PUBLIC_CSCID_REAL_URL;
-              if (url) window.location.assign(url);
-              else if (EXCHANGE_MODE === "real") { setMode("real"); setNotice("Anda sudah berada di server Real."); }
-              else setNotice("Server Real memakai deployment dan database terpisah. Server tersebut belum disiapkan untuk transaksi uang sungguhan.");
-            }}>REAL <span className={styles.lock}>●</span></button>
+          <div className={styles.headerRight}>
+            <div className={`${styles.liveIndicator} ${isLive ? styles.liveIndicatorOn : ""}`}>
+              <span className={`${styles.liveDot} ${isLive ? styles.liveDotActive : ""}`}></span>
+              <span className={`${styles.liveText} ${isLive ? styles.liveTextOn : ""}`}>{liveLabel}</span>
+            </div>
+            <div className={styles.modeSwitch} aria-label="Pilih mode perdagangan">
+              <button type="button" className={mode === "demo" ? styles.modeActive : ""} onClick={() => {
+                const url = process.env.NEXT_PUBLIC_CSCID_DEMO_URL;
+                if (url) window.location.assign(url);
+                else if (EXCHANGE_MODE === "demo") { setMode("demo"); setNotice("Anda sudah berada di server Demo."); }
+                else setNotice("Alamat server Demo belum dikonfigurasi pada server Real.");
+              }}>DEMO</button>
+              <button type="button" className={mode === "real" ? styles.modeActive : ""} onClick={() => {
+                const url = process.env.NEXT_PUBLIC_CSCID_REAL_URL;
+                if (url) window.location.assign(url);
+                else if (EXCHANGE_MODE === "real") { setMode("real"); setNotice("Anda sudah berada di server Real."); }
+                else setNotice("Server Real memakai deployment dan database terpisah. Server tersebut belum disiapkan untuk transaksi uang sungguhan.");
+              }}>REAL <span className={styles.lock}>●</span></button>
+            </div>
           </div>
         </div>
 
         <DemoAuth onAuth={handleDemoAuth} />
 
-        <div className={styles.quote}>
-          <div className={styles.quoteIdentity}>
-            <span className={styles.symbol}>CSCID</span>
-            <span className={styles.exchange}>CSCID · COMMON STOCK</span>
-            <span className={styles.ipoBadge}>FOUNDER SELL ORDER</span>
+        <div className={`notranslate ${styles.priceMain}`} translate="no">
+          <div className={styles.bigPrice}>
+            {money(currentPrice)}
+            <span className={styles.bigPriceUnit}> / LEMBAR</span>
           </div>
-          <div className={styles.quotePrice}>
-            <strong>{money(currentPrice)}</strong>
-            <span className={change >= 0 ? styles.positive : styles.negative}>{change >= 0 ? "+" : ""}{change.toFixed(2)}% <small>{marketData?.trades?.length ? "berdasarkan transaksi terakhir" : "belum ada transaksi"}</small></span>
+          <div className={styles.priceStats}>
+            <div className={styles.statBox}>
+              <span className={styles.statLabel}>PERUBAHAN</span>
+              <span className={`${styles.statVal} ${change >= 0 ? styles.up : styles.down}`}>{change >= 0 ? "▲ +" : "▼ "}{change.toFixed(2)}%</span>
+              <small className={styles.priceNote}>{marketData?.trades?.length ? "berdasarkan transaksi terakhir" : "belum ada transaksi"}</small>
+            </div>
+            <div className={styles.statBox}>
+              <span className={styles.statLabel}>SIMBOL</span>
+              <span className={styles.statVal}>CSCID</span>
+              <small className={styles.priceNote}>COMMON STOCK</small>
+            </div>
+            <div className={styles.statBox}>
+              <span className={styles.statLabel}>STATUS</span>
+              <span className={styles.statVal}>FOUNDER SELL ORDER</span>
+              <small className={styles.priceNote}>{mode.toUpperCase()}</small>
+            </div>
           </div>
         </div>
 
@@ -194,7 +213,8 @@ export default function Index() {
           <div className={styles.periods}>{periods.map((item) => <button type="button" key={item} onClick={() => setPeriod(item)} className={period === item ? styles.periodActive : ""}>{item}</button>)}</div>
         </div>
         <div className={styles.chartWrap}>
-          <ExchangeChart trades={marketData?.trades || []} period={period} />       </div>
+          <ExchangeChart trades={marketData?.trades || []} period={period} />
+        </div>
 
         <div className={styles.marketStats}>
           <div><span>HARGA IPO / LEMBAR</span><strong>{money(IPO_PRICE)}</strong></div>
@@ -297,4 +317,4 @@ export default function Index() {
       </div>
     </section>
   );
-}
+  }
