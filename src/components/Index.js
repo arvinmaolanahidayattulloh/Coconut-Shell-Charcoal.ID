@@ -28,8 +28,8 @@ export default function Index() {
   const [period, setPeriod] = useState("1D");
   const [balance, setBalance] = useState(0);
   const [depositInput, setDepositInput] = useState("10000");
-  const [buyInput, setBuyInput] = useState("1");
-  const [sellInput, setSellInput] = useState("1");
+  const [buyInput, setBuyInput] = useState("0.1");
+  const [sellInput, setSellInput] = useState("0.1");
   const [buyPriceInput, setBuyPriceInput] = useState(String(IPO_PRICE));
   const [sellPriceInput, setSellPriceInput] = useState(String(IPO_PRICE));
   const [owned, setOwned] = useState(0);
