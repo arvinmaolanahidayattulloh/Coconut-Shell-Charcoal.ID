@@ -29,6 +29,8 @@ export default function Index() {
   const [depositInput, setDepositInput] = useState("10000");
   const [buyInput, setBuyInput] = useState("1");
   const [sellInput, setSellInput] = useState("1");
+  const [buyPriceInput, setBuyPriceInput] = useState(String(IPO_PRICE));
+  const [sellPriceInput, setSellPriceInput] = useState(String(IPO_PRICE));
   const [owned, setOwned] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [notice, setNotice] = useState("");
@@ -50,8 +52,10 @@ export default function Index() {
   const buyQty = buyLots * SHARES_PER_LOT;
   const sellLots = Math.max(0, Number(sellInput) || 0);
   const sellQty = sellLots * SHARES_PER_LOT;
-  const buyTotal = buyQty * currentPrice;
-  const sellTotal = sellQty * currentPrice;
+  const buyPrice = Math.max(0, Number(buyPriceInput) || 0);
+  const sellPrice = Math.max(0, Number(sellPriceInput) || 0);
+  const buyTotal = buyQty * buyPrice;
+  const sellTotal = sellQty * sellPrice;
 
   function setQuantity(setter, quantity) {
     setter(String(quantity));
@@ -67,21 +71,23 @@ export default function Index() {
   function buyShares() {
     if (mode !== "demo") return setNotice("Mode Ril belum tersedia. Hubungkan backend dan mitra broker terlebih dahulu.");
     if (!buyLots || buyLots % 0.1 !== 0) return setNotice("Jumlah pembelian minimal 0,1 lot dan kelipatannya.");
+    if (!Number.isFinite(buyPrice) || buyPrice <= 0) return setNotice("Masukkan harga beli per lembar yang valid.");
     if (buyQty > availableShares) return setNotice("Jumlah pembelian melebihi sisa saham IPO.");
     if (buyTotal > balance) return setNotice("Saldo demo tidak mencukupi.");
     setBalance((value) => value - buyTotal);
     setOwned((value) => value + buyQty);
-    setTransactions((value) => [{ id: Date.now(), type: "BUY", qty: buyQty, price: currentPrice, total: buyTotal, time: new Date().toLocaleString("id-ID") }, ...value]);
+    setTransactions((value) => [{ id: Date.now(), type: "BUY", qty: buyQty, price: buyPrice, total: buyTotal, time: new Date().toLocaleString("id-ID") }, ...value]);
     setNotice("Pembelian CSCID berhasil dalam simulasi Demo.");
   }
 
   function sellShares() {
     if (mode !== "demo") return setNotice("Mode Ril belum tersedia. Hubungkan backend dan mitra broker terlebih dahulu.");
     if (!sellLots || sellLots % 0.1 !== 0) return setNotice("Jumlah penjualan minimal 0,1 lot dan kelipatannya.");
+    if (!Number.isFinite(sellPrice) || sellPrice <= 0) return setNotice("Masukkan harga jual per lembar yang valid.");
     if (sellQty > ownedShares) return setNotice("Jumlah jual melebihi saham yang kamu miliki.");
     setOwned((value) => Math.max(0, value - sellQty));
     setBalance((value) => value + sellTotal);
-    setTransactions((value) => [{ id: Date.now(), type: "SELL", qty: sellQty, price: currentPrice, total: sellTotal, time: new Date().toLocaleString("id-ID") }, ...value]);
+    setTransactions((value) => [{ id: Date.now(), type: "SELL", qty: sellQty, price: sellPrice, total: sellTotal, time: new Date().toLocaleString("id-ID") }, ...value]);
     setNotice("Penjualan CSCID berhasil dalam simulasi Demo.");
   }
 
@@ -151,6 +157,8 @@ export default function Index() {
         <div className={styles.tradeLayout}>
           <div className={styles.orderPanel}>
             <div className={styles.panelHeading}><span className={styles.buyLabel}>BUY / BELI</span><span>CSCID</span></div>
+            <label htmlFor="cscid-buy-price">Harga beli per lembar (USD)</label>
+            <input id="cscid-buy-price" type="number" min="0.01" step="0.01" value={buyPriceInput} onChange={(e) => setBuyPriceInput(e.target.value)} />
             <label htmlFor="cscid-buy-qty">Jumlah lot (1 lot = 100 lembar)</label>
             <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(buyInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setBuyInput, qty)}>{String(qty).replace(".", ",")}</button>)}</div>
             <input id="cscid-buy-qty" type="number" min="0.1" step="0.1" value={buyInput} onChange={(e) => setBuyInput(e.target.value)} />
@@ -159,6 +167,8 @@ export default function Index() {
           </div>
           <div className={styles.orderPanel}>
             <div className={styles.panelHeading}><span className={styles.sellLabel}>SELL / JUAL</span><span>CSCID</span></div>
+            <label htmlFor="cscid-sell-price">Harga jual per lembar (USD)</label>
+            <input id="cscid-sell-price" type="number" min="0.01" step="0.01" value={sellPriceInput} onChange={(e) => setSellPriceInput(e.target.value)} />
             <label htmlFor="cscid-sell-qty">Jumlah lot (1 lot = 100 lembar)</label>
             <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(sellInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setSellInput, qty)}>{String(qty).replace(".", ",")}</button>)}</div>
             <input id="cscid-sell-qty" type="number" min="0.1" step="0.1" max={ownedLots} value={sellInput} onChange={(e) => setSellInput(e.target.value)} />
@@ -195,7 +205,7 @@ export default function Index() {
           ))}
         </div>
 
-        <p className={styles.disclaimer}>HARGA REFERENSI IPO CSCID ditetapkan USD 1.000 per saham dan ditampilkan flat selama belum ada transaksi yang benar-benar tercatat. Aktivitas Mode Demo hanya simulasi lokal dan tidak mengubah harga pasar. Mode Ril pada halaman ini belum terhubung ke backend, kustodian, atau mitra broker sehingga belum dapat memproses transaksi maupun dana sungguhan.</p>
+        <p className={styles.disclaimer}>HARGA REFERENSI IPO CSCID ditetapkan USD 1.000 per saham. Harga beli dan jual yang dimasukkan pada panel merupakan harga transaksi simulasi langsung, bukan antrean limit order bursa. Aktivitas Mode Demo masih tersimpan lokal di browser dan tidak mengubah harga pasar maupun grafik. Mode Ril pada halaman ini belum terhubung ke backend, kustodian, atau mitra broker sehingga belum dapat memproses transaksi maupun dana sungguhan.</p>
       </div>
     </section>
   );
