@@ -110,6 +110,9 @@ export default function Index() {
   const availableLots = availableShares / SHARES_PER_LOT;
   const ipoSoldShares = marketData?.market?.ipoSoldShares ?? 0;
   const ownership = (ipoSoldShares / TOTAL_SHARES) * 100;
+  const accountOwnership = (ownedShares / TOTAL_SHARES) * 100;
+  const maxBuyLots = buyPrice > 0 ? Math.min(TOTAL_LOTS, Math.floor((balance / buyPrice / SHARES_PER_LOT) * 10) / 10) : 0;
+  const maxSellLots = Math.min(TOTAL_LOTS, Math.floor(((ownedShares - (marketData?.account?.lockedShares || 0)) / SHARES_PER_LOT) * 10) / 10);
   const bestBid = marketData?.bids?.[0]?.priceCents || null;
   const bestAsk = marketData?.asks?.[0]?.priceCents || null;
   const midPrice = bestBid && bestAsk ? (bestBid + bestAsk) / 200 : null;
@@ -228,7 +231,7 @@ export default function Index() {
           <div><span>HARGA IPO / LEMBAR</span><strong>{money(IPO_PRICE)}</strong></div>
           <div><span>HARGA TERAKHIR</span><strong>{money(currentPrice)}</strong></div>
           <div><span>SAHAM TERSEDIA</span><strong>{number(availableShares)} lembar / {number(availableLots)} lot</strong></div>
-          <div><span>KEPEMILIKAN DEMO</span><strong>{number(ownership)}%</strong></div>
+          <div><span>KEPEMILIKAN AKUN</span><strong>{number(accountOwnership)}%</strong></div>
         </div>
 
         <div className={styles.ipoProgress}>
@@ -243,7 +246,7 @@ export default function Index() {
             <label htmlFor="cscid-buy-price">Harga beli per lembar (USD)</label>
             <input id="cscid-buy-price" type="number" min="0.01" step="0.01" value={buyPriceInput} onChange={(e) => setBuyPriceInput(e.target.value)} />
             <label htmlFor="cscid-buy-qty">Jumlah lot (1 lot = 100 lembar)</label>
-            <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(buyInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setBuyInput, qty)}>{String(qty).replace(".", ",")}</button>)}</div>
+            <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(buyInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setBuyInput, qty)}>{String(qty).replace(".", ",")}</button>)}<button type="button" onClick={() => setQuantity(setBuyInput, maxBuyLots)}>MAX</button></div>
             <input id="cscid-buy-qty" type="number" min="0.1" step="0.1" value={buyInput} onChange={(e) => setBuyInput(e.target.value)} />
             <div className={styles.orderTotal}><span>Estimasi total</span><strong>{money(buyTotal)}</strong></div>
             <button type="button" className={styles.buyButton} onClick={buyShares}>Beli CSCID</button>
@@ -253,7 +256,7 @@ export default function Index() {
             <label htmlFor="cscid-sell-price">Harga jual per lembar (USD)</label>
             <input id="cscid-sell-price" type="number" min="0.01" step="0.01" value={sellPriceInput} onChange={(e) => setSellPriceInput(e.target.value)} />
             <label htmlFor="cscid-sell-qty">Jumlah lot (1 lot = 100 lembar)</label>
-            <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(sellInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setSellInput, qty)}>{String(qty).replace(".", ",")}</button>)}</div>
+            <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(sellInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setSellInput, qty)}>{String(qty).replace(".", ",")}</button>)}<button type="button" onClick={() => setQuantity(setSellInput, maxSellLots)}>MAX</button></div>
             <input id="cscid-sell-qty" type="number" min="0.1" step="0.1" max={ownedLots} value={sellInput} onChange={(e) => setSellInput(e.target.value)} />
             <div className={styles.orderTotal}><span>Estimasi hasil jual</span><strong>{money(sellTotal)}</strong></div>
             <button type="button" className={styles.sellButton} onClick={sellShares}>Jual CSCID</button>
