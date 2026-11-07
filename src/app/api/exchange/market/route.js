@@ -69,8 +69,8 @@ async function ensureMarketSchema() {
         WHERE id=1;
       INSERT INTO cscid_demo_orders
         (id,user_id,side,price_cents,quantity,remaining,status,created_at,updated_at)
-      SELECT 'CSCID-FOUNDER-IPO','D-CSCID-FOUNDER','SELL',100000,10000,10000,'OPEN',now(),now()
-      WHERE EXISTS (SELECT 1 FROM cscid_demo_users WHERE id='D-CSCID-FOUNDER' AND is_founder=true);
+      SELECT 'CSCID-FOUNDER-IPO',id,'SELL',100000,10000,10000,'OPEN',now(),now()
+      FROM cscid_demo_users WHERE username_norm='cscid' AND is_founder=true;
       INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1')
       ON CONFLICT DO NOTHING;
     END IF;
