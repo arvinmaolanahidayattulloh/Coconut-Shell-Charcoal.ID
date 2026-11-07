@@ -130,7 +130,7 @@ export default function DemoAuth({ onAuth }) {
       <div style={{marginTop:18,padding:16,border:"1px solid rgba(255,255,255,.16)",borderRadius:14}}>
         <span className={styles.sectionLabel}>WHATSAPP SERVER PAIRING</span>
         <h3 style={{margin:"8px 0"}}>QR Pairing</h3>
-        {user.isFounder ? <>
+        {user.isFounder && user.mustChangePassword ? <p style={{fontSize:13,opacity:.8}}>Perbarui password awal akun Founder terlebih dahulu. Setelah password baru disimpan, QR Pairing akan tersedia.</p> : user.isFounder ? <>
           <p style={{fontSize:13,opacity:.75}}>Akses Founder/CEO. Pindai QR ini melalui WhatsApp pemilik nomor server pada menu Perangkat tertaut.</p>
           <button type="button" onClick={showQr} disabled={busy}>{busy ? "Memuat..." : "Tampilkan QR Pairing"}</button>
           {qr && <div style={{marginTop:14,textAlign:"center"}}><img src={qr} alt="QR Pairing WhatsApp Server" style={{width:"min(100%,280px)",background:"#fff",padding:10,borderRadius:10}}/><p style={{fontSize:12}}>Pindai QR menggunakan WhatsApp pemilik nomor server.</p></div>}
