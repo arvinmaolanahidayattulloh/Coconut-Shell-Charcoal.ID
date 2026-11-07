@@ -265,7 +265,8 @@ export async function POST(req) {
   try {
     await ensureMarketSchema();
     const user = await getUser();
-    if (!user) return json({error:"Login Demo diperlukan."},401);
+    if (!user) return json({error:"Login diperlukan."},401);
+    if (user.must_change_password) return json({error:"Ganti password awal Founder sebelum melakukan transaksi."},403);
     const body = await req.json();
     const side = String(body?.side||"").toUpperCase();
     const price = Number(body?.price);
