@@ -24,7 +24,7 @@
 .periods{display:flex;gap:4px;flex-wrap:wrap}
 .periods button{border:1px solid transparent;border-radius:7px;padding:7px 10px;background:transparent;color:#6b7280;font-size:10px;font-weight:800;cursor:pointer}
 .periods .periodActive{background:#fef3ec;border-color:#fce2d2;color:#c45e20}
-.chartWrap{padding:12px 10px 4px;border:1px solid #f3f4f6;border-radius:16px;background:#fafaf9;overflow:hidden}
+.chartWrap{padding:24px;border:1px solid #f3f4f6;border-radius:16px;background:#fafaf9;overflow:hidden}
 .chart{display:block;width:100%;height:auto;min-height:150px;overflow:visible}
 .gridLine{stroke:#f0f3fa;stroke-width:1}
 .axisText{fill:#787b86;font-size:9px;font-family:var(--font-body)}
@@ -71,5 +71,5 @@
 .historyRow{display:grid;grid-template-columns:65px 1fr auto;gap:9px;align-items:center;padding:12px 0;border-top:1px solid #f3f4f6;font-size:12px}
 .historyRow strong{font-size:12px}.historyRow small{grid-column:2/-1;color:#9ca3af;font-size:10px}
 .disclaimer{margin:24px 0 0;padding-top:16px;border-top:1px solid #f3f4f6;color:#9ca3af;font-size:10px;line-height:1.7}
-@media(max-width:700px){.section{padding:0 16px}.card{padding:27px 20px;border-radius:18px}.header{align-items:flex-start;flex-direction:column}.modeSwitch{align-self:flex-start}.quote{align-items:flex-start;flex-direction:column;padding:19px}.quotePrice{align-items:flex-start}.marketStats{grid-template-columns:1fr 1fr}.marketStats>div{padding:12px}.marketStats strong{font-size:14px}}
-@media(max-width:480px){.card{padding:23px 15px}.quoteIdentity{gap:8px}.symbol{font-size:26px}.exchange{font-size:8px}.chartTop{align-items:flex-start;flex-direction:column}.chart{min-height:125px}.periods{width:100%;justify-content:space-between}.periods button{padding:7px 8px}.tradeLayout,.accountGrid{grid-template-columns:1fr}.progressLabels{font-size:9px}.historyRow{grid-template-columns:52px 1fr auto;font-size:11px}}
+@media(max-width:768px){.card{padding:32px 24px}.chartWrap{padding:16px}}\n@media(max-width:700px){.section{padding:0 16px}.card{border-radius:18px}.header{align-items:flex-start;flex-direction:column}.modeSwitch{align-self:flex-start}.quote{align-items:flex-start;flex-direction:column;padding:19px}.quotePrice{align-items:flex-start}.marketStats{grid-template-columns:1fr 1fr}.marketStats>div{padding:12px}.marketStats strong{font-size:14px}}
+@media(max-width:480px){.card{padding:24px 16px}.quoteIdentity{gap:8px}.symbol{font-size:26px}.exchange{font-size:8px}.chartTop{align-items:flex-start;flex-direction:column}.chart{min-height:125px}.periods{width:100%;justify-content:space-between}.periods button{padding:7px 8px}.chartWrap{padding:10px}.tradeLayout,.accountGrid{grid-template-columns:1fr}.progressLabels{font-size:9px}.historyRow{grid-template-columns:52px 1fr auto;font-size:11px}}
