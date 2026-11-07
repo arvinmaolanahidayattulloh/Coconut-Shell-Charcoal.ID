@@ -69,14 +69,30 @@ async function ensureMarketSchema() {
   BEGIN
     -- One market-row lock serializes all matching and settlement operations.
     SELECT * INTO v_market FROM cscid_demo_market_state WHERE id=1 FOR UPDATE;
-    SELECT * INTO v_order FROM cscid_demo_orders WHERE id=p_order_id;
-    IF NOT FOUND THEN RAISE EXCEPTION 'ORDER_NOT_FOUND'; END IF;
+    PERFORM 1 FROM cscid_demo_users WHERE id=p_user_id FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'USER_NOT_FOUND'; END IF;
+    IF p_side='BUY' THEN
+      UPDATE cscid_demo_users SET balance_cents=balance_cents-(p_price*p_qty),
+        locked_balance_cents=locked_balance_cents+(p_price*p_qty)
+        WHERE id=p_user_id AND balance_cents>=p_price*p_qty;
+      IF NOT FOUND THEN RAISE EXCEPTION 'INSUFFICIENT_CASH'; END IF;
+    ELSIF p_side='SELL' THEN
+      UPDATE cscid_demo_users SET locked_shares=locked_shares+p_qty
+        WHERE id=p_user_id AND shares-locked_shares>=p_qty;
+      IF NOT FOUND THEN RAISE EXCEPTION 'INSUFFICIENT_SHARES'; END IF;
+    ELSE
+      RAISE EXCEPTION 'INVALID_SIDE';
+    END IF;
+    INSERT INTO cscid_demo_orders(id,user_id,side,price_cents,quantity,remaining,status)
+      VALUES(p_order_id,p_user_id,p_side,p_price,p_qty,p_qty,'OPEN');
+    SELECT * INTO v_order FROM cscid_demo_orders WHERE id=p_order_id FOR UPDATE;
 
     IF v_order.side='BUY' THEN
       LOOP
         SELECT * INTO v_counter FROM cscid_demo_orders
           WHERE side='SELL' AND status IN ('OPEN','PARTIAL') AND remaining>0
             AND price_cents<=v_order.price_cents AND user_id<>p_user_id
+            AND (v_market.ipo_remaining_shares=0 OR price_cents<100000)
           ORDER BY price_cents ASC, created_at ASC, id ASC
           LIMIT 1 FOR UPDATE SKIP LOCKED;
         IF FOUND THEN
@@ -259,19 +275,7 @@ export async function POST(req) {
     if (side==="BUY" && Number(user.balance_cents)<reserved) return json({error:"Saldo tersedia tidak mencukupi untuk mengunci order."},400);
     if (side==="SELL" && Number(user.shares)-Number(user.locked_shares)<quantity) return json({error:"Saham tersedia tidak mencukupi."},400);
 
-    // The market mutex inside the settlement function prevents concurrent double fills.
-    if (side==="BUY") {
-      const rows = await sql`UPDATE cscid_demo_users SET balance_cents=balance_cents-${reserved},
-        locked_balance_cents=locked_balance_cents+${reserved}
-        WHERE id=${user.id} AND balance_cents>=${reserved} RETURNING id`;
-      if (!rows.length) return json({error:"Saldo berubah atau tidak mencukupi. Muat ulang akun."},409);
-    } else {
-      const rows = await sql`UPDATE cscid_demo_users SET locked_shares=locked_shares+${quantity}
-        WHERE id=${user.id} AND shares-locked_shares>=${quantity} RETURNING id`;
-      if (!rows.length) return json({error:"Saham berubah atau tidak mencukupi. Muat ulang akun."},409);
-    }
-    await sql`INSERT INTO cscid_demo_orders(id,user_id,side,price_cents,quantity,remaining,status)
-      VALUES(${orderId},${user.id},${side},${priceCents},${quantity},${quantity},'OPEN')`;
+    // Reserve funds/shares, create the order, match and settle in one PostgreSQL function transaction.
     const result = await sql`SELECT cscid_demo_place_order(${user.id},${orderId},${side},${priceCents},${quantity}) AS result`;
     return json({ok:true,...result[0].result},201);
   } catch (e) {
