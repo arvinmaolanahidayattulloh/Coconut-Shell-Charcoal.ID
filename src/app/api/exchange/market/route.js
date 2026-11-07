@@ -58,99 +58,14 @@ async function ensureMarketSchema() {
     IF NOT EXISTS (SELECT 1 FROM cscid_demo_migrations WHERE version='founder-allocation-v1') THEN
       DELETE FROM cscid_demo_trades;
       DELETE FROM cscid_demo_orders;
-      UPDATE cscid_demo_users
-        SET balance_cents=balance_cents+locked_balance_cents,
-            locked_balance_cents=0,shares=0,locked_shares=0;
-      UPDATE cscid_demo_users
-        SET balance_cents=0,locked_balance_cents=0,shares=10000,locked_shares=10000
-        WHERE username_norm='cscid' AND is_founder=true;
-      UPDATE cscid_demo_market_state
-        SET ipo_remaining_shares=0,last_price_cents=100000,updated_at=now()
-        WHERE id=1;
-      INSERT INTO cscid_demo_orders
-        (id,user_id,side,price_cents,quantity,remaining,status,created_at,updated_at)
-      SELECT 'CSCID-FOUNDER-IPO',id,'SELL',100000,10000,10000,'OPEN',now(),now()
-      FROM cscid_demo_users WHERE username_norm='cscid' AND is_founder=true;
-      INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1')
-      ON CONFLICT DO NOTHING;
+      UPDATE cscid_demo_users SET balance_cents=balance_cents+locked_balance_cents, locked_balance_cents=0, shares=0, locked_shares=0;
+      UPDATE cscid_demo_users SET balance_cents=0,locked_balance_cents=0,shares=10000,locked_shares=10000 WHERE username_norm='cscid' AND is_founder=true;
+      UPDATE cscid_demo_market_state SET ipo_remaining_shares=0,last_price_cents=100000,updated_at=now() WHERE id=1;
+      INSERT INTO cscid_demo_orders(id,user_id,side,price_cents,quantity,remaining,status,created_at,updated_at)
+      SELECT 'CSCID-FOUNDER-IPO',id,'SELL',100000,10000,10000,'OPEN',now(),now() FROM cscid_demo_users WHERE username_norm='cscid' AND is_founder=true;
+      INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1') ON CONFLICT DO NOTHING;
     END IF;
-  END $founder_resetimport { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createHash, randomUUID } from "node:crypto";
-import { sql } from "@/lib/csc/db";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-const EXCHANGE_ENV = process.env.CSCID_EXCHANGE_ENV === "real" ? "real" : "demo";
-const COOKIE = EXCHANGE_ENV === "real" ? "cscid_real_session" : "cscid_demo_session";
-const IPO_PRICE_CENTS = 100000; // USD 1,000.00 per share
-const TOTAL_IPO_SHARES = 10000;
-const json = (body, status = 200) => NextResponse.json(body, { status });
-const hashToken = (value) => createHash("sha256").update(value).digest("hex");
-let schemaReady = false;
-
-async function ensureMarketSchema() {
-  if (schemaReady) return;
-  await sql`ALTER TABLE cscid_demo_users
-    ADD COLUMN IF NOT EXISTS locked_balance_cents bigint NOT NULL DEFAULT 0`;
-  await sql`ALTER TABLE cscid_demo_users
-    ADD COLUMN IF NOT EXISTS locked_shares bigint NOT NULL DEFAULT 0`;
-  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_market_state (
-    id integer PRIMARY KEY CHECK (id = 1),
-    ipo_remaining_shares bigint NOT NULL DEFAULT 10000,
-    last_price_cents bigint NOT NULL DEFAULT 100000,
-    updated_at timestamptz NOT NULL DEFAULT now()
-  )`;
-  await sql`INSERT INTO cscid_demo_market_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING`;
-  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_orders (
-    id text PRIMARY KEY,
-    user_id text NOT NULL REFERENCES cscid_demo_users(id),
-    side text NOT NULL CHECK (side IN ('BUY','SELL')),
-    price_cents bigint NOT NULL CHECK (price_cents > 0),
-    quantity bigint NOT NULL CHECK (quantity > 0),
-    remaining bigint NOT NULL CHECK (remaining >= 0),
-    status text NOT NULL CHECK (status IN ('OPEN','PARTIAL','FILLED','CANCELLED')),
-    created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now()
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS cscid_demo_orders_book_idx
-    ON cscid_demo_orders (side, status, price_cents, created_at)`;
-  await sql`CREATE INDEX IF NOT EXISTS cscid_demo_orders_user_idx
-    ON cscid_demo_orders (user_id, status, created_at DESC)`;
-  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_trades (
-    id bigserial PRIMARY KEY,
-    buy_order_id text NOT NULL,
-    sell_order_id text,
-    buyer_id text NOT NULL REFERENCES cscid_demo_users(id),
-    seller_id text REFERENCES cscid_demo_users(id),
-    price_cents bigint NOT NULL,
-    quantity bigint NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now()
-  )`;
-  await sql`CREATE INDEX IF NOT EXISTS cscid_demo_trades_time_idx
-    ON cscid_demo_trades (created_at DESC)`;
-  await sql`DO $founder_reset$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM cscid_demo_migrations WHERE version='founder-allocation-v1') THEN
-      DELETE FROM cscid_demo_trades;
-      DELETE FROM cscid_demo_orders;
-      UPDATE cscid_demo_users
-        SET balance_cents=balance_cents+locked_balance_cents,
-            locked_balance_cents=0,shares=0,locked_shares=0;
-      UPDATE cscid_demo_users
-        SET balance_cents=0,locked_balance_cents=0,shares=10000,locked_shares=10000
-        WHERE username_norm='cscid' AND is_founder=true;
-      UPDATE cscid_demo_market_state
-        SET ipo_remaining_shares=0,last_price_cents=100000,updated_at=now()
-        WHERE id=1;
-      INSERT INTO cscid_demo_orders
-        (id,user_id,side,price_cents,quantity,remaining,status,created_at,updated_at)
-      SELECT 'CSCID-FOUNDER-IPO',id,'SELL',100000,10000,10000,'OPEN',now(),now()
-      FROM cscid_demo_users WHERE username_norm='cscid' AND is_founder=true;
-      INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1')
-      ON CONFLICT DO NOTHING;
-    END IF;
-;
+  END $founder_reset$`;
 
   await sql`CREATE OR REPLACE FUNCTION cscid_demo_place_order(
     p_user_id text, p_order_id text, p_side text, p_price bigint, p_qty bigint
