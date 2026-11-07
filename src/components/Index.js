@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import styles from "./Index.module.css";
+import DemoAuth from "./DemoAuth";
 
 const IPO_PRICE = 1000;
 const TOTAL_LOTS = 100;
@@ -34,6 +35,19 @@ export default function Index() {
   const [owned, setOwned] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [notice, setNotice] = useState("");
+  const [demoUser, setDemoUser] = useState(null);
+  const handleDemoAuth = useCallback((user) => {
+    setDemoUser(user);
+    if (user) {
+      setBalance(user.balance);
+      setOwned(user.shares);
+      setTransactions([]);
+    } else {
+      setBalance(0);
+      setOwned(0);
+      setTransactions([]);
+    }
+  }, []);
 
   const candles = useMemo(() => makeCandles(), []);
   const currentPrice = candles[candles.length - 1].close;
@@ -62,6 +76,7 @@ export default function Index() {
   }
 
   function addDemoFunds() {
+    if (!demoUser) return setNotice("Silakan login ke akun Demo terlebih dahulu.");
     const amount = Number(depositInput);
     if (!Number.isFinite(amount) || amount <= 0) return setNotice("Masukkan nominal saldo demo yang valid.");
     setBalance((value) => value + amount);
@@ -69,6 +84,7 @@ export default function Index() {
   }
 
   function buyShares() {
+    if (!demoUser) return setNotice("Silakan login ke akun Demo terlebih dahulu.");
     if (mode !== "demo") return setNotice("Mode Ril belum tersedia. Hubungkan backend dan mitra broker terlebih dahulu.");
     if (!buyLots || buyLots % 0.1 !== 0) return setNotice("Jumlah pembelian minimal 0,1 lot dan kelipatannya.");
     if (!Number.isFinite(buyPrice) || buyPrice <= 0) return setNotice("Masukkan harga beli per lembar yang valid.");
@@ -81,6 +97,7 @@ export default function Index() {
   }
 
   function sellShares() {
+    if (!demoUser) return setNotice("Silakan login ke akun Demo terlebih dahulu.");
     if (mode !== "demo") return setNotice("Mode Ril belum tersedia. Hubungkan backend dan mitra broker terlebih dahulu.");
     if (!sellLots || sellLots % 0.1 !== 0) return setNotice("Jumlah penjualan minimal 0,1 lot dan kelipatannya.");
     if (!Number.isFinite(sellPrice) || sellPrice <= 0) return setNotice("Masukkan harga jual per lembar yang valid.");
@@ -105,6 +122,8 @@ export default function Index() {
             <button type="button" className={mode === "real" ? styles.modeActive : ""} onClick={() => { setMode("real"); setNotice("Mode Ril dipilih, tetapi transaksi uang sungguhan belum diaktifkan."); }}>RIL <span className={styles.lock}>●</span></button>
           </div>
         </div>
+
+        <DemoAuth onAuth={handleDemoAuth} />
 
         <div className={styles.quote}>
           <div className={styles.quoteIdentity}>
