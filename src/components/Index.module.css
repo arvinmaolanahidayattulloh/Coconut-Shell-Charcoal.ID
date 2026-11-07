@@ -46,7 +46,7 @@
 .panelHeading{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.1em;color:#9ca3af}
 .buyLabel{color:#089981!important}.sellLabel{color:#f23645!important}
 .orderPanel label{font-size:11px;font-weight:700;color:#6b7280}
-.qtyPresets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qtyPresets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .qtyPresets button{padding:9px 5px;border:1px solid #e5e7eb;border-radius:7px;background:#fff;color:#4b5563;font-size:12px;font-weight:750;cursor:pointer}
 .qtyPresets .qtyActive{border-color:#c45e20;background:#fef3ec;color:#c45e20}
 .orderPanel input,.deposit input{box-sizing:border-box;width:100%;min-width:0;padding:11px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font:inherit}
