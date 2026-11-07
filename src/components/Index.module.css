@@ -62,7 +62,7 @@
 .deposit{display:flex;gap:7px;margin-top:5px}
 .deposit input{flex:1;width:60px;padding:9px;font-size:12px}
 .deposit button{border:0;border-radius:8px;padding:9px 12px;background:#111827;color:#fff;font-size:10px;font-weight:750;cursor:pointer}
-.notice{padding:12px 14px;margin:16px 0 0;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:12px}
+.notice{position:fixed;right:24px;bottom:24px;z-index:80;max-width:min(420px,calc(100vw - 32px));padding:14px 17px;margin:0;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#9a3412;font-size:12px;line-height:1.5;box-shadow:0 12px 36px rgba(15,23,42,.16)}
 .history{margin-top:28px}
 .historyTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .historyTitle h3{font:700 16px var(--font-display);margin:0}
