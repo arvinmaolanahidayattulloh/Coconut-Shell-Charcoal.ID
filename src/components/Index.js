@@ -24,7 +24,7 @@ const QUANTITY_PRESETS = [0.01, 0.1, 1, 10];
 const number = (value, maximumFractionDigits = 2) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits }).format(Number(value) || 0);
 
-export default function Index({ showAuth = true }) {
+export default function Index({ showAuth = true, initialUser = null }) {
   const [mode, setMode] = useState(EXCHANGE_MODE);
   const [currency, setCurrency] = useState("IDR");
   const [fxRates, setFxRates] = useState(null);
@@ -39,7 +39,7 @@ export default function Index({ showAuth = true }) {
   const [marketError, setMarketError] = useState("");
   const [orderBusy, setOrderBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [account, setAccount] = useState(null);
+  const [account, setAccount] = useState(initialUser);
 
   const handleAuth = useCallback((user) => {
     setAccount(user);
@@ -54,6 +54,8 @@ export default function Index({ showAuth = true }) {
       setMarketData(null);
     }
   }, []);
+
+  useEffect(() => { if (initialUser) handleAuth(initialUser); }, [initialUser, handleAuth]);
 
   useEffect(() => {
     let active = true;
