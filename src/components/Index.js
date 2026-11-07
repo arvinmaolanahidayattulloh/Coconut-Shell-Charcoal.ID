@@ -13,9 +13,10 @@ const money = (value) => new Intl.NumberFormat("en-US", { style: "currency", cur
 const number = (value) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(value);
 const periods = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 const presets = [0.1, 1, 10, 100];
+const EXCHANGE_MODE = process.env.NEXT_PUBLIC_CSCID_EXCHANGE_ENV === "real" ? "real" : "demo";
 
 export default function Index() {
-  const [mode, setMode] = useState("demo");
+  const [mode, setMode] = useState(EXCHANGE_MODE);
   const [period, setPeriod] = useState("1D");
   const [balance, setBalance] = useState(0);
   const [buyInput, setBuyInput] = useState("0.1");
@@ -158,8 +159,16 @@ export default function Index() {
             <p>Pasar saham Coconut Shell Charcoal Indonesia</p>
           </div>
           <div className={styles.modeSwitch} aria-label="Pilih mode perdagangan">
-            <button type="button" className={mode === "demo" ? styles.modeActive : ""} onClick={() => { setMode("demo"); setNotice("Mode Demo aktif. Transaksi menggunakan saldo simulasi."); }}>DEMO</button>
-            <button type="button" className={mode === "real" ? styles.modeActive : ""} onClick={() => setNotice("Server Real disiapkan terpisah. Fitur transaksi uang sungguhan belum diaktifkan.")}>RIL <span className={styles.lock}>●</span></button>
+            <button type="button" className={mode === "demo" ? styles.modeActive : ""} onClick={() => {
+              const url = process.env.NEXT_PUBLIC_CSCID_DEMO_URL;
+              if (url) window.location.assign(url);
+              else { setMode("demo"); setNotice("Server Demo aktif."); }
+            }}>DEMO</button>
+            <button type="button" className={mode === "real" ? styles.modeActive : ""} onClick={() => {
+              const url = process.env.NEXT_PUBLIC_CSCID_REAL_URL;
+              if (url) window.location.assign(url);
+              else setNotice("Server Real memakai deployment dan database terpisah. Server tersebut belum disiapkan untuk transaksi uang sungguhan.");
+            }}>REAL <span className={styles.lock}>●</span></button>
           </div>
         </div>
 
@@ -222,7 +231,7 @@ export default function Index() {
 
         <div className={styles.accountGrid}>
           <div className={styles.accountCard}>
-            <span className={styles.sectionLabel}>SALDO TERSEDIA · DEMO</span>
+            <span className={styles.sectionLabel}>SALDO TERSEDIA · {mode.toUpperCase()}</span>
             <strong>{demoUser ? money(balance) : "Login diperlukan"}</strong>
             <small>Saldo bebas digunakan untuk membuat order</small>
             <small>Terkunci pada order beli: {money((marketData?.account?.lockedBalanceCents || 0) / 100)}</small>
@@ -277,7 +286,7 @@ export default function Index() {
           ))}
         </div>
 
-        <p className={styles.disclaimer}>Harga limit dan antrean order Demo diproses di server melalui mesin pencocokan harga-waktu. Saldo dan saham yang digunakan untuk order aktif dikunci; transaksi yang matched dicatat permanen dan memperbarui harga terakhir. IPO awal berjumlah 10.000 saham pada USD 1.000 per saham. Server Real merupakan lingkungan terpisah dan belum diaktifkan untuk menerima dana atau transaksi uang sungguhan.</p>
+        <p className={styles.disclaimer}>Harga limit dan antrean order Demo diproses di server melalui mesin pencocokan harga-waktu. Saldo dan saham yang digunakan untuk order aktif dikunci; transaksi yang matched dicatat permanen dan memperbarui harga terakhir. IPO awal berjumlah 10.000 saham pada USD 1.000 per saham. Mode Demo dan Real memakai kode mesin bursa yang sama pada deployment serta database berbeda. Server Real belum disiapkan untuk menerima dana atau transaksi uang sungguhan.</p>
       </div>
     </section>
   );
