@@ -83,7 +83,7 @@ async function currentUser() {
     username: u.username,
     balance: Number(u.balance_cents) / 100,
     shares: Number(u.shares),
-    isFounder: !!u.is_founder,
+    isUnlimitedBuyer: !!u.is_founder,
     mustChangePassword: !!u.must_change_password,
   } : null;
 }
@@ -95,7 +95,7 @@ export async function GET() {
     return json({ authenticated: !!user, user });
   } catch (e) {
     console.error("[CSCID_DEMO_AUTH_GET]", e);
-    return json({ error: "Layanan akun Demo belum siap. Coba lagi sebentar." }, 503);
+    return json({ error: "Layanan akun belum siap. Silakan coba kembali." }, 503);
   }
 }
 
@@ -157,7 +157,7 @@ export async function POST(req) {
     return json({ ok: true, user: await currentUser() });
   } catch (e) {
     console.error("[CSCID_DEMO_AUTH_POST]", e);
-    return json({ error: "Tidak dapat memproses akun Demo. Coba lagi." }, 503);
+    return json({ error: "Tidak dapat memproses akun. Silakan coba kembali." }, 503);
   }
 }
 
@@ -171,6 +171,6 @@ export async function DELETE() {
     return json({ ok: true });
   } catch (e) {
     console.error("[CSCID_DEMO_AUTH_DELETE]", e);
-    return json({ error: "Gagal keluar dari akun Demo." }, 503);
+    return json({ error: "Gagal mengakhiri sesi akun." }, 503);
   }
 }
