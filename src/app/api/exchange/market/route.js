@@ -236,7 +236,7 @@ export async function GET() {
         FROM cscid_demo_trades t
         JOIN cscid_demo_users b ON b.id=t.buyer_id
         LEFT JOIN cscid_demo_users s ON s.id=t.seller_id
-        ORDER BY t.created_at DESC,t.id DESC LIMIT 30`,
+        ORDER BY t.created_at DESC,t.id DESC LIMIT 500`,
       sql`SELECT id,side,price_cents,quantity,remaining,status,created_at
         FROM cscid_demo_orders WHERE user_id=${user.id}
         ORDER BY created_at DESC LIMIT 50`,
