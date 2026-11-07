@@ -3,9 +3,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { ColorType, createChart } from "lightweight-charts";
 
-const IPO_PRICE = 1000;
-const IPO_TIME = Math.floor(Date.UTC(2026, 9, 30, 0, 0, 0) / 1000);
-
 export default function ExchangeChart({ trades = [], period = "1D" }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -13,11 +10,10 @@ export default function ExchangeChart({ trades = [], period = "1D" }) {
   const data = useMemo(() => {
     const interval = ({ "1H": 60, "1D": 900, "1W": 3600, "1M": 14400, "1Y": 86400, ALL: 86400 })[period] || 900;
     const candles = new Map();
-    candles.set(IPO_TIME, { time: IPO_TIME, open: IPO_PRICE, high: IPO_PRICE, low: IPO_PRICE, close: IPO_PRICE });
     const ordered = [...trades].reverse();
     for (const trade of ordered) {
       const timestamp = Math.floor(new Date(trade.createdAt).getTime() / 1000);
-      if (!Number.isFinite(timestamp) || timestamp < IPO_TIME) continue;
+      if (!Number.isFinite(timestamp)) continue;
       const time = Math.floor(timestamp / interval) * interval;
       const price = Number(trade.priceCents) / 100;
       if (!Number.isFinite(price) || price <= 0) continue;

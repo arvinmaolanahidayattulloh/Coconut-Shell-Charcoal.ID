@@ -8,8 +8,6 @@ export const dynamic = "force-dynamic";
 
 const EXCHANGE_ENV = process.env.CSCID_EXCHANGE_ENV === "real" ? "real" : "demo";
 const COOKIE = EXCHANGE_ENV === "real" ? "cscid_real_session" : "cscid_demo_session";
-const IPO_PRICE_CENTS = 100000; // USD 1,000.00 per share
-const TOTAL_IPO_SHARES = 10000;
 const json = (body, status = 200) => NextResponse.json(body, { status });
 const hashToken = (value) => createHash("sha256").update(value).digest("hex");
 let schemaReady = false;
@@ -22,10 +20,12 @@ async function ensureMarketSchema() {
     ADD COLUMN IF NOT EXISTS locked_shares bigint NOT NULL DEFAULT 0`;
   await sql`CREATE TABLE IF NOT EXISTS cscid_demo_market_state (
     id integer PRIMARY KEY CHECK (id = 1),
-    ipo_remaining_shares bigint NOT NULL DEFAULT 10000,
-    last_price_cents bigint NOT NULL DEFAULT 100000,
+    ipo_remaining_shares bigint NOT NULL DEFAULT 0,
+    last_price_cents bigint NOT NULL DEFAULT 0,
     updated_at timestamptz NOT NULL DEFAULT now()
   )`;
+  await sql`ALTER TABLE cscid_demo_market_state ALTER COLUMN ipo_remaining_shares SET DEFAULT 0`;
+  await sql`ALTER TABLE cscid_demo_market_state ALTER COLUMN last_price_cents SET DEFAULT 0`;
   await sql`INSERT INTO cscid_demo_market_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING`;
   await sql`CREATE TABLE IF NOT EXISTS cscid_demo_orders (
     id text PRIMARY KEY,
@@ -57,18 +57,32 @@ async function ensureMarketSchema() {
   await sql`CREATE TABLE IF NOT EXISTS cscid_demo_migrations (
     version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()
   )`;
-  await sql`DO $founder_reset$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM cscid_demo_migrations WHERE version='founder-allocation-v1') THEN
-      DELETE FROM cscid_demo_trades;
-      DELETE FROM cscid_demo_orders;
-      UPDATE cscid_demo_users SET balance_cents=balance_cents+locked_balance_cents, locked_balance_cents=0, shares=0, locked_shares=0;
-      UPDATE cscid_demo_users SET balance_cents=0,locked_balance_cents=0,shares=10000,locked_shares=10000 WHERE username_norm='cscid' AND is_founder=true;
-      UPDATE cscid_demo_market_state SET ipo_remaining_shares=0,last_price_cents=100000,updated_at=now() WHERE id=1;
-      INSERT INTO cscid_demo_orders(id,user_id,side,price_cents,quantity,remaining,status,created_at,updated_at)
-      SELECT 'CSCID-FOUNDER-IPO',id,'SELL',100000,10000,10000,'OPEN',now(),now() FROM cscid_demo_users WHERE username_norm='cscid' AND is_founder=true;
-      INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1') ON CONFLICT DO NOTHING;
-    END IF;
-  END $founder_reset$`;
+  const marketMigrations = await sql`SELECT version FROM cscid_demo_migrations WHERE version='secondary-market-no-ipo-v2' LIMIT 1`;
+  if (!marketMigrations.length) {
+    // Cancel only the legacy automatic IPO offer. Existing shareholder balances remain untouched.
+    await sql`WITH target AS MATERIALIZED (
+        SELECT id,user_id,remaining FROM cscid_demo_orders
+        WHERE id='CSCID-FOUNDER-IPO' AND status IN ('OPEN','PARTIAL') AND remaining>0
+        FOR UPDATE
+      ), released AS (
+        UPDATE cscid_demo_users u
+        SET locked_shares=GREATEST(0,u.locked_shares-t.remaining)
+        FROM target t WHERE u.id=t.user_id
+        RETURNING u.id
+      )
+      UPDATE cscid_demo_orders o
+      SET status='CANCELLED',remaining=0,updated_at=now()
+      FROM target t WHERE o.id=t.id`;
+    await sql`UPDATE cscid_demo_market_state
+      SET ipo_remaining_shares=0,
+          last_price_cents=COALESCE((
+            SELECT price_cents FROM cscid_demo_trades
+            WHERE seller_id IS NOT NULL ORDER BY created_at DESC,id DESC LIMIT 1
+          ),0),
+          updated_at=now()
+      WHERE id=1`;
+    await sql`INSERT INTO cscid_demo_migrations(version) VALUES ('secondary-market-no-ipo-v2') ON CONFLICT DO NOTHING`;
+  }
 
   await sql`CREATE OR REPLACE FUNCTION cscid_demo_place_order(
     p_user_id text, p_order_id text, p_side text, p_price bigint, p_qty bigint
@@ -84,14 +98,14 @@ async function ensureMarketSchema() {
     v_buyer text;
     v_seller text;
     v_remaining bigint;
-    v_founder boolean := false;
+    v_unlimited_buyer boolean := false;
   BEGIN
     -- One market-row lock serializes all matching and settlement operations.
     SELECT * INTO v_market FROM cscid_demo_market_state WHERE id=1 FOR UPDATE;
-    SELECT is_founder INTO v_founder FROM cscid_demo_users WHERE id=p_user_id FOR UPDATE;
+    SELECT is_founder INTO v_unlimited_buyer FROM cscid_demo_users WHERE id=p_user_id FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'USER_NOT_FOUND'; END IF;
     IF p_side='BUY' THEN
-      IF NOT v_founder THEN
+      IF NOT v_unlimited_buyer THEN
         UPDATE cscid_demo_users SET balance_cents=balance_cents-(p_price*p_qty),
           locked_balance_cents=locked_balance_cents+(p_price*p_qty)
           WHERE id=p_user_id AND balance_cents>=p_price*p_qty;
@@ -113,7 +127,6 @@ async function ensureMarketSchema() {
         SELECT * INTO v_counter FROM cscid_demo_orders
           WHERE side='SELL' AND status IN ('OPEN','PARTIAL') AND remaining>0
             AND price_cents<=v_order.price_cents AND user_id<>p_user_id
-            AND (v_market.ipo_remaining_shares=0 OR price_cents<100000)
           ORDER BY price_cents ASC, created_at ASC, id ASC
           LIMIT 1 FOR UPDATE SKIP LOCKED;
         IF FOUND THEN
@@ -143,21 +156,6 @@ async function ensureMarketSchema() {
           UPDATE cscid_demo_orders SET remaining=remaining-v_qty,
             status=CASE WHEN remaining-v_qty=0 THEN 'FILLED' ELSE 'PARTIAL' END, updated_at=now()
             WHERE id=v_order.id RETURNING * INTO v_order;
-        ELSIF v_market.ipo_remaining_shares>0 AND p_price>=100000 THEN
-          v_qty := LEAST(v_order.remaining,v_market.ipo_remaining_shares);
-          v_trade_price := 100000;
-          UPDATE cscid_demo_users SET
-            locked_balance_cents=locked_balance_cents-(v_order.price_cents*v_qty),
-            balance_cents=balance_cents+((v_order.price_cents-v_trade_price)*v_qty),
-            shares=shares+v_qty
-            WHERE id=p_user_id;
-          INSERT INTO cscid_demo_trades(buy_order_id,sell_order_id,buyer_id,seller_id,price_cents,quantity)
-            VALUES(v_order.id,'IPO',p_user_id,NULL,v_trade_price,v_qty);
-          UPDATE cscid_demo_market_state SET ipo_remaining_shares=ipo_remaining_shares-v_qty,
-            last_price_cents=v_trade_price, updated_at=now() WHERE id=1 RETURNING * INTO v_market;
-          UPDATE cscid_demo_orders SET remaining=remaining-v_qty,
-            status=CASE WHEN remaining-v_qty=0 THEN 'FILLED' ELSE 'PARTIAL' END, updated_at=now()
-            WHERE id=v_order.id RETURNING * INTO v_order;
         ELSE
           EXIT;
         END IF;
@@ -169,7 +167,6 @@ async function ensureMarketSchema() {
         SELECT * INTO v_counter FROM cscid_demo_orders
           WHERE side='BUY' AND status IN ('OPEN','PARTIAL') AND remaining>0
             AND price_cents>=v_order.price_cents AND user_id<>p_user_id
-            AND (v_market.ipo_remaining_shares=0 OR v_order.price_cents<100000)
           ORDER BY price_cents DESC, created_at ASC, id ASC
           LIMIT 1 FOR UPDATE SKIP LOCKED;
         IF NOT FOUND THEN EXIT; END IF;
@@ -227,7 +224,7 @@ export async function GET() {
   try {
     await ensureMarketSchema();
     const user = await getUser();
-    if (!user) return json({ error: "Login Demo diperlukan." }, 401);
+    if (!user) return json({ error: "Login diperlukan untuk mengakses data perdagangan." }, 401);
     const [market, bids, asks, trades, orders, buyLiquidity] = await Promise.all([
       sql`SELECT ipo_remaining_shares,last_price_cents,updated_at FROM cscid_demo_market_state WHERE id=1`,
       sql`SELECT price_cents,SUM(remaining)::bigint AS quantity,COUNT(*)::int AS order_count
@@ -239,7 +236,7 @@ export async function GET() {
       sql`SELECT t.id,t.price_cents,t.quantity,t.created_at,b.username AS buyer,s.username AS seller
         FROM cscid_demo_trades t
         JOIN cscid_demo_users b ON b.id=t.buyer_id
-        LEFT JOIN cscid_demo_users s ON s.id=t.seller_id
+        JOIN cscid_demo_users s ON s.id=t.seller_id
         ORDER BY t.created_at DESC,t.id DESC LIMIT 500`,
       sql`SELECT id,side,price_cents,quantity,remaining,status,created_at
         FROM cscid_demo_orders WHERE user_id=${user.id}
@@ -250,18 +247,16 @@ export async function GET() {
     ]);
     const m = market[0];
     return json({
-      market: { symbol:"CSCID", currency:"USD", ipoPriceCents:IPO_PRICE_CENTS,
-        ipoTotalShares:TOTAL_IPO_SHARES, ipoRemainingShares:Number(m.ipo_remaining_shares),
-        ipoSoldShares:TOTAL_IPO_SHARES-Number(m.ipo_remaining_shares),
+      market: { symbol:"CSCID", currency:"USD",
         buyLiquidityShares:Number(buyLiquidity[0]?.quantity||0),
         lastPriceCents:Number(m.last_price_cents), updatedAt:m.updated_at },
       account: { id:user.id, username:user.username, balanceCents:Number(user.balance_cents),
         lockedBalanceCents:Number(user.locked_balance_cents), shares:Number(user.shares),
-        lockedShares:Number(user.locked_shares),isFounder:!!user.is_founder,
+        lockedShares:Number(user.locked_shares),isUnlimitedBuyer:!!user.is_founder,
         mustChangePassword:!!user.must_change_password },
       bids:bids.map(x=>({...x,priceCents:Number(x.price_cents),quantity:Number(x.quantity)})),
-      asks:[{priceCents:IPO_PRICE_CENTS,quantity:Number(m.ipo_remaining_shares),orderCount:1,source:"IPO"},...asks.map(x=>({...x,priceCents:Number(x.price_cents),quantity:Number(x.quantity)}))].sort((a,b)=>a.priceCents-b.priceCents).slice(0,15),
-      trades:trades.map(x=>({id:Number(x.id),priceCents:Number(x.price_cents),quantity:Number(x.quantity),createdAt:x.created_at,buyer:x.buyer,seller:x.seller||"IPO"})),
+      asks:asks.map(x=>({...x,priceCents:Number(x.price_cents),quantity:Number(x.quantity)})),
+      trades:trades.map(x=>({id:Number(x.id),priceCents:Number(x.price_cents),quantity:Number(x.quantity),createdAt:x.created_at,buyer:x.buyer,seller:x.seller})),
       orders:orders.map(x=>({id:x.id,side:x.side,priceCents:Number(x.price_cents),quantity:Number(x.quantity),remaining:Number(x.remaining),status:x.status,createdAt:x.created_at}))
     });
   } catch (e) {
@@ -275,14 +270,14 @@ export async function POST(req) {
     await ensureMarketSchema();
     const user = await getUser();
     if (!user) return json({error:"Login diperlukan."},401);
-    if (user.must_change_password) return json({error:"Ganti password awal Founder sebelum melakukan transaksi."},403);
+    if (user.must_change_password) return json({error:"Perbarui kata sandi awal sebelum melakukan transaksi."},403);
     const body = await req.json();
     const side = String(body?.side||"").toUpperCase();
     const price = Number(body?.price);
     const quantity = Number(body?.quantity);
     if (!["BUY","SELL"].includes(side)) return json({error:"Jenis order tidak valid."},400);
     if (!Number.isFinite(price)||price<=0||price>10000000||Math.round(price*100)!==price*100) return json({error:"Harga harus valid dengan maksimal 2 angka desimal."},400);
-    if (!Number.isSafeInteger(quantity)||quantity<1||quantity>(user.is_founder?1000000000:10000)||quantity%10!==0) return json({error:"Jumlah minimal 10 lembar dan kelipatan 10; batas akun reguler 10.000 lembar."},400);
+    if (!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000000) return json({error:"Jumlah saham harus minimal 1 lembar dan tidak melebihi 1.000.000.000 lembar per order."},400);
     const priceCents = Math.round(price*100);
     const orderId = randomUUID();
 
@@ -302,7 +297,7 @@ export async function DELETE(req) {
   try {
     await ensureMarketSchema();
     const user = await getUser();
-    if (!user) return json({error:"Login Demo diperlukan."},401);
+    if (!user) return json({error:"Login diperlukan untuk mengelola order."},401);
     const {searchParams}=new URL(req.url);
     const id=searchParams.get("id");
     if (!id) return json({error:"ID order wajib diisi."},400);
