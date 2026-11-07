@@ -31,10 +31,8 @@ export default function Index() {
   const [fxUpdatedAt, setFxUpdatedAt] = useState(null);
   const [period, setPeriod] = useState("1D");
   const [balance, setBalance] = useState(0);
-  const [buyInput, setBuyInput] = useState("0.01");
-  const [sellInput, setSellInput] = useState("0.01");
-  const [buyPriceInput, setBuyPriceInput] = useState("");
-  const [sellPriceInput, setSellPriceInput] = useState("");
+  const [quantityInput, setQuantityInput] = useState("0.01");
+  const [priceInput, setPriceInput] = useState("");
   const [owned, setOwned] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [marketData, setMarketData] = useState(null);
@@ -154,37 +152,25 @@ export default function Index() {
     ...(marketData?.asks || []).map((item) => item.quantity),
   );
   const referencePrice = currentPrice || bestAsk || bestBid || 0.01;
-  const buyPrice = Number(buyPriceInput) > 0 ? Number(buyPriceInput) : referencePrice;
-  const sellPrice = Number(sellPriceInput) > 0 ? Number(sellPriceInput) : referencePrice;
-  const buyLots = Math.max(0, Number(buyInput) || 0);
-  const sellLots = Math.max(0, Number(sellInput) || 0);
-  const buyQty = Math.round(buyLots * SHARES_PER_LOT);
-  const sellQty = Math.round(sellLots * SHARES_PER_LOT);
-  const buyTotal = buyQty * buyPrice;
-  const sellTotal = sellQty * sellPrice;
+  const orderPrice = Number(priceInput) > 0 ? Number(priceInput) : referencePrice;
+  const orderLots = Math.max(0, Number(quantityInput) || 0);
+  const orderQty = Math.round(orderLots * SHARES_PER_LOT);
+  const estimatedTotal = orderQty * orderPrice;
   const unlimitedBuying = Boolean(account?.isUnlimitedBuyer || marketData?.account?.isUnlimitedBuyer);
   const maxBuyLots = unlimitedBuying
     ? Math.floor(((marketData?.market?.buyLiquidityShares || 0) / SHARES_PER_LOT) * 100) / 100
-    : buyPrice > 0 ? Math.floor((balance / buyPrice / SHARES_PER_LOT) * 100) / 100 : 0;
+    : orderPrice > 0 ? Math.floor((balance / orderPrice / SHARES_PER_LOT) * 100) / 100 : 0;
   const maxSellLots = Math.floor((Math.max(0, ownedShares - lockedShares) / SHARES_PER_LOT) * 100) / 100;
   const totalTradedShares = recentTrades.reduce((sum, trade) => sum + (Number(trade.quantity) || 0), 0);
 
-  function adjustPrice(side, direction) {
-    const current = side === "BUY" ? buyPrice : sellPrice;
-    const next = Math.max(0.01, Math.round((current + direction * 0.01 + Number.EPSILON) * 100) / 100);
-    if (side === "BUY") setBuyPriceInput(String(next));
-    else setSellPriceInput(String(next));
+  function adjustPrice(direction) {
+    const next = Math.max(0.01, Math.round((orderPrice + direction * 0.01 + Number.EPSILON) * 100) / 100);
+    setPriceInput(String(next));
   }
 
-  function choosePrice(side, displayValue) {
+  function choosePrice(displayValue) {
     const next = toUsd(displayValue);
-    if (!Number.isFinite(next) || next <= 0) {
-      if (side === "BUY") setBuyPriceInput("");
-      else setSellPriceInput("");
-      return;
-    }
-    if (side === "BUY") setBuyPriceInput(String(next));
-    else setSellPriceInput(String(next));
+    setPriceInput(Number.isFinite(next) && next > 0 ? String(next) : "");
   }
 
   function setQuantity(setter, quantity) {
@@ -197,9 +183,9 @@ export default function Index() {
       return;
     }
     if (orderBusy) return;
-    const lots = side === "BUY" ? buyLots : sellLots;
-    const price = side === "BUY" ? buyPrice : sellPrice;
-    const quantity = side === "BUY" ? buyQty : sellQty;
+    const lots = orderLots;
+    const price = orderPrice;
+    const quantity = orderQty;
     if (!lots || Math.abs(lots * 100 - Math.round(lots * 100)) > 0.000001 || quantity < 1) {
       setNotice("Jumlah minimum adalah 0,01 lot (1 lembar saham).");
       return;
@@ -360,56 +346,27 @@ export default function Index() {
               <span>1 LOT = 100 LEMBAR</span>
             </div>
             <p className={styles.orderHint}>Penyesuaian tombol + dan − mengubah harga sebesar 0,01 USD ekuivalen mata uang tampilan.</p>
-            <div className={styles.tradeColumns}>
-              <div className={`${styles.tradeSide} ${styles.sellSide}`}>
-                <div className={styles.sideHeading}>
-                  <strong>SELL · JUAL</strong>
-                  <small>Pasang penawaran jual saham</small>
-                </div>
-                <label htmlFor="cscid-sell-price">Harga jual per lembar ({currency})</label>
-                <div className={styles.priceControl}>
-                  <button type="button" aria-label="Kurangi harga jual" onClick={() => adjustPrice("SELL", -1)}>−</button>
-                  <input id="cscid-sell-price" type="number" min="0.01" step="0.01" value={fromUsd(sellPrice)} onChange={(event) => choosePrice("SELL", event.target.value)} />
-                  <button type="button" aria-label="Tambah harga jual" onClick={() => adjustPrice("SELL", 1)}>+</button>
-                </div>
-                <label htmlFor="cscid-sell-qty">Jumlah lot yang dijual</label>
-                <div className={styles.qtyPresets}>
-                  {QUANTITY_PRESETS.map((qty) => <button key={qty} type="button" className={Number(sellInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setSellInput, qty)}>{String(qty).replace(".", ",")}</button>)}
-                  <button type="button" onClick={() => setQuantity(setSellInput, maxSellLots)}>MAX</button>
-                </div>
-                <input id="cscid-sell-qty" type="number" min="0.01" step="0.01" max={ownedLots} value={sellInput} onChange={(event) => setSellInput(event.target.value)} />
-                <div className={styles.orderTotal}><span>Estimasi hasil jual</span><strong>{formatMoney(sellTotal)}</strong></div>
-                <small className={styles.orderHint}>Saham tersedia: {number(Math.max(0, ownedShares - lockedShares), 0)} lembar.</small>
-                <button type="button" className={styles.sellButton} onClick={() => submitOrder("SELL")} disabled={orderBusy}>
-                  {orderBusy ? "Memproses..." : "SELL · JUAL CSCID"}
-                </button>
-              </div>
-
-              <div className={`${styles.tradeSide} ${styles.buySide}`}>
-                <div className={styles.sideHeading}>
-                  <strong>BUY · BELI</strong>
-                  <small>Ajukan permintaan pembelian saham</small>
-                </div>
-                <label htmlFor="cscid-buy-price">Harga beli per lembar ({currency})</label>
-                <div className={styles.priceControl}>
-                  <button type="button" aria-label="Kurangi harga beli" onClick={() => adjustPrice("BUY", -1)}>−</button>
-                  <input id="cscid-buy-price" type="number" min="0.01" step="0.01" value={fromUsd(buyPrice)} onChange={(event) => choosePrice("BUY", event.target.value)} />
-                  <button type="button" aria-label="Tambah harga beli" onClick={() => adjustPrice("BUY", 1)}>+</button>
-                </div>
-                <label htmlFor="cscid-buy-qty">Jumlah lot yang dibeli</label>
-                <div className={styles.qtyPresets}>
-                  {QUANTITY_PRESETS.map((qty) => <button key={qty} type="button" className={Number(buyInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setBuyInput, qty)}>{String(qty).replace(".", ",")}</button>)}
-                  <button type="button" onClick={() => setQuantity(setBuyInput, maxBuyLots)}>MAX</button>
-                </div>
-                <input id="cscid-buy-qty" type="number" min="0.01" step="0.01" value={buyInput} onChange={(event) => setBuyInput(event.target.value)} />
-                <div className={styles.orderTotal}><span>Estimasi total beli</span><strong>{formatMoney(buyTotal)}</strong></div>
-                <small className={styles.orderHint}>
-                  {unlimitedBuying ? "Batas saldo akun tidak diterapkan; order hanya matched bila ada penjual." : `Saldo tersedia: ${formatMoney(balance)}.`}
-                </small>
-                <button type="button" className={styles.buyButton} onClick={() => submitOrder("BUY")} disabled={orderBusy}>
-                  {orderBusy ? "Memproses..." : "BUY · BELI CSCID"}
-                </button>
-              </div>
+            <label htmlFor="cscid-order-price">Harga per lembar ({currency})</label>
+            <div className={styles.priceControl}>
+              <button type="button" aria-label="Kurangi harga" onClick={() => adjustPrice(-1)}>−</button>
+              <input id="cscid-order-price" type="number" min="0.01" step="0.01" value={fromUsd(orderPrice)} onChange={(event) => choosePrice(event.target.value)} />
+              <button type="button" aria-label="Tambah harga" onClick={() => adjustPrice(1)}>+</button>
+            </div>
+            <label htmlFor="cscid-order-qty">Jumlah lot transaksi</label>
+            <div className={styles.qtyPresets}>
+              {QUANTITY_PRESETS.map((qty) => <button key={qty} type="button" className={Number(quantityInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setQuantityInput, qty)}>{String(qty).replace(".", ",")}</button>)}
+              <button type="button" onClick={() => setQuantity(setQuantityInput, maxSellLots)}>MAX</button>
+            </div>
+            <input id="cscid-order-qty" type="number" min="0.01" step="0.01" max={Math.max(maxBuyLots, maxSellLots)} value={quantityInput} onChange={(event) => setQuantityInput(event.target.value)} />
+            <div className={styles.orderTotal}><span>Estimasi total transaksi</span><strong>{formatMoney(estimatedTotal)}</strong></div>
+            <small className={styles.orderHint}>Saham tersedia: {number(Math.max(0, ownedShares - lockedShares), 0)} lembar · Saldo tersedia: {unlimitedBuying ? "Tidak dibatasi" : formatMoney(balance)}.</small>
+            <div className={styles.orderActions}>
+              <button type="button" className={styles.sellButton} onClick={() => submitOrder("SELL")} disabled={orderBusy}>
+                {orderBusy ? "Memproses..." : "SELL · JUAL CSCID"}
+              </button>
+              <button type="button" className={styles.buyButton} onClick={() => submitOrder("BUY")} disabled={orderBusy}>
+                {orderBusy ? "Memproses..." : "BUY · BELI CSCID"}
+              </button>
             </div>
           </div>
         </div>
