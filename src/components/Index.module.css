@@ -188,3 +188,48 @@
   .liveDotActive{animation:none}
   .periods button:hover,.buyButton:hover,.sellButton:hover{transform:none}
 }
+
+
+/* ===== PASAR SAHAM SEKUNDER CSCID ===== */
+.marketIntro{margin:0 0 18px;color:#667085;font:400 13px/1.7 var(--font-body);max-width:920px}
+.priceQuote{display:flex;flex-direction:column;gap:8px;min-width:0}
+.currencyBar{display:grid;grid-template-columns:auto minmax(160px,220px) 1fr;align-items:center;gap:12px;margin:0 0 22px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:12px;background:#fafaf9}
+.currencyBar label{font:700 10px var(--font-body);letter-spacing:.06em;color:#6b7280}
+.currencyBar select{min-width:0;width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:9px;background:#fff;color:#111827;font:600 12px var(--font-body)}
+.currencyBar small{color:#9ca3af;font:400 10px/1.5 var(--font-body)}
+.tradeColumns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.tradeSide{display:flex;flex-direction:column;gap:11px;min-width:0;padding:17px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+.sellSide{border-top:3px solid #f23645}
+.buySide{border-top:3px solid #089981}
+.sideHeading{display:flex;flex-direction:column;gap:4px;margin-bottom:4px}
+.sideHeading strong{font:800 14px var(--font-display);letter-spacing:.04em}
+.sellSide .sideHeading strong{color:#f23645}
+.buySide .sideHeading strong{color:#089981}
+.sideHeading small,.orderHint{color:#9ca3af;font:400 10px/1.5 var(--font-body)}
+.tradeSide>label{font:700 11px var(--font-body);color:#6b7280}
+.priceControl{display:grid;grid-template-columns:38px minmax(0,1fr) 38px;align-items:center;gap:6px}
+.priceControl button{height:42px;border:1px solid #e5e7eb;border-radius:9px;background:#f9fafb;color:#374151;font:700 20px var(--font-body);cursor:pointer;transition:all .16s ease}
+.priceControl button:hover{border-color:#c45e20;color:#c45e20;background:#fff7ed}
+.priceControl input{min-width:0;width:100%;box-sizing:border-box;height:42px;padding:9px 8px;text-align:center;border:1px solid #e5e7eb;border-radius:9px;background:#fff;color:#111827;font:700 14px var(--font-display)}
+.priceControl input:focus{outline:none;border-color:#c45e20;box-shadow:0 2px 8px rgba(196,94,32,.1)}
+.tradeSide .qtyPresets{grid-template-columns:repeat(5,minmax(0,1fr))}
+.tradeSide .qtyPresets button{min-width:0;padding:8px 3px;font-size:11px}
+.tradeSide .orderTotal{margin-top:3px}
+.tradeSide .sellButton,.tradeSide .buyButton{margin-top:auto;min-height:44px;font-size:12px;letter-spacing:.035em}
+.tradeSide .orderHint{min-height:30px;margin:0}
+.shareholderNotice{margin:20px 0 0;padding:14px 16px;border-left:3px solid #c45e20;background:#fafaf9;color:#667085;font:400 11px/1.7 var(--font-body)}
+.panelHeading{margin-bottom:2px}
+@media(max-width:760px){
+  .tradeColumns{grid-template-columns:1fr}
+  .currencyBar{grid-template-columns:1fr 1fr}
+  .currencyBar small{grid-column:1/-1}
+}
+@media(max-width:480px){
+  .tradeSide{padding:14px}
+  .priceControl{grid-template-columns:42px minmax(0,1fr) 42px}
+  .currencyBar{grid-template-columns:1fr}
+  .currencyBar small{grid-column:auto}
+}
+@media(prefers-reduced-motion:reduce){
+  .priceControl button{transition:none}
+}
