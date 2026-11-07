@@ -137,10 +137,14 @@ export default function Index() {
   const previousPrice = recentTrades.length > 1 ? recentTrades[1].priceCents / 100 : null;
   const change = currentPrice && previousPrice
     ? ((currentPrice - previousPrice) / previousPrice) * 100
-    : null;
+    : 0;
   const live = Boolean(account && marketData && !marketError);
   const liveLabel = !account ? "LOGIN DIPERLUKAN" : marketError ? "GANGGUAN" : marketData ? "LIVE" : "MENGHUBUNGKAN";
   const ownedShares = Number(owned) || 0;
+  const totalShares = Number(marketData?.market?.totalShares) || 0;
+  const ownershipPercentage = totalShares > 0
+    ? Math.min(100, Math.max(0, (ownedShares / totalShares) * 100))
+    : 0;
   const ownedLots = ownedShares / SHARES_PER_LOT;
   const lockedShares = Number(marketData?.account?.lockedShares) || 0;
   const bestBid = marketData?.bids?.[0]?.priceCents ? marketData.bids[0].priceCents / 100 : null;
@@ -281,7 +285,6 @@ export default function Index() {
             <span className={styles.statLabel}>HARGA TRANSAKSI TERAKHIR</span>
             <div className={styles.bigPrice}>
               {formatMoney(currentPrice)}
-              <span className={styles.bigPriceUnit}> / LEMBAR</span>
             </div>
             <small className={styles.priceNote}>
               {currentPrice == null ? "Belum ada transaksi yang matched." : "Harga berdasarkan transaksi saham CSCID yang telah matched."}
@@ -290,20 +293,17 @@ export default function Index() {
           <div className={styles.priceStats}>
             <div className={styles.statBox}>
               <span className={styles.statLabel}>PERUBAHAN TERAKHIR</span>
-              <span className={`${styles.statVal} ${change == null ? "" : change >= 0 ? styles.up : styles.down}`}>
-                {change == null ? "—" : `${change >= 0 ? "▲ +" : "▼ "}${change.toFixed(2)}%`}
+              <span className={`${styles.statVal} ${change >= 0 ? styles.up : styles.down}`}>
+                {`${change >= 0 ? "▲ +" : "▼ "}${change.toFixed(2)}%`}
               </span>
-              <small className={styles.priceNote}>Dibanding transaksi sebelumnya</small>
             </div>
             <div className={styles.statBox}>
               <span className={styles.statLabel}>SIMBOL</span>
               <span className={styles.statVal}>CSCID</span>
-              <small className={styles.priceNote}>COMMON STOCK</small>
             </div>
             <div className={styles.statBox}>
               <span className={styles.statLabel}>SERVER</span>
               <span className={styles.statVal}>{mode.toUpperCase()}</span>
-              <small className={styles.priceNote}>PASAR SEKUNDER</small>
             </div>
           </div>
         </div>
@@ -375,14 +375,10 @@ export default function Index() {
           <div className={styles.accountCard}>
             <span className={styles.sectionLabel}>SALDO TERSEDIA · {mode.toUpperCase()}</span>
             <strong>{unlimitedBuying ? "TIDAK DIBATASI" : account ? formatMoney(balance) : "Login diperlukan"}</strong>
-            <small>Saldo yang dapat digunakan untuk order pembelian.</small>
-            <small>Saldo yang terkunci pada order beli: {formatMoney((marketData?.account?.lockedBalanceCents || 0) / 100)}.</small>
           </div>
           <div className={styles.accountCard}>
-            <span className={styles.sectionLabel}>KEPEMILIKAN SAHAM CSCID</span>
-            <strong>{number(ownedLots)} lot / {number(ownedShares, 0)} lembar</strong>
-            <small>Nilai indikatif portofolio: {formatMoney(ownedShares * (currentPrice || 0))}.</small>
-            <small>Saham yang terkunci pada order jual: {number(lockedShares, 0)} lembar.</small>
+            <span className={styles.sectionLabel}>PERSENTASE KEPEMILIKAN 0–100%</span>
+            <strong>{number(ownershipPercentage, 2)}%</strong>
           </div>
         </div>
 
