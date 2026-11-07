@@ -71,7 +71,8 @@
 .historyRow{display:grid;grid-template-columns:65px 1fr auto;gap:9px;align-items:center;padding:12px 0;border-top:1px solid #f3f4f6;font-size:12px}
 .historyRow strong{font-size:12px}.historyRow small{grid-column:2/-1;color:#9ca3af;font-size:10px}
 .disclaimer{margin:24px 0 0;padding-top:16px;border-top:1px solid #f3f4f6;color:#9ca3af;font-size:10px;line-height:1.7}
-@media(max-width:768px){.card{padding:32px 24px}.chartWrap{padding:16px}}\n@media(max-width:700px){.section{padding:0 16px}.card{border-radius:18px}.header{align-items:flex-start;flex-direction:column}.modeSwitch{align-self:flex-start}.quote{align-items:flex-start;flex-direction:column;padding:19px}.quotePrice{align-items:flex-start}.marketStats{grid-template-columns:1fr 1fr}.marketStats>div{padding:12px}.marketStats strong{font-size:14px}}
+@media(max-width:768px){.card{padding:32px 24px}.chartWrap{padding:16px}}
+@media(max-width:700px){.section{padding:0 16px}.card{border-radius:18px}.header{align-items:flex-start;flex-direction:column}.modeSwitch{align-self:flex-start}.quote{align-items:flex-start;flex-direction:column;padding:19px}.quotePrice{align-items:flex-start}.marketStats{grid-template-columns:1fr 1fr}.marketStats>div{padding:12px}.marketStats strong{font-size:14px}}
 @media(max-width:480px){.card{padding:24px 16px}.quoteIdentity{gap:8px}.symbol{font-size:26px}.exchange{font-size:8px}.chartTop{align-items:flex-start;flex-direction:column}.chart{min-height:125px}.periods{width:100%;justify-content:space-between}.periods button{padding:7px 8px}.chartWrap{padding:10px}.tradeLayout,.accountGrid{grid-template-columns:1fr}.progressLabels{font-size:9px}.historyRow{grid-template-columns:52px 1fr auto;font-size:11px}}
 
 .demoAuth{margin:0 0 18px;padding:18px 20px;border:1px solid #e5e7eb;border-radius:14px;background:#fafaf9}
