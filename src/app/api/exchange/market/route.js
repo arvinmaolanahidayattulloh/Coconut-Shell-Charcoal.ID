@@ -6,7 +6,8 @@ import { sql } from "@/lib/csc/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const COOKIE = "cscid_demo_session";
+const EXCHANGE_ENV = process.env.CSCID_EXCHANGE_ENV === "real" ? "real" : "demo";
+const COOKIE = EXCHANGE_ENV === "real" ? "cscid_real_session" : "cscid_demo_session";
 const IPO_PRICE_CENTS = 100000; // USD 1,000.00 per share
 const TOTAL_IPO_SHARES = 10000;
 const json = (body, status = 200) => NextResponse.json(body, { status });
