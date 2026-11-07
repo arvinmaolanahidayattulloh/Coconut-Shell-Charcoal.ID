@@ -85,7 +85,7 @@ export default function Index() {
   const ipoSoldShares = marketData?.market?.ipoSoldShares ?? 0;
   const ownership = (ipoSoldShares / TOTAL_SHARES) * 100;
   const accountOwnership = (ownedShares / TOTAL_SHARES) * 100;
-  const maxBuyLots = demoUser?.isFounder ? TOTAL_LOTS : buyPrice > 0 ? Math.min(TOTAL_LOTS, Math.floor((balance / buyPrice / SHARES_PER_LOT) * 10) / 10) : 0;
+  const maxBuyLots = demoUser?.isFounder ? Math.floor(((marketData?.market?.buyLiquidityShares || 0) / SHARES_PER_LOT) * 10) / 10 : buyPrice > 0 ? Math.min(TOTAL_LOTS, Math.floor((balance / buyPrice / SHARES_PER_LOT) * 10) / 10) : 0;
   const maxSellLots = Math.min(TOTAL_LOTS, Math.floor(((ownedShares - (marketData?.account?.lockedShares || 0)) / SHARES_PER_LOT) * 10) / 10);
   const bestBid = marketData?.bids?.[0]?.priceCents || null;
   const bestAsk = marketData?.asks?.[0]?.priceCents || null;
@@ -240,7 +240,7 @@ export default function Index() {
           <div className={styles.accountCard}>
             <span className={styles.sectionLabel}>SALDO TERSEDIA · {mode.toUpperCase()}</span>
             <strong>{demoUser?.isFounder ? "UNLIMITED" : demoUser ? money(balance) : "Login diperlukan"}</strong>
-            <small>{demoUser?.isFounder ? "Founder dapat membeli tanpa batas saldo selama ada penjual." : "Saldo bebas digunakan untuk membuat order"}</small>
+            <small>{demoUser?.isFounder ? "Saldo Founder tidak terbatas; MAX mengikuti jumlah saham yang sedang ditawarkan akun lain." : "Saldo bebas digunakan untuk membuat order"}</small>
             <small>Terkunci pada order beli: {money((marketData?.account?.lockedBalanceCents || 0) / 100)}</small>
           </div>
           <div className={styles.accountCard}>
