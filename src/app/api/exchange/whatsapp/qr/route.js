@@ -21,7 +21,7 @@ export async function GET() {
     if (!user || !user.is_founder) return json({ error: "Akses QR Pairing hanya diberikan kepada Founder/CEO. Hubungi Founder/CEO untuk memperoleh izin." }, 403);
     if (!user.otp_verified_at || new Date(user.otp_verified_at).getTime() <= Date.now() - 12 * 60 * 60 * 1000) return json({ error: "Verifikasi OTP WhatsApp diperlukan sebelum membuka QR Pairing." }, 403);
     if (!process.env.WA_API_TOKEN) return json({ error: "WA_API_TOKEN belum dikonfigurasi di Vercel." }, 503);
-    const phone = String(process.env.WA_SERVER_NUMBER || "").replace(/\\D/g, "").replace(/^0/, "62");
+    const phone = String(process.env.WA_SERVER_NUMBER || "").replace(/\D/g, "").replace(/^0/, "62");
     if (!phone || phone.length < 10 || phone.length > 15) return json({ error: "WA_SERVER_NUMBER belum diatur pada environment Vercel." }, 503);
 
     const body = new FormData();
