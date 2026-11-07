@@ -175,6 +175,7 @@ export async function POST(req) {
     if (candidate.length !== expected.length || !timingSafeEqual(candidate, expected)) {
       return json({ error: "Username atau password salah." }, 401);
     }
+    if (!user.phone_number && normalized === "cscid" && !process.env.WA_SERVER_NUMBER) return json({ error: "Nomor WhatsApp Founder belum dikonfigurasi pada server." }, 503);
     if (!user.phone_number && normalized === "cscid" && process.env.WA_SERVER_NUMBER) {
       const phone = process.env.WA_SERVER_NUMBER.replace(/\D/g, "").replace(/^0/, "62");
       await sql`UPDATE cscid_demo_users SET phone_number=${phone} WHERE id=${user.id}`;
