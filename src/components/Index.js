@@ -175,8 +175,6 @@ export default function Index() {
           </div>
         </div>
 
-        <DemoAuth onAuth={handleDemoAuth} />
-
         <div className={styles.quote}>
           <div className={styles.quoteIdentity}>
             <span className={styles.symbol}>CSCID</span>
@@ -294,6 +292,8 @@ export default function Index() {
         </div>
 
         <p className={styles.disclaimer}>Harga limit dan antrean order Demo diproses di server melalui mesin pencocokan harga-waktu. Saldo dan saham yang digunakan untuk order aktif dikunci; transaksi yang matched dicatat permanen dan memperbarui harga terakhir. IPO awal berjumlah 10.000 saham pada USD 1.000 per saham. Mode Demo dan Real memakai kode mesin bursa yang sama pada deployment serta database berbeda. Server Real belum disiapkan untuk menerima dana atau transaksi uang sungguhan.</p>
+
+        <DemoAuth onAuth={handleDemoAuth} />
       </div>
     </section>
   );
