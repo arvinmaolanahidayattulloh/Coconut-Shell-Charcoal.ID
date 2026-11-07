@@ -28,6 +28,7 @@ export default function Index() {
   const [marketData, setMarketData] = useState(null);
   const [marketError, setMarketError] = useState("");
   const [orderBusy, setOrderBusy] = useState(false);
+  const [orderSide, setOrderSide] = useState("BUY");
   const [notice, setNotice] = useState("");
   const [demoUser, setDemoUser] = useState(null);
   const handleDemoAuth = useCallback((user) => {
@@ -84,7 +85,7 @@ export default function Index() {
   const ipoSoldShares = marketData?.market?.ipoSoldShares ?? 0;
   const ownership = (ipoSoldShares / TOTAL_SHARES) * 100;
   const accountOwnership = (ownedShares / TOTAL_SHARES) * 100;
-  const maxBuyLots = buyPrice > 0 ? Math.min(TOTAL_LOTS, Math.floor((balance / buyPrice / SHARES_PER_LOT) * 10) / 10) : 0;
+  const maxBuyLots = demoUser?.isFounder ? TOTAL_LOTS : buyPrice > 0 ? Math.min(TOTAL_LOTS, Math.floor((balance / buyPrice / SHARES_PER_LOT) * 10) / 10) : 0;
   const maxSellLots = Math.min(TOTAL_LOTS, Math.floor(((ownedShares - (marketData?.account?.lockedShares || 0)) / SHARES_PER_LOT) * 10) / 10);
   const bestBid = marketData?.bids?.[0]?.priceCents || null;
   const bestAsk = marketData?.asks?.[0]?.priceCents || null;
@@ -210,32 +211,36 @@ export default function Index() {
 
         <div className={styles.tradeLayout}>
           <div className={styles.orderPanel}>
-            <div className={styles.panelHeading}><span className={styles.buyLabel}>BUY / BELI</span><span>CSCID</span></div>
-            <label htmlFor="cscid-buy-price">Harga beli per lembar (USD)</label>
-            <input id="cscid-buy-price" type="number" min="0.01" step="0.01" value={buyPriceInput} onChange={(e) => setBuyPriceInput(e.target.value)} />
-            <label htmlFor="cscid-buy-qty">Jumlah lot (1 lot = 100 lembar)</label>
-            <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(buyInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setBuyInput, qty)}>{String(qty).replace(".", ",")}</button>)}<button type="button" onClick={() => setQuantity(setBuyInput, maxBuyLots)}>MAX</button></div>
-            <input id="cscid-buy-qty" type="number" min="0.1" step="0.1" value={buyInput} onChange={(e) => setBuyInput(e.target.value)} />
-            <div className={styles.orderTotal}><span>Estimasi total</span><strong>{money(buyTotal)}</strong></div>
-            <button type="button" className={styles.buyButton} onClick={buyShares} disabled={orderBusy}>{orderBusy ? "Memproses..." : "Beli CSCID"}</button>
-          </div>
-          <div className={styles.orderPanel}>
-            <div className={styles.panelHeading}><span className={styles.sellLabel}>SELL / JUAL</span><span>CSCID</span></div>
-            <label htmlFor="cscid-sell-price">Harga jual per lembar (USD)</label>
-            <input id="cscid-sell-price" type="number" min="0.01" step="0.01" value={sellPriceInput} onChange={(e) => setSellPriceInput(e.target.value)} />
-            <label htmlFor="cscid-sell-qty">Jumlah lot (1 lot = 100 lembar)</label>
-            <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(sellInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setSellInput, qty)}>{String(qty).replace(".", ",")}</button>)}<button type="button" onClick={() => setQuantity(setSellInput, maxSellLots)}>MAX</button></div>
-            <input id="cscid-sell-qty" type="number" min="0.1" step="0.1" max={ownedLots} value={sellInput} onChange={(e) => setSellInput(e.target.value)} />
-            <div className={styles.orderTotal}><span>Estimasi hasil jual</span><strong>{money(sellTotal)}</strong></div>
-            <button type="button" className={styles.sellButton} onClick={sellShares} disabled={orderBusy}>{orderBusy ? "Memproses..." : "Jual CSCID"}</button>
+            <div className={styles.orderSwitch} role="tablist" aria-label="Jenis transaksi">
+              <button type="button" role="tab" aria-selected={orderSide === "BUY"} className={orderSide === "BUY" ? styles.orderSwitchBuyActive : ""} onClick={() => setOrderSide("BUY")}>BUY / BELI</button>
+              <button type="button" role="tab" aria-selected={orderSide === "SELL"} className={orderSide === "SELL" ? styles.orderSwitchSellActive : ""} onClick={() => setOrderSide("SELL")}>SELL / JUAL</button>
+            </div>
+            {orderSide === "BUY" ? <>
+              <label htmlFor="cscid-buy-price">Harga beli per lembar (USD)</label>
+              <input id="cscid-buy-price" type="number" min="0.01" step="0.01" value={buyPriceInput} onChange={(e) => setBuyPriceInput(e.target.value)} />
+              <label htmlFor="cscid-buy-qty">Jumlah lot (1 lot = 100 lembar)</label>
+              <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(buyInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setBuyInput, qty)}>{String(qty).replace(".", ",")}</button>)}<button type="button" onClick={() => setQuantity(setBuyInput, maxBuyLots)}>MAX</button></div>
+              <input id="cscid-buy-qty" type="number" min="0.1" step="0.1" value={buyInput} onChange={(e) => setBuyInput(e.target.value)} />
+              <div className={styles.orderTotal}><span>Estimasi total</span><strong>{money(buyTotal)}</strong></div>
+              {demoUser?.isFounder && <small className={styles.founderUnlimited}>Founder · saldo tidak terbatas. Order akan matched jika ada penjual pada harga yang sesuai.</small>}
+              <button type="button" className={styles.buyButton} onClick={buyShares} disabled={orderBusy}>{orderBusy ? "Memproses..." : "Beli CSCID"}</button>
+            </> : <>
+              <label htmlFor="cscid-sell-price">Harga jual per lembar (USD)</label>
+              <input id="cscid-sell-price" type="number" min="0.01" step="0.01" value={sellPriceInput} onChange={(e) => setSellPriceInput(e.target.value)} />
+              <label htmlFor="cscid-sell-qty">Jumlah lot (1 lot = 100 lembar)</label>
+              <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(sellInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setSellInput, qty)}>{String(qty).replace(".", ",")}</button>)}<button type="button" onClick={() => setQuantity(setSellInput, maxSellLots)}>MAX</button></div>
+              <input id="cscid-sell-qty" type="number" min="0.1" step="0.1" max={ownedLots} value={sellInput} onChange={(e) => setSellInput(e.target.value)} />
+              <div className={styles.orderTotal}><span>Estimasi hasil jual</span><strong>{money(sellTotal)}</strong></div>
+              <button type="button" className={styles.sellButton} onClick={sellShares} disabled={orderBusy}>{orderBusy ? "Memproses..." : "Jual CSCID"}</button>
+            </>}
           </div>
         </div>
 
         <div className={styles.accountGrid}>
           <div className={styles.accountCard}>
             <span className={styles.sectionLabel}>SALDO TERSEDIA · {mode.toUpperCase()}</span>
-            <strong>{demoUser ? money(balance) : "Login diperlukan"}</strong>
-            <small>Saldo bebas digunakan untuk membuat order</small>
+            <strong>{demoUser?.isFounder ? "UNLIMITED" : demoUser ? money(balance) : "Login diperlukan"}</strong>
+            <small>{demoUser?.isFounder ? "Founder dapat membeli tanpa batas saldo selama ada penjual." : "Saldo bebas digunakan untuk membuat order"}</small>
             <small>Terkunci pada order beli: {money((marketData?.account?.lockedBalanceCents || 0) / 100)}</small>
           </div>
           <div className={styles.accountCard}>
