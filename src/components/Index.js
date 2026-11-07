@@ -359,6 +359,7 @@ export default function Index() {
               <span>TRANSAKSI SAHAM CSCID</span>
               <span>1 LOT = 100 LEMBAR</span>
             </div>
+            <p className={styles.orderHint}>Penyesuaian tombol + dan − mengubah harga sebesar 0,01 USD ekuivalen mata uang tampilan.</p>
             <div className={styles.tradeColumns}>
               <div className={`${styles.tradeSide} ${styles.sellSide}`}>
                 <div className={styles.sideHeading}>
