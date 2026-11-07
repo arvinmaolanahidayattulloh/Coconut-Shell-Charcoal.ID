@@ -58,7 +58,7 @@ export default function DemoAuth({ onAuth }) {
 
   return <div className={styles.demoAuth}>
     {user ? <div className={styles.demoSignedIn}>
-      <div><span className={styles.sectionLabel}>AKUN {SERVER_LABEL.toUpperCase()} AKTIF</span><strong>{user.username}</strong><small>ID: {user.id}</small></div>
+      <div><span className={styles.sectionLabel}>AKUN {SERVER_LABEL.toUpperCase()} AKTIF</span><strong>{user.username}</strong><small>Akun terhubung ke server perdagangan.</small></div>
       <button type="button" onClick={logout} disabled={busy}>Keluar</button>
       {user.mustChangePassword && <form className={styles.demoAuthForm} onSubmit={changePassword}>
         <h3>Perbarui keamanan akun</h3><p>Kata sandi awal wajib diperbarui sebelum akun dapat digunakan untuk bertransaksi.</p>
