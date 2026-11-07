@@ -127,14 +127,16 @@ export default function DemoAuth({ onAuth }) {
         <input aria-label="Password baru" type="password" autoComplete="new-password" minLength={12} value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="Password baru (minimal 12 karakter)" required />
         <button type="submit" disabled={busy}>{busy ? "Menyimpan..." : "Ganti password"}</button>
       </form>}
-      {user.isFounder && <div style={{marginTop:18,padding:16,border:"1px solid rgba(255,255,255,.16)",borderRadius:14}}>
-        <span className={styles.sectionLabel}>KHUSUS FOUNDER / CEO</span>
-        <h3 style={{margin:"8px 0"}}>WhatsApp Server Pairing</h3>
-        <p style={{fontSize:13,opacity:.75}}>QR ini hanya dapat dibuka oleh Founder/CEO. Pindai melalui WhatsApp pada nomor server, menu Perangkat tertaut.</p>
-        <button type="button" onClick={showQr} disabled={busy}>{busy ? "Memuat..." : "Tampilkan QR Pairing"}</button>
-        {qr && <div style={{marginTop:14,textAlign:"center"}}><img src={qr} alt="QR Pairing WhatsApp Server" style={{width:"min(100%,280px)",background:"#fff",padding:10,borderRadius:10}}/><p style={{fontSize:12}}>Pindai QR menggunakan WhatsApp pemilik nomor server.</p></div>}
-        {qrStatus && <p role="status">{qrStatus}</p>}
-      </div>}
+      <div style={{marginTop:18,padding:16,border:"1px solid rgba(255,255,255,.16)",borderRadius:14}}>
+        <span className={styles.sectionLabel}>WHATSAPP SERVER PAIRING</span>
+        <h3 style={{margin:"8px 0"}}>QR Pairing</h3>
+        {user.isFounder ? <>
+          <p style={{fontSize:13,opacity:.75}}>Akses Founder/CEO. Pindai QR ini melalui WhatsApp pemilik nomor server pada menu Perangkat tertaut.</p>
+          <button type="button" onClick={showQr} disabled={busy}>{busy ? "Memuat..." : "Tampilkan QR Pairing"}</button>
+          {qr && <div style={{marginTop:14,textAlign:"center"}}><img src={qr} alt="QR Pairing WhatsApp Server" style={{width:"min(100%,280px)",background:"#fff",padding:10,borderRadius:10}}/><p style={{fontSize:12}}>Pindai QR menggunakan WhatsApp pemilik nomor server.</p></div>}
+          {qrStatus && <p role="status">{qrStatus}</p>}
+        </> : <p style={{fontSize:13,opacity:.8}}>Akses QR Pairing dibatasi. Untuk memperoleh izin, Anda harus bertemu Founder / CEO CSCID secara langsung. QR tidak dapat dibuka sebelum akses diberikan.</p>}
+      </div>
       {error && <p className={styles.authError} role="alert">{error}</p>}
     </div> : <form className={styles.demoAuthForm} onSubmit={submitAccount}>
       <div><span className={styles.sectionLabel}>AKSES AKUN CSCID</span><h3>{mode === "login" ? `Masuk ke akun ${SERVER_LABEL}` : `Buat akun ${SERVER_LABEL}`}</h3><p>Login atau daftar, lalu verifikasi OTP WhatsApp untuk membuka akses privat.</p></div>
