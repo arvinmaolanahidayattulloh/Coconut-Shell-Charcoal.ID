@@ -11,6 +11,8 @@ export default function DemoAuth({ onAuth }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   useEffect(() => {
     let live = true;
@@ -32,6 +34,21 @@ export default function DemoAuth({ onAuth }) {
     finally { setBusy(false); }
   }
 
+  async function changePassword(e) {
+    e.preventDefault(); setBusy(true); setError("");
+    try {
+      const r = await fetch("/api/exchange/auth", {
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"change-password",username:user.username,password:currentPassword,newPassword})
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Password tidak dapat diperbarui.");
+      setUser(data.user); onAuth?.(data.user);
+      setCurrentPassword(""); setNewPassword("");
+    } catch (e) { setError(e.message || "Terjadi kesalahan."); }
+    finally { setBusy(false); }
+  }
+
   async function logout() {
     setBusy(true);
     try { await fetch("/api/exchange/auth", { method: "DELETE" }); setUser(null); onAuth?.(null); }
@@ -40,7 +57,17 @@ export default function DemoAuth({ onAuth }) {
   }
 
   return <div className={styles.demoAuth}>
-    {user ? <div className={styles.demoSignedIn}><div><span className={styles.sectionLabel}>AKUN {SERVER_LABEL.toUpperCase()} AKTIF</span><strong>{user.username}</strong><small>ID: {user.id}</small></div><button type="button" onClick={logout} disabled={busy}>Keluar</button></div> :
+    {user ? <div className={styles.demoSignedIn}>
+      <div><span className={styles.sectionLabel}>AKUN {SERVER_LABEL.toUpperCase()} AKTIF</span><strong>{user.username}{user.isFounder ? " · FOUNDER" : ""}</strong><small>ID: {user.id}</small></div>
+      <button type="button" onClick={logout} disabled={busy}>Keluar</button>
+      {user.mustChangePassword && <form className={styles.demoAuthForm} onSubmit={changePassword}>
+        <h3>Amankan akun Founder</h3><p>Password awal CSCID wajib diganti sebelum transaksi dapat dilakukan.</p>
+        <input aria-label="Password awal" type="password" autoComplete="current-password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} placeholder="Password awal" required />
+        <input aria-label="Password baru" type="password" autoComplete="new-password" minLength={12} value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="Password baru (minimal 12 karakter)" required />
+        <button type="submit" disabled={busy}>{busy ? "Menyimpan..." : "Ganti password"}</button>
+      </form>}
+      {error && <p role="alert">{error}</p>}
+    </div> :
       <form className={styles.demoAuthForm} onSubmit={submit}>
         <div><span className={styles.sectionLabel}>AKSES CSCID EXCHANGE</span><h3>{mode === "login" ? `Masuk ke akun ${SERVER_LABEL}` : `Buat akun ${SERVER_LABEL}`}</h3><p>Login diperlukan untuk menggunakan saldo, portofolio, dan order pribadi.</p></div>
         <input aria-label={`Username akun ${SERVER_LABEL}`} autoComplete="username" minLength={3} maxLength={24} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" required />
