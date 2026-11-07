@@ -89,14 +89,14 @@ export default function Home() {
 
             <PriceChart />
 
-            <Index />
-
-            {/* Invest tepat di bawah chart. Halaman khususnya: /invest (tampilan layar penuh) */}
+            {/* Invest ditempatkan di atas Index. Halaman khususnya: /invest (tampilan layar penuh) */}
             <div className="sectionWrapper" id="invest">
               <div className="wrap" style={{ maxWidth: 960, marginBottom: 80 }}>
                 <Invest embedded />
               </div>
             </div>
+
+            <Index />
 
             <AccessPanel />
 
