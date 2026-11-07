@@ -144,6 +144,7 @@ async function ensureMarketSchema() {
         SELECT * INTO v_counter FROM cscid_demo_orders
           WHERE side='BUY' AND status IN ('OPEN','PARTIAL') AND remaining>0
             AND price_cents>=v_order.price_cents AND user_id<>p_user_id
+            AND (v_market.ipo_remaining_shares=0 OR v_order.price_cents<100000)
           ORDER BY price_cents DESC, created_at ASC, id ASC
           LIMIT 1 FOR UPDATE SKIP LOCKED;
         IF NOT FOUND THEN EXIT; END IF;
@@ -271,7 +272,6 @@ export async function POST(req) {
     if (!Number.isSafeInteger(quantity)||quantity<1||quantity>10000||quantity%10!==0) return json({error:"Jumlah minimal 10 lembar dan kelipatan 10."},400);
     const priceCents = Math.round(price*100);
     const orderId = randomUUID();
-    const reserved = priceCents*quantity;
     if (side==="BUY" && Number(user.balance_cents)<reserved) return json({error:"Saldo tersedia tidak mencukupi untuk mengunci order."},400);
     if (side==="SELL" && Number(user.shares)-Number(user.locked_shares)<quantity) return json({error:"Saham tersedia tidak mencukupi."},400);
 
