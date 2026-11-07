@@ -32,7 +32,8 @@ export async function POST(req) {
 
     if (action === "send") {
       if (!process.env.WA_API_TOKEN) return json({ error: "WA_API_TOKEN belum dikonfigurasi di Vercel." }, 503);
-      if (session.otp_sent_at && Date.now() - new Date(session.otp_sent_at).getTime() < 60_000) return json({ error: "Tunggu 60 detik sebelum meminta OTP baru." }, 429);
+      const recentSend = await sql`SELECT 1 FROM cscid_demo_sessions WHERE user_id=${session.id} AND otp_sent_at>now()-interval '60 seconds' LIMIT 1`;
+      if (recentSend.length) return json({ error: "Tunggu 60 detik sebelum meminta OTP baru." }, 429);
       const otp = String(randomInt(0, 1000000)).padStart(6, "0");
       const response = await fetch("https://api.fonnte.com/send", {
         method: "POST",
