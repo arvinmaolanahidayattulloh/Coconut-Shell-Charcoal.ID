@@ -54,6 +54,9 @@ async function ensureMarketSchema() {
   )`;
   await sql`CREATE INDEX IF NOT EXISTS cscid_demo_trades_time_idx
     ON cscid_demo_trades (created_at DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_migrations (
+    version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()
+  )`;
   await sql`DO $founder_reset$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM cscid_demo_migrations WHERE version='founder-allocation-v1') THEN
       DELETE FROM cscid_demo_trades;
