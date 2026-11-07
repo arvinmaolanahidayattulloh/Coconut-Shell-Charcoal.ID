@@ -161,7 +161,7 @@ export default function Index() {
   const sellQty = Math.round(sellLots * SHARES_PER_LOT);
   const buyTotal = buyQty * buyPrice;
   const sellTotal = sellQty * sellPrice;
-  const unlimitedBuying = Boolean(account?.isFounder || marketData?.account?.isUnlimitedBuyer);
+  const unlimitedBuying = Boolean(account?.isUnlimitedBuyer || marketData?.account?.isUnlimitedBuyer);
   const maxBuyLots = unlimitedBuying
     ? Math.floor(((marketData?.market?.buyLiquidityShares || 0) / SHARES_PER_LOT) * 100) / 100
     : buyPrice > 0 ? Math.floor((balance / buyPrice / SHARES_PER_LOT) * 100) / 100 : 0;
