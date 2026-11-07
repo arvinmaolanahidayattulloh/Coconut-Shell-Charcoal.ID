@@ -162,11 +162,13 @@ export default function Index() {
             <button type="button" className={mode === "demo" ? styles.modeActive : ""} onClick={() => {
               const url = process.env.NEXT_PUBLIC_CSCID_DEMO_URL;
               if (url) window.location.assign(url);
-              else { setMode("demo"); setNotice("Server Demo aktif."); }
+              else if (EXCHANGE_MODE === "demo") { setMode("demo"); setNotice("Anda sudah berada di server Demo."); }
+              else setNotice("Alamat server Demo belum dikonfigurasi pada server Real.");
             }}>DEMO</button>
             <button type="button" className={mode === "real" ? styles.modeActive : ""} onClick={() => {
               const url = process.env.NEXT_PUBLIC_CSCID_REAL_URL;
               if (url) window.location.assign(url);
+              else if (EXCHANGE_MODE === "real") { setMode("real"); setNotice("Anda sudah berada di server Real."); }
               else setNotice("Server Real memakai deployment dan database terpisah. Server tersebut belum disiapkan untuk transaksi uang sungguhan.");
             }}>REAL <span className={styles.lock}>●</span></button>
           </div>
