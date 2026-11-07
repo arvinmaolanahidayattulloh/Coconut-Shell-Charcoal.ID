@@ -9,6 +9,7 @@ import Products from "@/components/Products";
 import WhyUs from "@/components/WhyUs";
 import CTA from "@/components/CTA";
 import PriceChart from "@/components/PriceChart";
+import Index from "@/components/Index";
 import Invest from "@/components/Invest";
 import Footer from "@/components/Footer";
 import AdBanner from "@/components/AdBanner";
@@ -87,6 +88,8 @@ export default function Home() {
             <CTA />
 
             <PriceChart />
+
+            <Index />
 
             {/* Invest tepat di bawah chart. Halaman khususnya: /invest (tampilan layar penuh) */}
             <div className="sectionWrapper" id="invest">
