@@ -103,12 +103,12 @@ export default function Index() {
   async function submitOrder(side) {
     if (!demoUser) return setNotice("Silakan login ke akun Demo terlebih dahulu.");
     if (orderBusy) return;
-    setOrderBusy(true);
     const lots = side === "BUY" ? buyLots : sellLots;
     const price = side === "BUY" ? buyPrice : sellPrice;
     const quantity = Math.round(lots * SHARES_PER_LOT);
     if (!lots || Math.abs(lots * 10 - Math.round(lots * 10)) > 0.000001) return setNotice("Jumlah minimal 0,1 lot dan kelipatannya.");
     if (!Number.isFinite(price) || price <= 0) return setNotice("Masukkan harga limit yang valid.");
+    setOrderBusy(true);
     try {
       const response = await fetch("/api/exchange/market", {
         method: "POST",
