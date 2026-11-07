@@ -55,6 +55,7 @@
 .buyButton,.sellButton{border:0;border-radius:8px;padding:12px;font-weight:800;font-size:12px;cursor:pointer;transition:filter .15s ease}
 .buyButton{background:#089981;color:#fff}.sellButton{background:#f23645;color:#fff}
 .buyButton:hover,.sellButton:hover{filter:brightness(.94)}
+.buyButton:disabled,.sellButton:disabled{opacity:.6;cursor:wait}
 .accountGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
 .accountCard{display:flex;flex-direction:column;gap:8px;padding:17px;border:1px solid #e5e7eb;border-radius:12px}
 .accountCard>strong{font:750 21px var(--font-display);overflow-wrap:anywhere}
