@@ -272,8 +272,6 @@ export async function POST(req) {
     if (!Number.isSafeInteger(quantity)||quantity<1||quantity>10000||quantity%10!==0) return json({error:"Jumlah minimal 10 lembar dan kelipatan 10."},400);
     const priceCents = Math.round(price*100);
     const orderId = randomUUID();
-    if (side==="BUY" && Number(user.balance_cents)<reserved) return json({error:"Saldo tersedia tidak mencukupi untuk mengunci order."},400);
-    if (side==="SELL" && Number(user.shares)-Number(user.locked_shares)<quantity) return json({error:"Saham tersedia tidak mencukupi."},400);
 
     // Reserve funds/shares, create the order, match and settle in one PostgreSQL function transaction.
     const result = await sql`SELECT cscid_demo_place_order(${user.id},${orderId},${side},${priceCents},${quantity}) AS result`;
