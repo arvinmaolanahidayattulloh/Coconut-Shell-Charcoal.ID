@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Invest from "@/components/Invest";
 import Index from "@/components/Index";
 import HargaFeed from "@/components/HargaFeed";
@@ -10,11 +10,13 @@ import { useAccount } from "@/components/Account";
 export default function PrivateAccessClient() {
   const [user, setUser] = useState(null);
   const { loginGoogle, logout } = useAccount();
+  const accountActions = useRef({ loginGoogle, logout });
+  accountActions.current = { loginGoogle, logout };
   const handleAuth = useCallback((nextUser) => setUser(nextUser), []);
   useEffect(() => {
-    if (user) loginGoogle({ name: user.username, username: user.username, email: `${user.username}@cscid.local` });
-    else logout();
-  }, [user, loginGoogle, logout]);
+    if (user) accountActions.current.loginGoogle({ name: user.username, username: user.username, email: `${user.username}@cscid.local` });
+    else accountActions.current.logout();
+  }, [user]);
 
   return (
     <main>
