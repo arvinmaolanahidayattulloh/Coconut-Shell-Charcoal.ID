@@ -24,10 +24,12 @@ async function schema() {
     shares bigint NOT NULL DEFAULT 0,
     is_founder boolean NOT NULL DEFAULT false,
     must_change_password boolean NOT NULL DEFAULT false,
+    phone_number text,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
   await sql`ALTER TABLE cscid_demo_users ADD COLUMN IF NOT EXISTS is_founder boolean NOT NULL DEFAULT false`;
   await sql`ALTER TABLE cscid_demo_users ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE cscid_demo_users ADD COLUMN IF NOT EXISTS phone_number text`;
   await sql`CREATE TABLE IF NOT EXISTS cscid_demo_migrations (version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`;
   const founderSalt = randomBytes(16).toString("hex");
   const founderHash = Buffer.from(await scrypt("CSCID", founderSalt, 64)).toString("hex");
@@ -46,8 +48,16 @@ async function schema() {
     token_hash text PRIMARY KEY,
     user_id text NOT NULL REFERENCES cscid_demo_users(id) ON DELETE CASCADE,
     expires_at timestamptz NOT NULL,
+    otp_hash text,
+    otp_expires_at timestamptz,
+    otp_attempts integer NOT NULL DEFAULT 0,
+    otp_verified_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
+  await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_hash text`;
+  await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_expires_at timestamptz`;
+  await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_attempts integer NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_verified_at timestamptz`;
   await sql`CREATE INDEX IF NOT EXISTS cscid_demo_sessions_user_idx ON cscid_demo_sessions(user_id)`;
 }
 
@@ -75,7 +85,7 @@ async function currentUser() {
   const rows = await sql`SELECT u.id, u.username, u.balance_cents, u.shares,u.is_founder,u.must_change_password
     FROM cscid_demo_sessions s
     JOIN cscid_demo_users u ON u.id = s.user_id
-    WHERE s.token_hash = ${hashToken(token)} AND s.expires_at > now()
+    WHERE s.token_hash = ${hashToken(token)} AND s.expires_at > now() AND s.otp_verified_at > now() - interval '12 hours'
     LIMIT 1`;
   const u = rows[0];
   return u ? {
@@ -84,6 +94,7 @@ async function currentUser() {
     balance: Number(u.balance_cents) / 100,
     shares: Number(u.shares),
     isUnlimitedBuyer: !!u.is_founder,
+    isFounder: !!u.is_founder,
     mustChangePassword: !!u.must_change_password,
   } : null;
 }
@@ -92,7 +103,14 @@ export async function GET() {
   try {
     await schema();
     const user = await currentUser();
-    return json({ authenticated: !!user, user });
+    if (user) return json({ authenticated: true, user });
+    const jar = await cookies();
+    const token = jar.get(COOKIE)?.value;
+    if (token) {
+      const pending = await sql`SELECT u.username,u.phone_number FROM cscid_demo_sessions s JOIN cscid_demo_users u ON u.id=s.user_id WHERE s.token_hash=${hashToken(token)} AND s.expires_at>now() AND s.otp_verified_at IS NULL LIMIT 1`;
+      if (pending[0]) return json({ authenticated: false, pendingOtp: true, username: pending[0].username, phoneMasked: String(pending[0].phone_number||"").replace(/(\\d{2})\\d+(\\d{3})$/, "$1••••••$2") });
+    }
+    return json({ authenticated: false });
   } catch (e) {
     console.error("[CSCID_DEMO_AUTH_GET]", e);
     return json({ error: "Layanan akun belum siap. Silakan coba kembali." }, 503);
@@ -129,22 +147,24 @@ export async function POST(req) {
       if (!(action === "login" && normalized === "cscid" && password === "CSCID")) return json({ error: "Password harus 8–128 karakter." }, 400);
     }
     if (action === "register") {
+      const phone = String(body?.phone || "").replace(/\\D/g, "").replace(/^0/, "62");
+      if (phone.length < 10 || phone.length > 15) return json({ error: "Nomor WhatsApp harus valid dan memakai kode negara Indonesia." }, 400);
       const id = "D-" + randomBytes(12).toString("hex");
       const salt = randomBytes(16).toString("hex");
       const derived = await scrypt(password, salt, 64);
       try {
         await sql`INSERT INTO cscid_demo_users
-          (id, username, username_norm, password_hash, password_salt, balance_cents)
-          VALUES (${id}, ${username}, ${normalized}, ${Buffer.from(derived).toString("hex")}, ${salt}, ${INITIAL_BALANCE_CENTS})`;
+          (id, username, username_norm, password_hash, password_salt, balance_cents, phone_number)
+          VALUES (${id}, ${username}, ${normalized}, ${Buffer.from(derived).toString("hex")}, ${salt}, ${INITIAL_BALANCE_CENTS}, ${phone})`;
       } catch (e) {
         if (e?.code === "23505") return json({ error: "Username sudah digunakan." }, 409);
         throw e;
       }
       await issueSession(id);
-      return json({ ok: true, user: await currentUser() }, 201);
+      return json({ ok: true, otpRequired: true }, 201);
     }
 
-    const rows = await sql`SELECT id, username, password_hash, password_salt
+    const rows = await sql`SELECT id, username, password_hash, password_salt, phone_number
       FROM cscid_demo_users WHERE username_norm = ${normalized} LIMIT 1`;
     const user = rows[0];
     if (!user) return json({ error: "Username atau password salah." }, 401);
@@ -153,8 +173,13 @@ export async function POST(req) {
     if (candidate.length !== expected.length || !timingSafeEqual(candidate, expected)) {
       return json({ error: "Username atau password salah." }, 401);
     }
+    if (!user.phone_number && normalized === "cscid" && process.env.WA_SERVER_NUMBER) {
+      const phone = process.env.WA_SERVER_NUMBER.replace(/\\D/g, "").replace(/^0/, "62");
+      await sql`UPDATE cscid_demo_users SET phone_number=${phone} WHERE id=${user.id}`;
+    }
+    if (!user.phone_number && normalized !== "cscid") return json({ error: "Akun belum memiliki nomor WhatsApp. Hubungi Founder/CEO untuk memperbarui data akun." }, 403);
     await issueSession(user.id);
-    return json({ ok: true, user: await currentUser() });
+    return json({ ok: true, otpRequired: true });
   } catch (e) {
     console.error("[CSCID_DEMO_AUTH_POST]", e);
     return json({ error: "Tidak dapat memproses akun. Silakan coba kembali." }, 503);
