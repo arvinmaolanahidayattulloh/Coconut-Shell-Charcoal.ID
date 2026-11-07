@@ -1,39 +1,75 @@
 .section{max-width:1120px;margin:0 auto 80px;padding:0 24px;color:#111827}
 .card{background:#fff;border:1px solid #e5e7eb;border-radius:24px;padding:38px 42px;box-shadow:0 4px 24px rgba(0,0,0,.04)}
-.header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:28px}
-.eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;color:#c45e20}
-.header h2{font-size:clamp(30px,4vw,42px);letter-spacing:-.04em;margin:8px 0 4px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}
+.eyebrow{font-family:var(--font-display);font-size:12px;font-weight:800;letter-spacing:.15em;color:#c45e20}
+.header h2{font-family:var(--font-display);font-size:clamp(30px,4vw,42px);letter-spacing:-.04em;margin:8px 0 4px}
 .header p{margin:0;color:#6b7280;font-size:14px}
-.status{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:11px;font-weight:800;letter-spacing:.08em;white-space:nowrap}
-.status i{width:7px;height:7px;border-radius:50%;background:#10b981}
-.stock{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:24px;background:#fafaf9;border:1px solid #f0f0ed;border-radius:16px}
-.stock>div{display:flex;flex-direction:column;gap:5px}
-.muted{font-size:10px;font-weight:800;letter-spacing:.12em;color:#9ca3af}
-.ticker{font-size:30px;letter-spacing:-.03em}
-.price{text-align:right}.price strong{font-size:clamp(24px,4vw,36px);letter-spacing:-.04em}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 14px}
-.metrics>div,.portfolio>div{display:flex;flex-direction:column;gap:7px;padding:16px;border:1px solid #eee;border-radius:12px}
-.metrics span{font-size:12px;color:#6b7280}.metrics strong{font-size:17px}
-.progress{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden}.progress span{display:block;height:100%;background:#c45e20;border-radius:99px;min-width:0}
-.progressLabels{display:flex;justify-content:space-between;color:#9ca3af;font-size:10px;margin-top:7px}
-.wallet{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:26px 0;padding:18px 20px;border:1px solid #e5e7eb;border-radius:14px}
-.wallet>div:first-child{display:flex;flex-direction:column;gap:6px}.wallet strong{font-size:21px}
-.deposit{display:flex;gap:8px}.deposit input,.tradePanel input{min-width:0;width:130px;padding:11px 12px;border:1px solid #d1d5db;border-radius:9px;font:inherit}
-.deposit button,.buyButton,.sellButton{border:0;border-radius:9px;padding:11px 15px;font-weight:750;cursor:pointer}
-.deposit button{background:#111827;color:white}
-.tradeGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.tradePanel{display:flex;flex-direction:column;gap:12px;padding:20px;border:1px solid #e5e7eb;border-radius:15px}
-.tradePanel label{font-size:12px;color:#6b7280;font-weight:650}
-.buyTag,.sellTag{font-size:11px;font-weight:850;letter-spacing:.1em}.buyTag,.buyText{color:#059669}.sellTag,.sellText{color:#dc2626}
-.tradePanel input{width:100%;box-sizing:border-box}
-.total{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#6b7280}.total strong{font-size:15px;color:#111827}
-.buyButton{background:#059669;color:white}.sellButton{background:#dc2626;color:white}
-.portfolio{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
-.portfolio strong{font-size:18px}
-.notice{padding:12px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px}
-.history{margin-top:28px}.history h3{font-size:16px;margin:0 0 12px}
-.empty{font-size:13px;color:#9ca3af}
-.historyRow{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #f1f5f9;font-size:13px}
-.historyRow small{grid-column:2/-1;color:#9ca3af;font-size:10px}
-.disclaimer{margin:24px 0 0;padding-top:16px;border-top:1px solid #eee;color:#9ca3af;font-size:10px;line-height:1.6}
-@media(max-width:640px){.section{padding:0 16px}.card{padding:25px 17px;border-radius:18px}.header{flex-direction:column}.stock{padding:18px}.metrics{grid-template-columns:1fr}.metrics>div{flex-direction:row;justify-content:space-between;align-items:center}.wallet{align-items:flex-start;flex-direction:column}.deposit{width:100%}.deposit input{flex:1;width:0}.tradeGrid,.portfolio{grid-template-columns:1fr}.historyRow{grid-template-columns:55px 1fr auto;font-size:12px}}
+.modeSwitch{display:flex;gap:3px;padding:4px;border:1px solid #e5e7eb;background:#f3f4f6;border-radius:999px}
+.modeSwitch button{border:0;background:transparent;padding:9px 17px;border-radius:999px;font:700 11px var(--font-body);letter-spacing:.08em;color:#6b7280;cursor:pointer}
+.modeSwitch .modeActive{background:#fff;color:#c45e20;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.lock{font-size:8px;color:#d97706;vertical-align:2px}
+.quote{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;background:#fafaf9;border:1px solid #f0f0ed;border-radius:16px}
+.quoteIdentity{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.symbol{font:800 29px var(--font-display);letter-spacing:-.04em}
+.exchange{font-size:10px;font-weight:750;letter-spacing:.1em;color:#9ca3af}
+.ipoBadge{padding:5px 9px;border-radius:5px;background:#fef3ec;color:#c45e20;font-size:9px;font-weight:850;letter-spacing:.08em}
+.quotePrice{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.quotePrice strong{font:750 clamp(25px,4vw,36px) var(--font-display);letter-spacing:-.04em}
+.positive{font-size:12px;font-weight:750;color:#16a34a}.negative{font-size:12px;font-weight:750;color:#dc2626}
+.quotePrice small{font-size:10px;font-weight:500;color:#9ca3af}
+.chartTop{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin:28px 0 12px}
+.chartTop>div:first-child{display:flex;flex-direction:column;gap:4px}
+.chartTop>div:first-child span,.sectionLabel{font-size:10px;font-weight:850;letter-spacing:.13em;color:#6b7280}
+.chartTop small{font-size:11px;color:#9ca3af}
+.periods{display:flex;gap:4px;flex-wrap:wrap}
+.periods button{border:1px solid transparent;border-radius:7px;padding:7px 10px;background:transparent;color:#6b7280;font-size:10px;font-weight:800;cursor:pointer}
+.periods .periodActive{background:#fef3ec;border-color:#fce2d2;color:#c45e20}
+.chartWrap{padding:12px 10px 4px;border:1px solid #f0f0ed;border-radius:14px;background:#fafaf9;overflow:hidden}
+.chart{display:block;width:100%;height:auto;min-height:150px;overflow:visible}
+.gridLine{stroke:#e8e8e5;stroke-width:1}
+.axisText{fill:#9ca3af;font-size:9px;font-family:var(--font-body)}
+.candleUp{color:#16a34a}.candleDown{color:#dc2626}
+.priceLine{stroke:#c45e20;stroke-width:1.2;opacity:.7}.priceDot{fill:#c45e20}
+.marketStats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 24px}
+.marketStats>div{display:flex;flex-direction:column;gap:7px;padding:15px;border:1px solid #eee;border-radius:11px}
+.marketStats span{font-size:9px;font-weight:800;letter-spacing:.09em;color:#9ca3af}
+.marketStats strong{font:700 16px var(--font-display);overflow-wrap:anywhere}
+.ipoProgress{margin:0 0 26px}
+.progressHeading,.progressLabels{display:flex;justify-content:space-between;gap:10px}
+.progressHeading{margin-bottom:9px;font-size:10px;font-weight:800;letter-spacing:.08em;color:#6b7280}
+.progressHeading strong{color:#c45e20}
+.progress{height:8px;border-radius:99px;background:#e5e7eb;overflow:hidden}
+.progress span{display:block;height:100%;min-width:0;border-radius:99px;background:#c45e20;transition:width .2s ease}
+.progressLabels{margin-top:7px;color:#9ca3af;font-size:10px}
+.tradeLayout{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.orderPanel{display:flex;flex-direction:column;gap:12px;padding:19px;border:1px solid #e5e7eb;border-radius:14px}
+.panelHeading{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.1em;color:#9ca3af}
+.buyLabel{color:#059669!important}.sellLabel{color:#dc2626!important}
+.orderPanel label{font-size:11px;font-weight:700;color:#6b7280}
+.qtyPresets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qtyPresets button{padding:9px 5px;border:1px solid #e5e7eb;border-radius:7px;background:#fff;color:#4b5563;font-size:12px;font-weight:750;cursor:pointer}
+.qtyPresets .qtyActive{border-color:#c45e20;background:#fef3ec;color:#c45e20}
+.orderPanel input,.deposit input{box-sizing:border-box;width:100%;min-width:0;padding:11px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font:inherit}
+.orderTotal{display:flex;justify-content:space-between;gap:10px;align-items:center;padding-top:4px;color:#6b7280;font-size:11px}
+.orderTotal strong{color:#111827;font-size:15px}
+.buyButton,.sellButton{border:0;border-radius:8px;padding:12px;font-weight:800;font-size:12px;cursor:pointer;transition:filter .15s ease}
+.buyButton{background:#059669;color:#fff}.sellButton{background:#dc2626;color:#fff}
+.buyButton:hover,.sellButton:hover{filter:brightness(.94)}
+.accountGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.accountCard{display:flex;flex-direction:column;gap:8px;padding:17px;border:1px solid #e5e7eb;border-radius:12px}
+.accountCard>strong{font:750 21px var(--font-display);overflow-wrap:anywhere}
+.accountCard>small{font-size:11px;color:#9ca3af}
+.deposit{display:flex;gap:7px;margin-top:5px}
+.deposit input{flex:1;width:60px;padding:9px;font-size:12px}
+.deposit button{border:0;border-radius:8px;padding:9px 12px;background:#111827;color:#fff;font-size:10px;font-weight:750;cursor:pointer}
+.notice{padding:12px 14px;margin:16px 0 0;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:12px}
+.history{margin-top:28px}
+.historyTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.historyTitle h3{font:700 16px var(--font-display);margin:0}
+.historyTitle>span{font-size:10px;color:#9ca3af}
+.empty{font-size:12px;color:#9ca3af;padding:14px 0;border-top:1px solid #f1f5f9}
+.historyRow{display:grid;grid-template-columns:65px 1fr auto;gap:9px;align-items:center;padding:12px 0;border-top:1px solid #f1f5f9;font-size:12px}
+.historyRow strong{font-size:12px}.historyRow small{grid-column:2/-1;color:#9ca3af;font-size:10px}
+.disclaimer{margin:24px 0 0;padding-top:16px;border-top:1px solid #eee;color:#9ca3af;font-size:10px;line-height:1.7}
+@media(max-width:700px){.section{padding:0 16px}.card{padding:27px 20px;border-radius:18px}.header{align-items:flex-start;flex-direction:column}.modeSwitch{align-self:flex-start}.quote{align-items:flex-start;flex-direction:column;padding:19px}.quotePrice{align-items:flex-start}.marketStats{grid-template-columns:1fr 1fr}.marketStats>div{padding:12px}.marketStats strong{font-size:14px}}
+@media(max-width:480px){.card{padding:23px 15px}.quoteIdentity{gap:8px}.symbol{font-size:26px}.exchange{font-size:8px}.chartTop{align-items:flex-start;flex-direction:column}.chart{min-height:125px}.periods{width:100%;justify-content:space-between}.periods button{padding:7px 8px}.tradeLayout,.accountGrid{grid-template-columns:1fr}.progressLabels{font-size:9px}.historyRow{grid-template-columns:52px 1fr auto;font-size:11px}}
