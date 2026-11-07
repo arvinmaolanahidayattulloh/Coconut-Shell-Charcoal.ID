@@ -54,6 +54,27 @@ async function ensureMarketSchema() {
   )`;
   await sql`CREATE INDEX IF NOT EXISTS cscid_demo_trades_time_idx
     ON cscid_demo_trades (created_at DESC)`;
+  await sql`DO $ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM cscid_demo_migrations WHERE version='founder-allocation-v1') THEN
+      DELETE FROM cscid_demo_trades;
+      DELETE FROM cscid_demo_orders;
+      UPDATE cscid_demo_users
+        SET balance_cents=balance_cents+locked_balance_cents,
+            locked_balance_cents=0,shares=0,locked_shares=0;
+      UPDATE cscid_demo_users
+        SET balance_cents=0,locked_balance_cents=0,shares=10000,locked_shares=10000
+        WHERE username_norm='cscid' AND is_founder=true;
+      UPDATE cscid_demo_market_state
+        SET ipo_remaining_shares=0,last_price_cents=100000,updated_at=now()
+        WHERE id=1;
+      INSERT INTO cscid_demo_orders
+        (id,user_id,side,price_cents,quantity,remaining,status,created_at,updated_at)
+      SELECT 'CSCID-FOUNDER-IPO','D-CSCID-FOUNDER','SELL',100000,10000,10000,'OPEN',now(),now()
+      WHERE EXISTS (SELECT 1 FROM cscid_demo_users WHERE id='D-CSCID-FOUNDER' AND is_founder=true);
+      INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1')
+      ON CONFLICT DO NOTHING;
+    END IF;
+  END $`;
 
   await sql`CREATE OR REPLACE FUNCTION cscid_demo_place_order(
     p_user_id text, p_order_id text, p_side text, p_price bigint, p_qty bigint
@@ -191,7 +212,7 @@ async function getUser() {
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
   const rows = await sql`SELECT u.id,u.username,u.balance_cents,u.locked_balance_cents,
-      u.shares,u.locked_shares
+      u.shares,u.locked_shares,u.is_founder,u.must_change_password
     FROM cscid_demo_sessions s JOIN cscid_demo_users u ON u.id=s.user_id
     WHERE s.token_hash=${hashToken(token)} AND s.expires_at>now() LIMIT 1`;
   return rows[0] || null;
@@ -227,7 +248,8 @@ export async function GET() {
         lastPriceCents:Number(m.last_price_cents), updatedAt:m.updated_at },
       account: { id:user.id, username:user.username, balanceCents:Number(user.balance_cents),
         lockedBalanceCents:Number(user.locked_balance_cents), shares:Number(user.shares),
-        lockedShares:Number(user.locked_shares) },
+        lockedShares:Number(user.locked_shares),isFounder:!!user.is_founder,
+        mustChangePassword:!!user.must_change_password },
       bids:bids.map(x=>({...x,priceCents:Number(x.price_cents),quantity:Number(x.quantity)})),
       asks:[{priceCents:IPO_PRICE_CENTS,quantity:Number(m.ipo_remaining_shares),orderCount:1,source:"IPO"},...asks.map(x=>({...x,priceCents:Number(x.price_cents),quantity:Number(x.quantity)}))].sort((a,b)=>a.priceCents-b.priceCents).slice(0,15),
       trades:trades.map(x=>({id:Number(x.id),priceCents:Number(x.price_cents),quantity:Number(x.quantity),createdAt:x.created_at,buyer:x.buyer,seller:x.seller||"IPO"})),
