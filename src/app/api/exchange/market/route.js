@@ -11,8 +11,10 @@ const IPO_PRICE_CENTS = 100000; // USD 1,000.00 per share
 const TOTAL_IPO_SHARES = 10000;
 const json = (body, status = 200) => NextResponse.json(body, { status });
 const hashToken = (value) => createHash("sha256").update(value).digest("hex");
+let schemaReady = false;
 
 async function ensureMarketSchema() {
+  if (schemaReady) return;
   await sql`ALTER TABLE cscid_demo_users
     ADD COLUMN IF NOT EXISTS locked_balance_cents bigint NOT NULL DEFAULT 0`;
   await sql`ALTER TABLE cscid_demo_users
@@ -202,7 +204,8 @@ async function ensureMarketSchema() {
       UPDATE cscid_demo_orders SET status='CANCELLED',remaining=0,updated_at=now()
         WHERE id=p_order_id;
       RETURN jsonb_build_object('orderId',p_order_id,'status','CANCELLED');
-    END $$`;
+    END $`;
+  schemaReady = true;
 }
 
 async function getUser() {
