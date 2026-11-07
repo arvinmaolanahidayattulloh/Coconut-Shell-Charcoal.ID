@@ -225,7 +225,7 @@ export async function GET() {
     await ensureMarketSchema();
     const user = await getUser();
     if (!user) return json({ error: "Login Demo diperlukan." }, 401);
-    const [market, bids, asks, trades, orders] = await Promise.all([
+    const [market, bids, asks, trades, orders, buyLiquidity] = await Promise.all([
       sql`SELECT ipo_remaining_shares,last_price_cents,updated_at FROM cscid_demo_market_state WHERE id=1`,
       sql`SELECT price_cents,SUM(remaining)::bigint AS quantity,COUNT(*)::int AS order_count
         FROM cscid_demo_orders WHERE side='BUY' AND status IN ('OPEN','PARTIAL') AND remaining>0
@@ -241,12 +241,16 @@ export async function GET() {
       sql`SELECT id,side,price_cents,quantity,remaining,status,created_at
         FROM cscid_demo_orders WHERE user_id=${user.id}
         ORDER BY created_at DESC LIMIT 50`,
+      sql`SELECT COALESCE(SUM(remaining),0)::bigint AS quantity
+        FROM cscid_demo_orders WHERE side='SELL' AND status IN ('OPEN','PARTIAL')
+          AND remaining>0 AND user_id<>${user.id}`,
     ]);
     const m = market[0];
     return json({
       market: { symbol:"CSCID", currency:"USD", ipoPriceCents:IPO_PRICE_CENTS,
         ipoTotalShares:TOTAL_IPO_SHARES, ipoRemainingShares:Number(m.ipo_remaining_shares),
         ipoSoldShares:TOTAL_IPO_SHARES-Number(m.ipo_remaining_shares),
+        buyLiquidityShares:Number(buyLiquidity[0]?.quantity||0),
         lastPriceCents:Number(m.last_price_cents), updatedAt:m.updated_at },
       account: { id:user.id, username:user.username, balanceCents:Number(user.balance_cents),
         lockedBalanceCents:Number(user.locked_balance_cents), shares:Number(user.shares),
@@ -275,7 +279,7 @@ export async function POST(req) {
     const quantity = Number(body?.quantity);
     if (!["BUY","SELL"].includes(side)) return json({error:"Jenis order tidak valid."},400);
     if (!Number.isFinite(price)||price<=0||price>10000000||Math.round(price*100)!==price*100) return json({error:"Harga harus valid dengan maksimal 2 angka desimal."},400);
-    if (!Number.isSafeInteger(quantity)||quantity<1||quantity>10000||quantity%10!==0) return json({error:"Jumlah minimal 10 lembar dan kelipatan 10."},400);
+    if (!Number.isSafeInteger(quantity)||quantity<1||quantity>(user.is_founder?1000000000:10000)||quantity%10!==0) return json({error:"Jumlah minimal 10 lembar dan kelipatan 10; batas akun reguler 10.000 lembar."},400);
     const priceCents = Math.round(price*100);
     const orderId = randomUUID();
 
