@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import styles from "./Index.module.css";
 
+const SERVER_LABEL = process.env.NEXT_PUBLIC_CSCID_EXCHANGE_ENV === "real" ? "Real" : "Demo";
+
 export default function DemoAuth({ onAuth }) {
   const [user, setUser] = useState(null);
   const [mode, setMode] = useState("login");
@@ -40,10 +42,10 @@ export default function DemoAuth({ onAuth }) {
   return <div className={styles.demoAuth}>
     {user ? <div className={styles.demoSignedIn}><div><span className={styles.sectionLabel}>AKUN DEMO AKTIF</span><strong>{user.username}</strong><small>ID: {user.id}</small></div><button type="button" onClick={logout} disabled={busy}>Keluar</button></div> :
       <form className={styles.demoAuthForm} onSubmit={submit}>
-        <div><span className={styles.sectionLabel}>AKSES CSCID EXCHANGE</span><h3>{mode === "login" ? "Masuk ke akun Demo" : "Buat akun Demo"}</h3><p>Login diperlukan untuk menggunakan saldo, portofolio, dan order pribadi.</p></div>
-        <input aria-label="Username akun Demo" autoComplete="username" minLength={3} maxLength={24} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" required />
-        <input aria-label="Password akun Demo" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (minimal 8 karakter)" required />
-        <button type="submit" disabled={busy}>{busy ? "Memproses..." : mode === "login" ? "Masuk Demo" : "Daftar Demo"}</button>
+        <div><span className={styles.sectionLabel}>AKSES CSCID EXCHANGE</span><h3>{mode === "login" ? "Masuk ke akun {SERVER_LABEL}" : "Buat akun {SERVER_LABEL}"}</h3><p>Login diperlukan untuk menggunakan saldo, portofolio, dan order pribadi.</p></div>
+        <input aria-label="Username akun {SERVER_LABEL}" autoComplete="username" minLength={3} maxLength={24} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" required />
+        <input aria-label="Password akun {SERVER_LABEL}" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (minimal 8 karakter)" required />
+        <button type="submit" disabled={busy}>{busy ? "Memproses..." : mode === "login" ? "Masuk {SERVER_LABEL}" : "Daftar {SERVER_LABEL}"}</button>
         <button type="button" className={styles.authModeToggle} onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}</button>
         {error && <p className={styles.authError} role="alert">{error}</p>}
       </form>
