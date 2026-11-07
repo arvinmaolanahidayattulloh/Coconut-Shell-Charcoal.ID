@@ -46,7 +46,7 @@ export default function DemoAuth({ onAuth }) {
     e.preventDefault(); setBusy(true); setError(""); setNotice("");
     try {
       const body = { action: mode, username, password };
-      if (mode === "register") body.phone = phone;
+      if (phone.trim()) body.phone = phone;
       const r = await fetch("/api/exchange/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Tidak dapat memproses akun.");
@@ -140,7 +140,7 @@ export default function DemoAuth({ onAuth }) {
       <div><span className={styles.sectionLabel}>AKSES AKUN CSCID</span><h3>{mode === "login" ? `Masuk ke akun ${SERVER_LABEL}` : `Buat akun ${SERVER_LABEL}`}</h3><p>Login atau daftar, lalu verifikasi OTP WhatsApp untuk membuka akses privat.</p></div>
       <input aria-label={`Username akun ${SERVER_LABEL}`} autoComplete="username" minLength={3} maxLength={24} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" required />
       <input aria-label={`Password akun ${SERVER_LABEL}`} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={mode === "login" && username.toLowerCase() === "cscid" ? 5 : 8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (minimal 8 karakter)" required />
-      {mode === "register" && <input aria-label="Nomor WhatsApp" type="tel" autoComplete="tel" value={phone} onChange={(e)=>setPhone(e.target.value)} placeholder="Nomor WhatsApp (contoh 08xxxxxxxxxx)" required />}
+      <input aria-label="Nomor WhatsApp" type="tel" autoComplete="tel" value={phone} onChange={(e)=>setPhone(e.target.value)} placeholder={mode === "register" ? "Nomor WhatsApp (contoh 08xxxxxxxxxx)" : "Nomor WhatsApp (isi jika akun lama belum terdaftar)"} required={mode === "register"} />
       <button type="submit" disabled={busy}>{busy ? "Memproses..." : mode === "login" ? `Masuk ${SERVER_LABEL}` : `Daftar ${SERVER_LABEL}`}</button>
       <button type="button" className={styles.authModeToggle} onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}</button>
       {error && <p className={styles.authError} role="alert">{error}</p>}
