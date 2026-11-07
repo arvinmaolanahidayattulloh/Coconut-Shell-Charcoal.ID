@@ -110,6 +110,10 @@ export default function Index() {
   const availableLots = availableShares / SHARES_PER_LOT;
   const ipoSoldShares = marketData?.market?.ipoSoldShares ?? 0;
   const ownership = (ipoSoldShares / TOTAL_SHARES) * 100;
+  const bestBid = marketData?.bids?.[0]?.priceCents || null;
+  const bestAsk = marketData?.asks?.[0]?.priceCents || null;
+  const midPrice = bestBid && bestAsk ? (bestBid + bestAsk) / 200 : null;
+  const maxDepth = Math.max(1, ...(marketData?.bids || []).map((item) => item.quantity), ...(marketData?.asks || []).map((item) => item.quantity));
   const buyLots = Math.max(0, Number(buyInput) || 0);
   const buyQty = buyLots * SHARES_PER_LOT;
   const sellLots = Math.max(0, Number(sellInput) || 0);
@@ -274,17 +278,17 @@ export default function Index() {
         {(notice || marketError) && <p className={styles.notice} role="status">{notice || marketError}</p>}
 
         <div className={styles.marketDepth}>
-          <div className={styles.historyTitle}><h3>Order Book · Antrean Harga</h3><span>Server Demo · pembaruan 4 detik</span></div>
+          <div className={styles.historyTitle}><h3>Order Book · Antrean Harga</h3><span>{midPrice ? `Mid-price ${money(midPrice)}` : "Mid-price belum tersedia"} · Live 4 detik</span></div>
           <div className={styles.depthColumns}>
             <div className={styles.depthColumn}>
               <strong className={styles.buyLabel}>BID · BELI</strong>
               <div className={styles.depthHeader}><span>Harga (USD)</span><span>Jumlah</span></div>
-              {(marketData?.bids || []).length ? marketData.bids.map((item, i) => <div className={styles.depthRow} key={i}><strong>{money(item.priceCents / 100)}</strong><span>{number(item.quantity)}</span></div>) : <p className={styles.empty}>Belum ada antrean beli.</p>}
+              {(marketData?.bids || []).length ? marketData.bids.map((item, i) => <div className={styles.depthRow} key={i} style={{background:`linear-gradient(90deg,rgba(8,153,129,.12) ${Math.min(100,item.quantity/maxDepth*100)}%,transparent 0)`}}><strong>{money(item.priceCents / 100)}</strong><span>{number(item.quantity)}</span></div>) : <p className={styles.empty}>Belum ada antrean beli.</p>}
             </div>
             <div className={styles.depthColumn}>
               <strong className={styles.sellLabel}>ASK · JUAL</strong>
               <div className={styles.depthHeader}><span>Harga (USD)</span><span>Jumlah</span></div>
-              {(marketData?.asks || []).length ? marketData.asks.map((item, i) => <div className={styles.depthRow} key={i}><strong>{money(item.priceCents / 100)}</strong><span>{number(item.quantity)}{item.source === "IPO" ? " · IPO" : ""}</span></div>) : <p className={styles.empty}>Belum ada antrean jual.</p>}
+              {(marketData?.asks || []).length ? marketData.asks.map((item, i) => <div className={styles.depthRow} key={i} style={{background:`linear-gradient(270deg,rgba(242,54,69,.12) ${Math.min(100,item.quantity/maxDepth*100)}%,transparent 0)`}}><strong>{money(item.priceCents / 100)}</strong><span>{number(item.quantity)}{item.source === "IPO" ? " · IPO" : ""}</span></div>) : <p className={styles.empty}>Belum ada antrean jual.</p>}
             </div>
           </div>
         </div>
