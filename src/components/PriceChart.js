@@ -1008,7 +1008,7 @@ export default function PriceChart() {
       <div ref={cardRef} className={`${styles.priceCard} ${isFull ? styles.cardFull : ""}`}>
         <div className={styles.priceHeader}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span className={styles.eyebrow}>Index CSCID</span>
+            <span className={styles.eyebrow}>Price CSCID</span>
             <span style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Coconut Shell Charcoal Indonesia
             </span>
