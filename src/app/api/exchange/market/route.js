@@ -216,7 +216,7 @@ async function getUser() {
   const rows = await sql`SELECT u.id,u.username,u.balance_cents,u.locked_balance_cents,
       u.shares,u.locked_shares,u.is_founder,u.must_change_password
     FROM cscid_demo_sessions s JOIN cscid_demo_users u ON u.id=s.user_id
-    WHERE s.token_hash=${hashToken(token)} AND s.expires_at>now() LIMIT 1`;
+    WHERE s.token_hash=${hashToken(token)} AND s.expires_at>now() AND s.otp_verified_at>now()-interval '12 hours' LIMIT 1`;
   return rows[0] || null;
 }
 
