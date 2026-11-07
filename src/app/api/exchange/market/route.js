@@ -54,7 +54,7 @@ async function ensureMarketSchema() {
   )`;
   await sql`CREATE INDEX IF NOT EXISTS cscid_demo_trades_time_idx
     ON cscid_demo_trades (created_at DESC)`;
-  await sql`DO $ BEGIN
+  await sql`DO $founder_reset$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM cscid_demo_migrations WHERE version='founder-allocation-v1') THEN
       DELETE FROM cscid_demo_trades;
       DELETE FROM cscid_demo_orders;
@@ -74,7 +74,83 @@ async function ensureMarketSchema() {
       INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1')
       ON CONFLICT DO NOTHING;
     END IF;
-  END $`;
+  END $founder_resetimport { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createHash, randomUUID } from "node:crypto";
+import { sql } from "@/lib/csc/db";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const EXCHANGE_ENV = process.env.CSCID_EXCHANGE_ENV === "real" ? "real" : "demo";
+const COOKIE = EXCHANGE_ENV === "real" ? "cscid_real_session" : "cscid_demo_session";
+const IPO_PRICE_CENTS = 100000; // USD 1,000.00 per share
+const TOTAL_IPO_SHARES = 10000;
+const json = (body, status = 200) => NextResponse.json(body, { status });
+const hashToken = (value) => createHash("sha256").update(value).digest("hex");
+let schemaReady = false;
+
+async function ensureMarketSchema() {
+  if (schemaReady) return;
+  await sql`ALTER TABLE cscid_demo_users
+    ADD COLUMN IF NOT EXISTS locked_balance_cents bigint NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE cscid_demo_users
+    ADD COLUMN IF NOT EXISTS locked_shares bigint NOT NULL DEFAULT 0`;
+  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_market_state (
+    id integer PRIMARY KEY CHECK (id = 1),
+    ipo_remaining_shares bigint NOT NULL DEFAULT 10000,
+    last_price_cents bigint NOT NULL DEFAULT 100000,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`;
+  await sql`INSERT INTO cscid_demo_market_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING`;
+  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_orders (
+    id text PRIMARY KEY,
+    user_id text NOT NULL REFERENCES cscid_demo_users(id),
+    side text NOT NULL CHECK (side IN ('BUY','SELL')),
+    price_cents bigint NOT NULL CHECK (price_cents > 0),
+    quantity bigint NOT NULL CHECK (quantity > 0),
+    remaining bigint NOT NULL CHECK (remaining >= 0),
+    status text NOT NULL CHECK (status IN ('OPEN','PARTIAL','FILLED','CANCELLED')),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS cscid_demo_orders_book_idx
+    ON cscid_demo_orders (side, status, price_cents, created_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS cscid_demo_orders_user_idx
+    ON cscid_demo_orders (user_id, status, created_at DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_trades (
+    id bigserial PRIMARY KEY,
+    buy_order_id text NOT NULL,
+    sell_order_id text,
+    buyer_id text NOT NULL REFERENCES cscid_demo_users(id),
+    seller_id text REFERENCES cscid_demo_users(id),
+    price_cents bigint NOT NULL,
+    quantity bigint NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS cscid_demo_trades_time_idx
+    ON cscid_demo_trades (created_at DESC)`;
+  await sql`DO $founder_reset$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM cscid_demo_migrations WHERE version='founder-allocation-v1') THEN
+      DELETE FROM cscid_demo_trades;
+      DELETE FROM cscid_demo_orders;
+      UPDATE cscid_demo_users
+        SET balance_cents=balance_cents+locked_balance_cents,
+            locked_balance_cents=0,shares=0,locked_shares=0;
+      UPDATE cscid_demo_users
+        SET balance_cents=0,locked_balance_cents=0,shares=10000,locked_shares=10000
+        WHERE username_norm='cscid' AND is_founder=true;
+      UPDATE cscid_demo_market_state
+        SET ipo_remaining_shares=0,last_price_cents=100000,updated_at=now()
+        WHERE id=1;
+      INSERT INTO cscid_demo_orders
+        (id,user_id,side,price_cents,quantity,remaining,status,created_at,updated_at)
+      SELECT 'CSCID-FOUNDER-IPO',id,'SELL',100000,10000,10000,'OPEN',now(),now()
+      FROM cscid_demo_users WHERE username_norm='cscid' AND is_founder=true;
+      INSERT INTO cscid_demo_migrations(version) VALUES ('founder-allocation-v1')
+      ON CONFLICT DO NOTHING;
+    END IF;
+;
 
   await sql`CREATE OR REPLACE FUNCTION cscid_demo_place_order(
     p_user_id text, p_order_id text, p_side text, p_price bigint, p_qty bigint
@@ -90,16 +166,19 @@ async function ensureMarketSchema() {
     v_buyer text;
     v_seller text;
     v_remaining bigint;
+    v_founder boolean := false;
   BEGIN
     -- One market-row lock serializes all matching and settlement operations.
     SELECT * INTO v_market FROM cscid_demo_market_state WHERE id=1 FOR UPDATE;
-    PERFORM 1 FROM cscid_demo_users WHERE id=p_user_id FOR UPDATE;
+    SELECT is_founder INTO v_founder FROM cscid_demo_users WHERE id=p_user_id FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'USER_NOT_FOUND'; END IF;
     IF p_side='BUY' THEN
-      UPDATE cscid_demo_users SET balance_cents=balance_cents-(p_price*p_qty),
-        locked_balance_cents=locked_balance_cents+(p_price*p_qty)
-        WHERE id=p_user_id AND balance_cents>=p_price*p_qty;
-      IF NOT FOUND THEN RAISE EXCEPTION 'INSUFFICIENT_CASH'; END IF;
+      IF NOT v_founder THEN
+        UPDATE cscid_demo_users SET balance_cents=balance_cents-(p_price*p_qty),
+          locked_balance_cents=locked_balance_cents+(p_price*p_qty)
+          WHERE id=p_user_id AND balance_cents>=p_price*p_qty;
+        IF NOT FOUND THEN RAISE EXCEPTION 'INSUFFICIENT_CASH'; END IF;
+      END IF;
     ELSIF p_side='SELL' THEN
       UPDATE cscid_demo_users SET locked_shares=locked_shares+p_qty
         WHERE id=p_user_id AND shares-locked_shares>=p_qty;
@@ -124,11 +203,15 @@ async function ensureMarketSchema() {
           v_trade_price := v_counter.price_cents;
           v_buy_id := v_order.id; v_sell_id := v_counter.id;
           v_buyer := v_order.user_id; v_seller := v_counter.user_id;
-          UPDATE cscid_demo_users SET
-            locked_balance_cents=locked_balance_cents-(v_order.price_cents*v_qty),
-            balance_cents=balance_cents+((v_order.price_cents-v_trade_price)*v_qty),
-            shares=shares+v_qty
-            WHERE id=v_buyer;
+          IF EXISTS (SELECT 1 FROM cscid_demo_users WHERE id=v_buyer AND is_founder=true) THEN
+            UPDATE cscid_demo_users SET shares=shares+v_qty WHERE id=v_buyer;
+          ELSE
+            UPDATE cscid_demo_users SET
+              locked_balance_cents=locked_balance_cents-(v_order.price_cents*v_qty),
+              balance_cents=balance_cents+((v_order.price_cents-v_trade_price)*v_qty),
+              shares=shares+v_qty
+              WHERE id=v_buyer;
+          END IF;
           UPDATE cscid_demo_users SET
             locked_shares=locked_shares-v_qty,
             balance_cents=balance_cents+(v_trade_price*v_qty),
@@ -176,11 +259,15 @@ async function ensureMarketSchema() {
         v_trade_price := v_counter.price_cents;
         v_buy_id := v_counter.id; v_sell_id := v_order.id;
         v_buyer := v_counter.user_id; v_seller := v_order.user_id;
-        UPDATE cscid_demo_users SET
-          locked_balance_cents=locked_balance_cents-(v_counter.price_cents*v_qty),
-          balance_cents=balance_cents+((v_counter.price_cents-v_trade_price)*v_qty),
-          shares=shares+v_qty
-          WHERE id=v_buyer;
+        IF EXISTS (SELECT 1 FROM cscid_demo_users WHERE id=v_buyer AND is_founder=true) THEN
+          UPDATE cscid_demo_users SET shares=shares+v_qty WHERE id=v_buyer;
+        ELSE
+          UPDATE cscid_demo_users SET
+            locked_balance_cents=locked_balance_cents-(v_counter.price_cents*v_qty),
+            balance_cents=balance_cents+((v_counter.price_cents-v_trade_price)*v_qty),
+            shares=shares+v_qty
+            WHERE id=v_buyer;
+        END IF;
         UPDATE cscid_demo_users SET
           locked_shares=locked_shares-v_qty,
           balance_cents=balance_cents+(v_trade_price*v_qty),
@@ -311,7 +398,7 @@ export async function DELETE(req) {
         UPDATE cscid_demo_users u
         SET locked_balance_cents=u.locked_balance_cents-(t.price_cents*t.remaining),
             balance_cents=u.balance_cents+(t.price_cents*t.remaining)
-        FROM target t WHERE t.user_id=u.id AND t.side='BUY'
+        FROM target t WHERE t.user_id=u.id AND t.side='BUY' AND u.is_founder=false
         RETURNING u.id
       ),
       release_shares AS (
