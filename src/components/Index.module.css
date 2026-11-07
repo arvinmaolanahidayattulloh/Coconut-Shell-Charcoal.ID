@@ -90,3 +90,15 @@
 .demoSignedIn strong{font:750 19px var(--font-display)}
 .demoSignedIn small{font-size:10px;color:#9ca3af}
 @media(max-width:520px){.demoAuthForm{grid-template-columns:1fr}.demoAuthForm>div:first-child,.authModeToggle,.authError{grid-column:1}.demoSignedIn{align-items:flex-start}}
+
+
+.marketDepth{margin-top:24px;padding:18px;border:1px solid #e5e7eb;border-radius:14px;background:#fff}
+.depthColumns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.depthColumn{min-width:0}
+.depthColumn>strong{display:block;margin-bottom:9px;font-size:11px;letter-spacing:.1em}
+.depthHeader,.depthRow{display:flex;justify-content:space-between;gap:10px;padding:8px 4px;border-bottom:1px solid #f3f4f6;font-size:11px}
+.depthHeader{color:#9ca3af;font-size:9px;font-weight:800;text-transform:uppercase}
+.depthRow strong{font-size:11px}
+.openOrderRow{display:grid;grid-template-columns:65px 1fr auto auto;gap:10px;align-items:center;padding:11px 0;border-top:1px solid #f3f4f6;font-size:11px}
+.openOrderRow button{border:1px solid #fecaca;border-radius:7px;padding:7px 9px;background:#fff;color:#b91c1c;font-size:10px;font-weight:750;cursor:pointer}
+@media(max-width:520px){.depthColumns{grid-template-columns:1fr}.openOrderRow{grid-template-columns:52px 1fr auto}.openOrderRow button{grid-column:2/-1;justify-self:start}}
