@@ -1,6 +1,4 @@
-import Invest from "@/components/Invest";
-import Index from "@/components/Index";
-import HargaFeed from "@/components/HargaFeed";
+import PrivateAccessClient from "@/components/PrivateAccessClient";
 
 export const metadata = {
   title: "Private Access | CSCID",
@@ -9,11 +7,5 @@ export const metadata = {
 };
 
 export default function PrivateAccessPage() {
-  return (
-    <main>
-      <Invest />
-      <Index />
-      <HargaFeed />
-    </main>
-  );
+  return <PrivateAccessClient />;
 }
