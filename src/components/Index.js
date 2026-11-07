@@ -12,18 +12,14 @@ const number = (value) => new Intl.NumberFormat("id-ID", { maximumFractionDigits
 const periods = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 const presets = [0.1, 1, 10, 100];
 
-function makeCandles(period) {
-  const scale = period === "1H" ? 1.2 : period === "1D" ? 2.1 : period === "1W" ? 3.5 : period === "1M" ? 5 : period === "1Y" ? 8 : 11;
-  let previous = IPO_PRICE * 0.985;
-  return Array.from({ length: 56 }, (_, index) => {
-    const drift = Math.sin(index * 0.31) * scale + Math.cos(index * 0.13) * scale * 0.7 + (index / 56) * scale * 1.8;
-    const open = previous;
-    const close = IPO_PRICE + drift + Math.sin(index * 0.83) * scale * 0.55;
-    const high = Math.max(open, close) + 1.5 + Math.abs(Math.sin(index * 1.7)) * scale;
-    const low = Math.min(open, close) - 1.5 - Math.abs(Math.cos(index * 1.2)) * scale;
-    previous = close;
-    return { open, close, high, low };
-  });
+function makeCandles() {
+  // Pasar baru: belum ada transaksi terverifikasi, jadi seluruh candle tetap flat di harga IPO.
+  return Array.from({ length: 56 }, () => ({
+    open: IPO_PRICE,
+    high: IPO_PRICE,
+    low: IPO_PRICE,
+    close: IPO_PRICE,
+  }));
 }
 
 export default function Index() {
@@ -37,10 +33,10 @@ export default function Index() {
   const [transactions, setTransactions] = useState([]);
   const [notice, setNotice] = useState("");
 
-  const candles = useMemo(() => makeCandles(period), [period]);
+  const candles = useMemo(() => makeCandles(), []);
   const currentPrice = candles[candles.length - 1].close;
   const firstPrice = candles[0].open;
-  const change = ((currentPrice - firstPrice) / firstPrice) * 100;
+  const change = 0;
   const minPrice = Math.min(...candles.map((c) => c.low)) - 3;
   const maxPrice = Math.max(...candles.map((c) => c.high)) + 3;
   const x = (i) => 14 + (i * 672) / (candles.length - 1);
@@ -112,16 +108,16 @@ export default function Index() {
           </div>
           <div className={styles.quotePrice}>
             <strong>{money(currentPrice)}</strong>
-            <span className={change >= 0 ? styles.positive : styles.negative}>{change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(2)}% <small>simulasi</small></span>
+            <span className={styles.positive}>0.00% <small>belum ada transaksi</small></span>
           </div>
         </div>
 
         <div className={styles.chartTop}>
-          <div><span>PRICE CHART</span><small>Pergerakan ilustratif saham CSCID</small></div>
+          <div><span>PRICE CHART</span><small>Harga tetap pada harga IPO sampai ada transaksi riil</small></div>
           <div className={styles.periods}>{periods.map((item) => <button type="button" key={item} onClick={() => setPeriod(item)} className={period === item ? styles.periodActive : ""}>{item}</button>)}</div>
         </div>
         <div className={styles.chartWrap}>
-          <svg className={styles.chart} viewBox="0 0 740 205" role="img" aria-label="Grafik candlestick simulasi harga saham CSCID">
+          <svg className={styles.chart} viewBox="0 0 740 205" role="img" aria-label="Grafik datar harga IPO CSCID sebesar 1000 dolar AS">
             {[28, 66, 104, 142, 180].map((line) => <g key={line}><line x1="8" x2="690" y1={line} y2={line} className={styles.gridLine} /><text x="700" y={line + 4} className={styles.axisText}>{(maxPrice - ((line - 28) / 152) * (maxPrice - minPrice)).toFixed(0)}</text></g>)}
             {candles.map((c, i) => {
               const up = c.close >= c.open;
@@ -199,7 +195,7 @@ export default function Index() {
           ))}
         </div>
 
-        <p className={styles.disclaimer}>GRAFIK DAN HARGA DI HALAMAN INI BERSIFAT SIMULASI, BUKAN KUTIPAN PASAR LANGSUNG. Mode Demo hanya berjalan di sesi browser ini. Mode Ril belum aktif dan tidak menerima atau memproses dana sungguhan. Aktivasi perdagangan riil memerlukan badan usaha dan pencatatan kepemilikan yang sah, backend aman, serta mitra broker/perizinan yang sesuai.</p>
+        <p className={styles.disclaimer}>HARGA REFERENSI IPO CSCID ditetapkan USD 1.000 per saham dan ditampilkan flat selama belum ada transaksi yang benar-benar tercatat. Aktivitas Mode Demo hanya simulasi lokal dan tidak mengubah harga pasar. Mode Ril pada halaman ini belum terhubung ke backend, kustodian, atau mitra broker sehingga belum dapat memproses transaksi maupun dana sungguhan.</p>
       </div>
     </section>
   );
