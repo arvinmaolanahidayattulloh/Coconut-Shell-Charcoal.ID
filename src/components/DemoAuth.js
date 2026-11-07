@@ -113,7 +113,7 @@ export default function DemoAuth({ onAuth }) {
   return <div className={styles.demoAuth}>
     {step === "otp" ? <form className={styles.demoAuthForm} onSubmit={verifyOtp}>
       <div><span className={styles.sectionLabel}>VERIFIKASI WAJIB</span><h3>Verifikasi WhatsApp</h3><p>Masukkan kode 6 digit yang dikirim ke {phoneMasked || "nomor WhatsApp akun Anda"}. Kode berlaku 5 menit.</p></div>
-      <input aria-label="Kode OTP WhatsApp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e)=>setOtp(e.target.value.replace(/\\D/g,"").slice(0,6))} placeholder="6 digit OTP" required />
+      <input aria-label="Kode OTP WhatsApp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e)=>setOtp(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6 digit OTP" required />
       <button type="submit" disabled={busy || otp.length !== 6}>{busy ? "Memverifikasi..." : "Verifikasi & Buka Akses"}</button>
       <button type="button" className={styles.authModeToggle} onClick={resendOtp} disabled={busy}>Kirim ulang OTP</button>
       {error && <p className={styles.authError} role="alert">{error}</p>}
