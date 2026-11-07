@@ -14,7 +14,7 @@ async function getPending() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
-  const rows = await sql`SELECT s.token_hash,u.id,u.username,u.phone_number,s.otp_expires_at,s.otp_attempts,s.otp_verified_at
+  const rows = await sql`SELECT s.token_hash,u.id,u.username,u.phone_number,s.otp_expires_at,s.otp_attempts,s.otp_verified_at,s.otp_sent_at
     FROM cscid_demo_sessions s JOIN cscid_demo_users u ON u.id=s.user_id
     WHERE s.token_hash=${hashToken(token)} AND s.expires_at>now() LIMIT 1`;
   return rows[0] ? { ...rows[0], token } : null;
@@ -32,9 +32,7 @@ export async function POST(req) {
 
     if (action === "send") {
       if (!process.env.WA_API_TOKEN) return json({ error: "WA_API_TOKEN belum dikonfigurasi di Vercel." }, 503);
-      const cooldown = await sql`SELECT created_at FROM cscid_demo_sessions WHERE token_hash=${hashToken(session.token)} LIMIT 1`;
-      const recent = await sql`SELECT otp_expires_at FROM cscid_demo_sessions WHERE token_hash=${hashToken(session.token)} AND otp_expires_at>now() LIMIT 1`;
-      if (recent.length && session.otp_attempts === 0) return json({ error: "OTP masih berlaku. Periksa WhatsApp Anda." }, 429);
+      if (session.otp_sent_at && Date.now() - new Date(session.otp_sent_at).getTime() < 60_000) return json({ error: "Tunggu 60 detik sebelum meminta OTP baru." }, 429);
       const otp = String(randomInt(0, 1000000)).padStart(6, "0");
       const response = await fetch("https://api.fonnte.com/send", {
         method: "POST",
@@ -47,13 +45,13 @@ export async function POST(req) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.status) return json({ error: result.reason || result.message || "WhatsApp gagal mengirim OTP." }, 502);
-      await sql`UPDATE cscid_demo_sessions SET otp_hash=${hashOtp(session.token, otp)},otp_expires_at=now()+interval '5 minutes',otp_attempts=0,otp_verified_at=NULL WHERE token_hash=${hashToken(session.token)}`;
-      return json({ ok: true, phoneMasked: String(session.phone_number).replace(/^(\\d{2})\\d+(\\d{3})$/, "$1••••••$2") });
+      await sql`UPDATE cscid_demo_sessions SET otp_hash=${hashOtp(session.token, otp)},otp_expires_at=now()+interval '5 minutes',otp_attempts=0,otp_sent_at=now(),otp_verified_at=NULL WHERE token_hash=${hashToken(session.token)}`;
+      return json({ ok: true, phoneMasked: String(session.phone_number).replace(/^(\d{2})\d+(\d{3})$/, "$1••••••$2") });
     }
 
     if (action === "verify") {
       const entered = String(code || "").trim();
-      if (!/^\\d{6}$/.test(entered)) return json({ error: "Masukkan OTP 6 digit." }, 400);
+      if (!/^\d{6}$/.test(entered)) return json({ error: "Masukkan OTP 6 digit." }, 400);
       const rows = await sql`SELECT otp_hash,otp_expires_at,otp_attempts FROM cscid_demo_sessions WHERE token_hash=${hashToken(session.token)} LIMIT 1`;
       const challenge = rows[0];
       if (!challenge?.otp_hash || !challenge.otp_expires_at || new Date(challenge.otp_expires_at).getTime() <= Date.now()) return json({ error: "OTP sudah kedaluwarsa. Minta kode baru." }, 401);
