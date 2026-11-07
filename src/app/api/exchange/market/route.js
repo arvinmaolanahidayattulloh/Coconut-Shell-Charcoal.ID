@@ -224,7 +224,7 @@ export async function GET() {
   try {
     await ensureMarketSchema();
     const user = await getUser();
-    if (!user) return json({ error: "Login Demo diperlukan." }, 401);
+    if (!user) return json({ error: "Login diperlukan untuk mengakses data perdagangan." }, 401);
     const [market, bids, asks, trades, orders, buyLiquidity] = await Promise.all([
       sql`SELECT ipo_remaining_shares,last_price_cents,updated_at FROM cscid_demo_market_state WHERE id=1`,
       sql`SELECT price_cents,SUM(remaining)::bigint AS quantity,COUNT(*)::int AS order_count
@@ -252,11 +252,11 @@ export async function GET() {
         lastPriceCents:Number(m.last_price_cents), updatedAt:m.updated_at },
       account: { id:user.id, username:user.username, balanceCents:Number(user.balance_cents),
         lockedBalanceCents:Number(user.locked_balance_cents), shares:Number(user.shares),
-        lockedShares:Number(user.locked_shares),isFounder:!!user.is_founder,
+        lockedShares:Number(user.locked_shares),isUnlimitedBuyer:!!user.is_founder,
         mustChangePassword:!!user.must_change_password },
       bids:bids.map(x=>({...x,priceCents:Number(x.price_cents),quantity:Number(x.quantity)})),
       asks:asks.map(x=>({...x,priceCents:Number(x.price_cents),quantity:Number(x.quantity)})),
-      trades:trades.map(x=>({id:Number(x.id),priceCents:Number(x.price_cents),quantity:Number(x.quantity),createdAt:x.created_at,buyer:x.buyer,seller:x.seller||"IPO"})),
+      trades:trades.map(x=>({id:Number(x.id),priceCents:Number(x.price_cents),quantity:Number(x.quantity),createdAt:x.created_at,buyer:x.buyer,seller:x.seller})),
       orders:orders.map(x=>({id:x.id,side:x.side,priceCents:Number(x.price_cents),quantity:Number(x.quantity),remaining:Number(x.remaining),status:x.status,createdAt:x.created_at}))
     });
   } catch (e) {
@@ -270,7 +270,7 @@ export async function POST(req) {
     await ensureMarketSchema();
     const user = await getUser();
     if (!user) return json({error:"Login diperlukan."},401);
-    if (user.must_change_password) return json({error:"Ganti password awal Founder sebelum melakukan transaksi."},403);
+    if (user.must_change_password) return json({error:"Perbarui kata sandi awal sebelum melakukan transaksi."},403);
     const body = await req.json();
     const side = String(body?.side||"").toUpperCase();
     const price = Number(body?.price);
