@@ -24,7 +24,7 @@ const QUANTITY_PRESETS = [0.01, 0.1, 1, 10];
 const number = (value, maximumFractionDigits = 2) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits }).format(Number(value) || 0);
 
-export default function Index() {
+export default function Index({ showAuth = true }) {
   const [mode, setMode] = useState(EXCHANGE_MODE);
   const [currency, setCurrency] = useState("IDR");
   const [fxRates, setFxRates] = useState(null);
@@ -278,7 +278,7 @@ export default function Index() {
           Setiap pemegang saham bebas mempertahankan kepemilikannya atau mengajukan order jual atas saham yang dimiliki.
         </p>
 
-        <DemoAuth onAuth={handleAuth} />
+        {showAuth && <DemoAuth onAuth={handleAuth} />}
 
         <div className={`notranslate ${styles.priceMain}`} translate="no">
           <div className={styles.priceQuote}>
