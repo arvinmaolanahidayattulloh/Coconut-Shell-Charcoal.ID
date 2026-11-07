@@ -22,8 +22,26 @@ async function schema() {
     password_salt text NOT NULL,
     balance_cents bigint NOT NULL DEFAULT 0,
     shares bigint NOT NULL DEFAULT 0,
+    is_founder boolean NOT NULL DEFAULT false,
+    must_change_password boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
+  await sql`ALTER TABLE cscid_demo_users ADD COLUMN IF NOT EXISTS is_founder boolean NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE cscid_demo_users ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false`;
+  await sql`CREATE TABLE IF NOT EXISTS cscid_demo_migrations (version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`;
+  const founderSalt = randomBytes(16).toString("hex");
+  const founderHash = Buffer.from(await scrypt("CSCID", founderSalt, 64)).toString("hex");
+  await sql`WITH migration AS (
+    INSERT INTO cscid_demo_migrations(version) VALUES ('founder-account-v1')
+    ON CONFLICT DO NOTHING RETURNING version
+  )
+  INSERT INTO cscid_demo_users
+    (id,username,username_norm,password_hash,password_salt,balance_cents,shares,is_founder,must_change_password)
+  SELECT 'D-CSCID-FOUNDER','CSCID','cscid',${founderHash},${founderSalt},0,0,true,true
+  FROM migration
+  ON CONFLICT (username_norm) DO UPDATE SET
+    password_hash=EXCLUDED.password_hash,password_salt=EXCLUDED.password_salt,
+    balance_cents=0,is_founder=true,must_change_password=true`;
   await sql`CREATE TABLE IF NOT EXISTS cscid_demo_sessions (
     token_hash text PRIMARY KEY,
     user_id text NOT NULL REFERENCES cscid_demo_users(id) ON DELETE CASCADE,
@@ -54,7 +72,7 @@ async function currentUser() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
-  const rows = await sql`SELECT u.id, u.username, u.balance_cents, u.shares
+  const rows = await sql`SELECT u.id, u.username, u.balance_cents, u.shares,u.is_founder,u.must_change_password
     FROM cscid_demo_sessions s
     JOIN cscid_demo_users u ON u.id = s.user_id
     WHERE s.token_hash = ${hashToken(token)} AND s.expires_at > now()
@@ -65,6 +83,8 @@ async function currentUser() {
     username: u.username,
     balance: Number(u.balance_cents) / 100,
     shares: Number(u.shares),
+    isFounder: !!u.is_founder,
+    mustChangePassword: !!u.must_change_password,
   } : null;
 }
 
@@ -86,15 +106,28 @@ export async function POST(req) {
     const action = body?.action;
     const username = String(body?.username || "").trim();
     const password = String(body?.password || "");
-    if (!["register", "login"].includes(action)) return json({ error: "Aksi tidak valid." }, 400);
+    if (!["register", "login", "change-password"].includes(action)) return json({ error: "Aksi tidak valid." }, 400);
     if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
       return json({ error: "Username 3–24 karakter, hanya huruf, angka, dan garis bawah." }, 400);
     }
-    if (password.length < 8 || password.length > 128) {
-      return json({ error: "Password harus 8–128 karakter." }, 400);
-    }
-
     const normalized = username.toLowerCase();
+    if (action === "change-password") {
+      const newPassword = String(body?.newPassword || "");
+      if (newPassword.length < 12 || newPassword.length > 128) return json({ error: "Password baru minimal 12 karakter." }, 400);
+      const sessionUser = await currentUser();
+      if (!sessionUser) return json({ error: "Sesi login tidak ditemukan." }, 401);
+      const rows = await sql`SELECT password_hash,password_salt FROM cscid_demo_users WHERE id=${sessionUser.id} LIMIT 1`;
+      const oldHash = Buffer.from(await scrypt(password, rows[0].password_salt, 64));
+      const expectedHash = Buffer.from(rows[0].password_hash, "hex");
+      if (oldHash.length !== expectedHash.length || !timingSafeEqual(oldHash, expectedHash)) return json({ error: "Password awal tidak sesuai." }, 401);
+      const salt = randomBytes(16).toString("hex");
+      const hash = Buffer.from(await scrypt(newPassword, salt, 64)).toString("hex");
+      await sql`UPDATE cscid_demo_users SET password_hash=${hash},password_salt=${salt},must_change_password=false WHERE id=${sessionUser.id}`;
+      return json({ ok:true,user:await currentUser() });
+    }
+    if (password.length < 8 || password.length > 128) {
+      if (!(action === "login" && normalized === "cscid" && password === "CSCID")) return json({ error: "Password harus 8–128 karakter." }, 400);
+    }
     if (action === "register") {
       const id = "D-" + randomBytes(12).toString("hex");
       const salt = randomBytes(16).toString("hex");
