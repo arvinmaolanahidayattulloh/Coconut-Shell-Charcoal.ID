@@ -51,12 +51,14 @@ async function schema() {
     otp_hash text,
     otp_expires_at timestamptz,
     otp_attempts integer NOT NULL DEFAULT 0,
+    otp_sent_at timestamptz,
     otp_verified_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
   await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_hash text`;
   await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_expires_at timestamptz`;
   await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_attempts integer NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_sent_at timestamptz`;
   await sql`ALTER TABLE cscid_demo_sessions ADD COLUMN IF NOT EXISTS otp_verified_at timestamptz`;
   await sql`CREATE INDEX IF NOT EXISTS cscid_demo_sessions_user_idx ON cscid_demo_sessions(user_id)`;
 }
@@ -108,7 +110,7 @@ export async function GET() {
     const token = jar.get(COOKIE)?.value;
     if (token) {
       const pending = await sql`SELECT u.username,u.phone_number FROM cscid_demo_sessions s JOIN cscid_demo_users u ON u.id=s.user_id WHERE s.token_hash=${hashToken(token)} AND s.expires_at>now() AND s.otp_verified_at IS NULL LIMIT 1`;
-      if (pending[0]) return json({ authenticated: false, pendingOtp: true, username: pending[0].username, phoneMasked: String(pending[0].phone_number||"").replace(/(\\d{2})\\d+(\\d{3})$/, "$1••••••$2") });
+      if (pending[0]) return json({ authenticated: false, pendingOtp: true, username: pending[0].username, phoneMasked: String(pending[0].phone_number||"").replace(/(\d{2})\d+(\d{3})$/, "$1••••••$2") });
     }
     return json({ authenticated: false });
   } catch (e) {
@@ -147,7 +149,7 @@ export async function POST(req) {
       if (!(action === "login" && normalized === "cscid" && password === "CSCID")) return json({ error: "Password harus 8–128 karakter." }, 400);
     }
     if (action === "register") {
-      const phone = String(body?.phone || "").replace(/\\D/g, "").replace(/^0/, "62");
+      const phone = String(body?.phone || "").replace(/\D/g, "").replace(/^0/, "62");
       if (phone.length < 10 || phone.length > 15) return json({ error: "Nomor WhatsApp harus valid dan memakai kode negara Indonesia." }, 400);
       const id = "D-" + randomBytes(12).toString("hex");
       const salt = randomBytes(16).toString("hex");
@@ -174,7 +176,7 @@ export async function POST(req) {
       return json({ error: "Username atau password salah." }, 401);
     }
     if (!user.phone_number && normalized === "cscid" && process.env.WA_SERVER_NUMBER) {
-      const phone = process.env.WA_SERVER_NUMBER.replace(/\\D/g, "").replace(/^0/, "62");
+      const phone = process.env.WA_SERVER_NUMBER.replace(/\D/g, "").replace(/^0/, "62");
       await sql`UPDATE cscid_demo_users SET phone_number=${phone} WHERE id=${user.id}`;
     }
     if (!user.phone_number && normalized !== "cscid") return json({ error: "Akun belum memiliki nomor WhatsApp. Hubungi Founder/CEO untuk memperbarui data akun." }, 403);
