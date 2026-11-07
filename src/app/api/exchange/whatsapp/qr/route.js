@@ -14,11 +14,12 @@ export async function GET() {
     const jar = await cookies();
     const token = jar.get(COOKIE)?.value;
     if (!token) return json({ error: "Login Founder diperlukan." }, 401);
-    const rows = await sql`SELECT u.is_founder,s.otp_verified_at FROM cscid_demo_sessions s
+    const rows = await sql`SELECT u.is_founder,u.must_change_password,s.otp_verified_at FROM cscid_demo_sessions s
       JOIN cscid_demo_users u ON u.id=s.user_id
       WHERE s.token_hash=${hashToken(token)} AND s.expires_at>now() LIMIT 1`;
     const user = rows[0];
     if (!user || !user.is_founder) return json({ error: "Akses QR Pairing hanya diberikan kepada Founder/CEO. Hubungi Founder/CEO untuk memperoleh izin." }, 403);
+    if (user.must_change_password) return json({ error: "Perbarui password Founder terlebih dahulu sebelum membuka QR Pairing." }, 403);
     if (!user.otp_verified_at || new Date(user.otp_verified_at).getTime() <= Date.now() - 12 * 60 * 60 * 1000) return json({ error: "Verifikasi OTP WhatsApp diperlukan sebelum membuka QR Pairing." }, 403);
     if (!process.env.WA_API_TOKEN) return json({ error: "WA_API_TOKEN belum dikonfigurasi di Vercel." }, 503);
     const phone = String(process.env.WA_SERVER_NUMBER || "").replace(/\D/g, "").replace(/^0/, "62");
