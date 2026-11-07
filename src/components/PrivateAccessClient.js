@@ -17,7 +17,7 @@ export default function PrivateAccessClient() {
       </section>
       {user ? <>
         <Invest />
-        <Index showAuth={false} />
+        <Index showAuth={false} initialUser={user} />
         <HargaFeed />
       </> : <section style={{maxWidth:760,margin:"0 auto",padding:"8px 20px 60px",textAlign:"center",opacity:.72}}>
         <p>Invest CSCID dan Index CSCID akan terbuka setelah login dan verifikasi OTP WhatsApp berhasil.</p>
