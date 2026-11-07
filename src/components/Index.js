@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import styles from "./Index.module.css";
 
 const IPO_PRICE = 1000;
-const TOTAL_SHARES = 1000000;
+const TOTAL_LOTS = 100;
+const SHARES_PER_LOT = 100;
+const TOTAL_SHARES = TOTAL_LOTS * SHARES_PER_LOT;
 const money = (value) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(value);
 const number = (value) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(value);
 const periods = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
@@ -43,10 +45,15 @@ export default function Index() {
   const maxPrice = Math.max(...candles.map((c) => c.high)) + 3;
   const x = (i) => 14 + (i * 672) / (candles.length - 1);
   const y = (price) => 178 - ((price - minPrice) / (maxPrice - minPrice)) * 150;
-  const available = Math.max(0, TOTAL_SHARES - owned);
+  const ownedShares = owned;
+  const ownedLots = ownedShares / SHARES_PER_LOT;
+  const availableShares = Math.max(0, TOTAL_SHARES - ownedShares);
+  const availableLots = availableShares / SHARES_PER_LOT;
   const ownership = (owned / TOTAL_SHARES) * 100;
-  const buyQty = Math.max(0, Number(buyInput) || 0);
-  const sellQty = Math.max(0, Number(sellInput) || 0);
+  const buyLots = Math.max(0, Number(buyInput) || 0);
+  const buyQty = buyLots * SHARES_PER_LOT;
+  const sellLots = Math.max(0, Number(sellInput) || 0);
+  const sellQty = sellLots * SHARES_PER_LOT;
   const buyTotal = buyQty * currentPrice;
   const sellTotal = sellQty * currentPrice;
 
@@ -63,8 +70,8 @@ export default function Index() {
 
   function buyShares() {
     if (mode !== "demo") return setNotice("Mode Ril belum tersedia. Hubungkan backend dan mitra broker terlebih dahulu.");
-    if (!buyQty || buyQty % 0.1 !== 0) return setNotice("Jumlah pembelian minimal 0,1 lembar dan kelipatannya.");
-    if (buyQty > available) return setNotice("Jumlah saham melebihi sisa saham IPO.");
+    if (!buyLots || buyLots % 0.1 !== 0) return setNotice("Jumlah pembelian minimal 0,1 lot dan kelipatannya.");
+    if (buyQty > availableShares) return setNotice("Jumlah pembelian melebihi sisa saham IPO.");
     if (buyTotal > balance) return setNotice("Saldo demo tidak mencukupi.");
     setBalance((value) => value - buyTotal);
     setOwned((value) => value + buyQty);
@@ -74,8 +81,8 @@ export default function Index() {
 
   function sellShares() {
     if (mode !== "demo") return setNotice("Mode Ril belum tersedia. Hubungkan backend dan mitra broker terlebih dahulu.");
-    if (!sellQty || sellQty % 0.1 !== 0) return setNotice("Jumlah penjualan minimal 0,1 lembar dan kelipatannya.");
-    if (sellQty > owned) return setNotice("Jumlah jual melebihi saham yang kamu miliki.");
+    if (!sellLots || sellLots % 0.1 !== 0) return setNotice("Jumlah penjualan minimal 0,1 lot dan kelipatannya.");
+    if (sellQty > ownedShares) return setNotice("Jumlah jual melebihi saham yang kamu miliki.");
     setOwned((value) => Math.max(0, value - sellQty));
     setBalance((value) => value + sellTotal);
     setTransactions((value) => [{ id: Date.now(), type: "SELL", qty: sellQty, price: currentPrice, total: sellTotal, time: new Date().toLocaleString("id-ID") }, ...value]);
@@ -133,22 +140,22 @@ export default function Index() {
         </div>
 
         <div className={styles.marketStats}>
-          <div><span>HARGA IPO</span><strong>{money(IPO_PRICE)}</strong></div>
+          <div><span>HARGA IPO / LEMBAR</span><strong>{money(IPO_PRICE)}</strong></div>
           <div><span>HARGA TERAKHIR</span><strong>{money(currentPrice)}</strong></div>
-          <div><span>SAHAM TERSEDIA</span><strong>{number(available)}</strong></div>
+          <div><span>SAHAM TERSEDIA</span><strong>{number(availableShares)} lembar / {number(availableLots)} lot</strong></div>
           <div><span>KEPEMILIKAN DEMO</span><strong>{number(ownership)}%</strong></div>
         </div>
 
         <div className={styles.ipoProgress}>
           <div className={styles.progressHeading}><span>PROGRES IPO</span><strong>{ownership.toFixed(4)}% teralokasi</strong></div>
           <div className={styles.progress}><span style={{ width: ownership + "%" }} /></div>
-          <div className={styles.progressLabels}><span>Terjual {number(owned)} lembar</span><span>Tersedia {number(available)} lembar</span></div>
+          <div className={styles.progressLabels}><span>Terjual {number(ownedShares)} lembar ({number(ownedLots)} lot)</span><span>Tersedia {number(availableShares)} lembar ({number(availableLots)} lot)</span></div>
         </div>
 
         <div className={styles.tradeLayout}>
           <div className={styles.orderPanel}>
             <div className={styles.panelHeading}><span className={styles.buyLabel}>BUY / BELI</span><span>CSCID</span></div>
-            <label htmlFor="cscid-buy-qty">Jumlah saham</label>
+            <label htmlFor="cscid-buy-qty">Jumlah lot (1 lot = 100 lembar)</label>
             <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(buyInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setBuyInput, qty)}>{String(qty).replace(".", ",")}</button>)}</div>
             <input id="cscid-buy-qty" type="number" min="0.1" step="0.1" value={buyInput} onChange={(e) => setBuyInput(e.target.value)} />
             <div className={styles.orderTotal}><span>Estimasi total</span><strong>{money(buyTotal)}</strong></div>
@@ -156,9 +163,9 @@ export default function Index() {
           </div>
           <div className={styles.orderPanel}>
             <div className={styles.panelHeading}><span className={styles.sellLabel}>SELL / JUAL</span><span>CSCID</span></div>
-            <label htmlFor="cscid-sell-qty">Jumlah saham</label>
+            <label htmlFor="cscid-sell-qty">Jumlah lot (1 lot = 100 lembar)</label>
             <div className={styles.qtyPresets}>{presets.map((qty) => <button key={qty} type="button" className={Number(sellInput) === qty ? styles.qtyActive : ""} onClick={() => setQuantity(setSellInput, qty)}>{String(qty).replace(".", ",")}</button>)}</div>
-            <input id="cscid-sell-qty" type="number" min="0.1" step="0.1" max={owned} value={sellInput} onChange={(e) => setSellInput(e.target.value)} />
+            <input id="cscid-sell-qty" type="number" min="0.1" step="0.1" max={ownedLots} value={sellInput} onChange={(e) => setSellInput(e.target.value)} />
             <div className={styles.orderTotal}><span>Estimasi hasil jual</span><strong>{money(sellTotal)}</strong></div>
             <button type="button" className={styles.sellButton} onClick={sellShares}>Jual CSCID</button>
           </div>
@@ -173,7 +180,7 @@ export default function Index() {
           </div>
           <div className={styles.accountCard}>
             <span className={styles.sectionLabel}>PORTOFOLIO CSCID</span>
-            <strong>{number(owned)} lembar</strong>
+            <strong>{number(ownedLots)} lot / {number(ownedShares)} lembar</strong>
             <small>Nilai indikatif {money(owned * currentPrice)}</small>
           </div>
         </div>
@@ -185,7 +192,7 @@ export default function Index() {
           {transactions.length === 0 ? <p className={styles.empty}>Belum ada aktivitas. Transaksi Demo akan muncul di sini.</p> : transactions.slice(0, 8).map((item) => (
             <div className={styles.historyRow} key={item.id}>
               <span className={item.type === "BUY" ? styles.buyLabel : styles.sellLabel}>{item.type}</span>
-              <span>{number(item.qty)} CSCID</span>
+              <span>{number(item.qty / SHARES_PER_LOT)} lot · {number(item.qty)} lembar</span>
               <strong>{money(item.total)}</strong>
               <small>@ {money(item.price)} · {item.time}</small>
             </div>
