@@ -58,10 +58,10 @@ export default function DemoAuth({ onAuth }) {
 
   return <div className={styles.demoAuth}>
     {user ? <div className={styles.demoSignedIn}>
-      <div><span className={styles.sectionLabel}>AKUN {SERVER_LABEL.toUpperCase()} AKTIF</span><strong>{user.username}{user.isFounder ? " · FOUNDER" : ""}</strong><small>ID: {user.id}</small></div>
+      <div><span className={styles.sectionLabel}>AKUN {SERVER_LABEL.toUpperCase()} AKTIF</span><strong>{user.username}</strong><small>ID: {user.id}</small></div>
       <button type="button" onClick={logout} disabled={busy}>Keluar</button>
       {user.mustChangePassword && <form className={styles.demoAuthForm} onSubmit={changePassword}>
-        <h3>Amankan akun Founder</h3><p>Password awal CSCID wajib diganti sebelum transaksi dapat dilakukan.</p>
+        <h3>Perbarui keamanan akun</h3><p>Kata sandi awal wajib diperbarui sebelum akun dapat digunakan untuk bertransaksi.</p>
         <input aria-label="Password awal" type="password" autoComplete="current-password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} placeholder="Password awal" required />
         <input aria-label="Password baru" type="password" autoComplete="new-password" minLength={12} value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="Password baru (minimal 12 karakter)" required />
         <button type="submit" disabled={busy}>{busy ? "Menyimpan..." : "Ganti password"}</button>
@@ -69,7 +69,7 @@ export default function DemoAuth({ onAuth }) {
       {error && <p role="alert">{error}</p>}
     </div> :
       <form className={styles.demoAuthForm} onSubmit={submit}>
-        <div><span className={styles.sectionLabel}>AKSES CSCID EXCHANGE</span><h3>{mode === "login" ? `Masuk ke akun ${SERVER_LABEL}` : `Buat akun ${SERVER_LABEL}`}</h3><p>Login diperlukan untuk menggunakan saldo, portofolio, dan order pribadi.</p></div>
+        <div><span className={styles.sectionLabel}>AKSES AKUN CSCID</span><h3>{mode === "login" ? `Masuk ke akun ${SERVER_LABEL}` : `Buat akun ${SERVER_LABEL}`}</h3><p>Masuk untuk mengakses saldo, kepemilikan saham, dan fasilitas perdagangan akun.</p></div>
         <input aria-label={`Username akun ${SERVER_LABEL}`} autoComplete="username" minLength={3} maxLength={24} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" required />
         <input aria-label={`Password akun ${SERVER_LABEL}`} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={mode === "login" && username.toLowerCase() === "cscid" ? 5 : 8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (minimal 8 karakter)" required />
         <button type="submit" disabled={busy}>{busy ? "Memproses..." : mode === "login" ? `Masuk ${SERVER_LABEL}` : `Daftar ${SERVER_LABEL}`}</button>
