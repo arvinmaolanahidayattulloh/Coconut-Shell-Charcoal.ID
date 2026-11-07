@@ -175,12 +175,17 @@ export async function POST(req) {
     if (candidate.length !== expected.length || !timingSafeEqual(candidate, expected)) {
       return json({ error: "Username atau password salah." }, 401);
     }
+    const suppliedPhone = String(body?.phone || "").replace(/\D/g, "").replace(/^0/, "62");
     if (!user.phone_number && normalized === "cscid" && !process.env.WA_SERVER_NUMBER) return json({ error: "Nomor WhatsApp Founder belum dikonfigurasi pada server." }, 503);
     if (!user.phone_number && normalized === "cscid" && process.env.WA_SERVER_NUMBER) {
       const phone = process.env.WA_SERVER_NUMBER.replace(/\D/g, "").replace(/^0/, "62");
       await sql`UPDATE cscid_demo_users SET phone_number=${phone} WHERE id=${user.id}`;
     }
-    if (!user.phone_number && normalized !== "cscid") return json({ error: "Akun belum memiliki nomor WhatsApp. Hubungi Founder/CEO untuk memperbarui data akun." }, 403);
+    if (!user.phone_number && normalized !== "cscid") {
+      if (suppliedPhone.length < 10 || suppliedPhone.length > 15) return json({ error: "Akun lama belum memiliki nomor WhatsApp. Masukkan nomor WhatsApp untuk menghubungkan akun." }, 400);
+      await sql`UPDATE cscid_demo_users SET phone_number=${suppliedPhone} WHERE id=${user.id}`;
+    }
+    if (user.phone_number && suppliedPhone && suppliedPhone !== user.phone_number) return json({ error: "Nomor WhatsApp tidak cocok dengan nomor yang terdaftar. Hubungi Founder/CEO jika perlu perubahan." }, 403);
     await issueSession(user.id);
     return json({ ok: true, otpRequired: true });
   } catch (e) {
