@@ -246,9 +246,11 @@ export async function GET() {
           AND remaining>0 AND user_id<>${user.id}`,
     ]);
     const m = market[0];
+    const totalSharesRows = await sql`SELECT COALESCE(SUM(shares),0)::bigint AS quantity FROM cscid_demo_users`;
     return json({
       market: { symbol:"CSCID", currency:"USD",
         buyLiquidityShares:Number(buyLiquidity[0]?.quantity||0),
+        totalShares:Number(totalSharesRows[0]?.quantity||0),
         lastPriceCents:Number(m.last_price_cents), updatedAt:m.updated_at },
       account: { id:user.id, username:user.username, balanceCents:Number(user.balance_cents),
         lockedBalanceCents:Number(user.locked_balance_cents), shares:Number(user.shares),
