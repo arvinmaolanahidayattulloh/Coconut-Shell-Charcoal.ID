@@ -180,7 +180,7 @@ export default function Index() {
           <div className={styles.quoteIdentity}>
             <span className={styles.symbol}>CSCID</span>
             <span className={styles.exchange}>CSCID · COMMON STOCK</span>
-            <span className={styles.ipoBadge}>IPO OPEN</span>
+            <span className={styles.ipoBadge}>FOUNDER SELL ORDER</span>
           </div>
           <div className={styles.quotePrice}>
             <strong>{money(currentPrice)}</strong>
