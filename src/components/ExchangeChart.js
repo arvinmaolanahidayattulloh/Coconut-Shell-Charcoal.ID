@@ -8,6 +8,8 @@ const IPO_TIME = Math.floor(Date.UTC(2026, 9, 30, 0, 0, 0) / 1000);
 
 export default function ExchangeChart({ trades = [], period = "1D" }) {
   const containerRef = useRef(null);
+  const chartRef = useRef(null);
+  const seriesRef = useRef(null);
   const data = useMemo(() => {
     const interval = ({ "1H": 60, "1D": 900, "1W": 3600, "1M": 14400, "1Y": 86400, ALL: 86400 })[period] || 900;
     const candles = new Map();
@@ -57,8 +59,8 @@ export default function ExchangeChart({ trades = [], period = "1D" }) {
       wickUpColor: "#089981",
       wickDownColor: "#f23645",
     });
-    series.setData(data);
-    chart.timeScale().fitContent();
+    chartRef.current = chart;
+    seriesRef.current = series;
     const observer = typeof ResizeObserver !== "undefined"
       ? new ResizeObserver((entries) => {
           const width = entries[0]?.contentRect?.width;
@@ -69,7 +71,15 @@ export default function ExchangeChart({ trades = [], period = "1D" }) {
     return () => {
       observer?.disconnect();
       chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    if (!seriesRef.current || !chartRef.current) return;
+    seriesRef.current.setData(data);
+    chartRef.current.timeScale().fitContent();
   }, [data]);
 
   return <div ref={containerRef} style={{ width: "100%", minHeight: 260 }} aria-label="Grafik candlestick CSCID" />;
