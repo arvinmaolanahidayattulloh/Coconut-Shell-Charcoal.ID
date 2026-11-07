@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./Index.module.css";
 import DemoAuth from "./DemoAuth";
+import ExchangeChart from "./ExchangeChart";
 
 const IPO_PRICE = 1000;
 const TOTAL_LOTS = 100;
@@ -12,16 +13,6 @@ const money = (value) => new Intl.NumberFormat("en-US", { style: "currency", cur
 const number = (value) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(value);
 const periods = ["1H", "1D", "1W", "1M", "1Y", "ALL"];
 const presets = [0.1, 1, 10, 100];
-
-function makeCandles() {
-  // Pasar baru: belum ada transaksi terverifikasi, jadi seluruh candle tetap flat di harga IPO.
-  return Array.from({ length: 56 }, () => ({
-    open: IPO_PRICE,
-    high: IPO_PRICE,
-    low: IPO_PRICE,
-    close: IPO_PRICE,
-  }));
-}
 
 export default function Index() {
   const [mode, setMode] = useState("demo");
@@ -82,28 +73,7 @@ export default function Index() {
   }, [demoUser]);
 
   const currentPrice = marketData?.market?.lastPriceCents ? marketData.market.lastPriceCents / 100 : IPO_PRICE;
-  const candles = useMemo(() => {
-    const trades = [...(marketData?.trades || [])].reverse();
-    if (!trades.length) return makeCandles();
-    const bucketSeconds = ({ "1H": 60, "1D": 900, "1W": 3600, "1M": 14400, "1Y": 86400, ALL: 86400 })[period] || 900;
-    const grouped = new Map();
-    for (const trade of trades) {
-      const timestamp = Math.floor(new Date(trade.createdAt).getTime() / 1000);
-      const bucket = Math.floor(timestamp / bucketSeconds) * bucketSeconds;
-      const price = trade.priceCents / 100;
-      const candle = grouped.get(bucket);
-      if (!candle) grouped.set(bucket, { open: price, high: price, low: price, close: price });
-      else { candle.high = Math.max(candle.high, price); candle.low = Math.min(candle.low, price); candle.close = price; }
-    }
-    const actual = [...grouped.values()].slice(-56);
-    return [...makeCandles().slice(0, Math.max(0, 56 - actual.length)), ...actual];
-  }, [marketData, period]);
-  const firstPrice = candles[0].open;
-  const change = firstPrice ? ((currentPrice - firstPrice) / firstPrice) * 100 : 0;
-  const minPrice = Math.min(...candles.map((c) => c.low)) - 3;
-  const maxPrice = Math.max(...candles.map((c) => c.high)) + 3;
-  const x = (i) => 14 + (i * 672) / (candles.length - 1);
-  const y = (price) => 178 - ((price - minPrice) / (maxPrice - minPrice)) * 150;
+  const change = ((currentPrice - IPO_PRICE) / IPO_PRICE) * 100;
   const buyPrice = Math.max(0, Number(buyPriceInput) || 0);
   const sellPrice = Math.max(0, Number(sellPriceInput) || 0);
   const ownedShares = owned;
@@ -209,23 +179,7 @@ export default function Index() {
           <div className={styles.periods}>{periods.map((item) => <button type="button" key={item} onClick={() => setPeriod(item)} className={period === item ? styles.periodActive : ""}>{item}</button>)}</div>
         </div>
         <div className={styles.chartWrap}>
-          <svg className={styles.chart} viewBox="0 0 740 205" role="img" aria-label="Grafik datar harga IPO CSCID sebesar 1000 dolar AS">
-            {[28, 66, 104, 142, 180].map((line) => <g key={line}><line x1="8" x2="690" y1={line} y2={line} className={styles.gridLine} /><text x="700" y={line + 4} className={styles.axisText}>{(maxPrice - ((line - 28) / 152) * (maxPrice - minPrice)).toFixed(0)}</text></g>)}
-            {candles.map((c, i) => {
-              const up = c.close >= c.open;
-              const top = y(Math.max(c.open, c.close));
-              const bottom = y(Math.min(c.open, c.close));
-              return <g key={i} className={up ? styles.candleUp : styles.candleDown}>
-                <line x1={x(i)} x2={x(i)} y1={y(c.high)} y2={y(c.low)} stroke="currentColor" strokeWidth="1.2" />
-                <rect x={x(i) - 3.1} y={top} width="6.2" height={Math.max(2, bottom - top)} rx="1" fill="currentColor" />
-              </g>;
-            })}
-            <line x1="8" x2="690" y1={y(currentPrice)} y2={y(currentPrice)} className={styles.priceLine} strokeDasharray="4 4" />
-            <circle cx={x(candles.length - 1)} cy={y(currentPrice)} r="3.5" className={styles.priceDot} />
-            <text x="14" y="199" className={styles.axisText}>{period === "1H" ? "60 MIN" : period === "1D" ? "TODAY" : period}</text>
-            <text x="650" y="199" className={styles.axisText}>NOW</text>
-          </svg>
-        </div>
+          <ExchangeChart trades={marketData?.trades || []} period={period} />       </div>
 
         <div className={styles.marketStats}>
           <div><span>HARGA IPO / LEMBAR</span><strong>{money(IPO_PRICE)}</strong></div>
